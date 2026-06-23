@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0D0806" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <link rel="manifest" href="/manifest.json?v=5" />
+    <link rel="icon" type="image/png" href="/logo192.png?v=5" />
+    <link rel="apple-touch-icon" href="/logo192.png?v=5" />
+
+    <title>Leemos</title>
+
+    <style>
+      html, body {
+        touch-action: manipulation; /* Mata el zoom al hacer doble toque rápido */
+        -webkit-text-size-adjust: 100%;
+        overflow: hidden; /* Congela el fondo para que no rebote al llegar al final */
+      }
+      #root {
+        touch-action: pan-x pan-y;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+
+    <script>
+      document.addEventListener('gesturestart', function (e) {
+          e.preventDefault();
+      });
+      document.addEventListener('touchstart', function(event) {
+          if (event.touches.length > 1) {
+              event.preventDefault(); // Bloquea si detecta más de un dedo en la pantalla
+          }
+      }, { passive: false });
+    </script>
+  </body>
+</html>
