@@ -293,7 +293,7 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes parceroBreath { 0%,100%{transform:scale(0.97) translateY(0px);} 50%{transform:scale(1.03) translateY(-2px);} }
 @keyframes parceroWave { 0%{transform:rotate(0deg);} 30%{transform:rotate(-22deg);} 70%{transform:rotate(13deg);} 100%{transform:rotate(0deg);} }
 @keyframes sparkRise { 0%{transform:translate(0,0) scale(1);opacity:1;} 100%{transform:translate(var(--sx),var(--sy)) scale(0);opacity:0;} }
-@keyframes starTwinkle { 0%,100%{opacity:0.28;} 50%{opacity:0.82;} }
+@keyframes starTwinkle { 0%,100%{opacity:0.12;} 50%{opacity:0.38;} }
 @keyframes zzz { 0%{opacity:0;transform:translate(0,0) scale(0.5);} 30%{opacity:1;} 100%{opacity:0;transform:translate(8px,-22px) scale(1.1);} }
 @keyframes mordorGlow { 0%,100%{opacity:0.35;} 50%{opacity:0.68;} }
 @keyframes logFlyToFire { 0%{transform:translate(0,0) rotate(0deg);opacity:1;} 60%{opacity:1;} 100%{transform:translate(var(--tx),var(--ty)) rotate(-55deg);opacity:0;} }
@@ -5441,159 +5441,171 @@ function ParceroSVG({ state = 'sitting' }) {
 
   const W = '#F5F2EB'; // Blanco hueso
   const G = '#D4AF37'; // Oro tumbaga
-  const B = '#6B4A1E'; // Marrón oscuro sombrero
+  const sw = 3.0;     // trazo principal más grueso para que se vea en fondo oscuro
+
+  // armWaveStyle definido ANTES del if-else para evitar TDZ
+  const armWaveStyle = {
+    animation: waving ? 'parceroWave 0.9s ease-in-out' : 'none',
+    transformOrigin: '63px 64px',
+  };
 
   const eyes = blink
     ? <>
-        <line x1="53" y1="30" x2="60" y2="30" stroke={W} strokeWidth="2.5" strokeLinecap="round"/>
-        <line x1="67" y1="30" x2="74" y2="30" stroke={W} strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="51" y1="31" x2="61" y2="31" stroke={W} strokeWidth="2.8" strokeLinecap="round"/>
+        <line x1="66" y1="31" x2="76" y2="31" stroke={W} strokeWidth="2.8" strokeLinecap="round"/>
       </>
     : state === 'sleeping'
     ? <>
-        <path d="M52 28 L57 33 M57 28 L52 33" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
-        <path d="M68 28 L73 33 M73 28 L68 33" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M51 28 L57 34 M57 28 L51 34" stroke={W} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M67 28 L73 34 M73 28 L67 34" stroke={W} strokeWidth="2" strokeLinecap="round"/>
       </>
     : (state === 'happy' || state === 'celebrating')
     ? <>
-        <path d="M52 31 Q56 27 60 31" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>
-        <path d="M67 31 Q71 27 75 31" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>
+        <path d="M50 32 Q56 26 62 32" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+        <path d="M65 32 Q71 26 77 32" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
       </>
     : state === 'worried'
     ? <>
-        <circle cx="56" cy="30" r="2.2" fill={W}/>
-        <circle cx="71" cy="30" r="2.2" fill={W}/>
-        <path d="M50 25 L57 28" stroke={W} strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M70 28 L77 25" stroke={W} strokeWidth="1.5" strokeLinecap="round"/>
+        <circle cx="56" cy="30" r="3" fill={W}/>
+        <circle cx="71" cy="30" r="3" fill={W}/>
+        <path d="M49 25 L58 28" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M69 28 L78 25" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
       </>
     : <>
-        <circle cx="56" cy="29" r="2.2" fill={W}/>
-        <circle cx="71" cy="29" r="2.2" fill={W}/>
+        <circle cx="56" cy="30" r="3" fill={W}/>
+        <circle cx="71" cy="30" r="3" fill={W}/>
       </>;
 
   const mouth = state === 'sleeping'
-    ? <path d="M57 38 Q63 41 69 38" stroke={W} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    ? <path d="M57 40 Q63 43 69 40" stroke={W} strokeWidth="1.8" fill="none" strokeLinecap="round"/>
     : state === 'happy'
-    ? <path d="M52 37 Q63 44 74 37" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+    ? <path d="M50 39 Q63 47 76 39" stroke={W} strokeWidth="2.4" fill="none" strokeLinecap="round"/>
     : state === 'celebrating'
-    ? <path d="M51 36 Q63 46 75 36" stroke={W} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+    ? <path d="M49 38 Q63 49 77 38" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
     : state === 'worried'
-    ? <path d="M56 41 Q63 37 70 41" stroke={W} strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-    : <path d="M56 38 Q63 42 70 38" stroke={W} strokeWidth="1.8" fill="none" strokeLinecap="round"/>;
+    ? <path d="M55 43 Q63 38 71 43" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>
+    : <path d="M54 40 Q63 46 72 40" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>;
 
-  const sw = 2.4;
   let body;
   if (state === 'celebrating') {
     body = <>
-      <line x1="63" y1="45" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M63 62 L38 34 L30 23" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M63 62 L88 34 L96 23" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="63" y1="47" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M63 64 L36 34 L28 22" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 64 L90 34 L98 22" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L40 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-      <path d="M76 92 L86 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <path d="M50 92 L40 116" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
+      <path d="M76 92 L86 116" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
     </>;
   } else if (state === 'sleeping') {
     body = <>
-      <path d="M63 45 Q60 65 58 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
-      <path d="M62 62 L42 78 L36 70" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M62 62 L84 74 L88 66" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 47 Q60 66 58 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
+      <path d="M62 64 L40 80 L34 70" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M62 64 L84 76 L88 66" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       <line x1="46" y1="92" x2="72" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M46 92 L28 104 L18 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M72 92 L90 104 L100 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M46 92 L28 106 L18 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M72 92 L90 106 L100 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </>;
   } else if (state === 'worried') {
     body = <>
-      <path d="M63 45 Q60 68 63 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
-      <path d="M63 65 L44 73 L38 64" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M63 60 L78 52 L82 43" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 47 Q60 68 63 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
+      <path d="M63 66 L42 75 L36 64" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 62 L79 52 L83 42" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L32 104 L22 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M76 92 L94 104 L104 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M50 92 L32 106 L22 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 92 L94 106 L104 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </>;
   } else if (state === 'happy') {
     body = <>
-      <line x1="63" y1="45" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M63 62 L42 50 L36 42" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="63" y1="47" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M63 64 L40 50 L34 40" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       <g style={armWaveStyle}>
-        <path d="M63 62 L84 50 L90 42" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M63 64 L86 50 L92 40" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       </g>
       <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L32 104 L22 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M76 92 L94 104 L104 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M50 92 L32 106 L22 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 92 L94 106 L104 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </>;
   } else if (state === 'coffee') {
     body = <>
-      <line x1="63" y1="45" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M63 62 L42 78 L36 70" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M63 62 L88 70 L94 63" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <rect x="91" y="58" width="12" height="10" rx="2" fill="none" stroke={W} strokeWidth="1.6"/>
-      <path d="M103 62 Q108 64 103 68" stroke={W} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-      <path d="M95 56 Q97 51 95 46" stroke={W} strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.5" style={{animation:'steamRise 2s ease-in-out infinite'}}/>
-      <path d="M100 57 Q102 51 100 45" stroke={W} strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.4" style={{animation:'steamRise 2.5s ease-in-out infinite 0.4s'}}/>
+      <line x1="63" y1="47" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M63 64 L40 80 L34 70" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 64 L88 72 L94 64" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="91" y="59" width="13" height="11" rx="2.5" fill="none" stroke={W} strokeWidth="1.8"/>
+      <path d="M104 63 Q109 65 104 69" stroke={W} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+      <path d="M95 57 Q97 51 95 46" stroke={W} strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.5" style={{animation:'steamRise 2s ease-in-out infinite'}}/>
+      <path d="M100 58 Q102 51 100 45" stroke={W} strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.4" style={{animation:'steamRise 2.5s ease-in-out infinite 0.4s'}}/>
       <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L32 104 L22 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M76 92 L94 104 L104 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M50 92 L32 106 L22 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 92 L94 106 L104 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </>;
   } else {
-    // sitting — sentado con piernas dobladas, mano derecha al fuego
+    // sitting — sentado en el piso, piernas dobladas hacia adelante, brazo derecho al fuego
     body = <>
-      {/* Torso */}
-      <line x1="63" y1="46" x2="63" y2="88" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      {/* Brazo izquierdo descansando en la rodilla */}
-      <path d="M63 64 L44 80 L40 76" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* Brazo derecho hacia el fuego — calentándose */}
+      {/* Torso vertical */}
+      <line x1="63" y1="47" x2="63" y2="86" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      {/* Brazo izquierdo — descansando sobre rodilla */}
+      <path d="M63 66 L44 82 L39 78" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Brazo derecho — extendido hacia el fuego, animado */}
       <g style={armWaveStyle}>
-        <path d="M63 64 L98 78 L114 72" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M63 66 L96 78 L112 72" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       </g>
       {/* Caderas */}
-      <line x1="48" y1="88" x2="78" y2="88" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      {/* Pierna izquierda doblada (muslo + espinilla cruzada) */}
-      <path d="M48 88 Q30 98 26 112" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-      <path d="M26 112 Q38 122 62 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-      {/* Pierna derecha doblada (muslo + espinilla) */}
-      <path d="M78 88 Q96 98 100 112" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-      <path d="M100 112 Q88 122 64 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <line x1="50" y1="86" x2="76" y2="86" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      {/* Pierna izquierda: muslo adelante, rodilla doblada, pie al piso */}
+      <path d="M50 86 L34 106" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
+      <path d="M34 106 L54 120" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
+      {/* Pierna derecha: muslo adelante, rodilla doblada, pie al piso */}
+      <path d="M76 86 L92 106" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
+      <path d="M92 106 L72 120" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
     </>;
   }
-
-  const armWaveStyle = {
-    animation: waving ? 'parceroWave 0.9s ease-in-out' : 'none',
-    transformOrigin: '63px 62px',
-  };
 
   const hatTransform = state === 'sleeping' ? 'rotate(18 63 18)' : undefined;
 
   return (
-    <svg viewBox="0 0 126 130" xmlns="http://www.w3.org/2000/svg"
+    <svg viewBox="0 0 126 134" xmlns="http://www.w3.org/2000/svg"
       style={{ width: '100%', height: '100%', overflow: 'visible',
         animation: 'parceroBreath 4.5s ease-in-out infinite',
         transformOrigin: '50% 70%' }}>
+      {/* ── SOMBRERO VUELTIAO — Copa baja + ala ancha + zigzag negro y oro ── */}
       <g transform={hatTransform}>
-        <path d="M46 18 Q46 4 63 4 Q80 4 80 18" fill={G} stroke={B} strokeWidth="0.8"/>
-        <rect x="46" y="13" width="34" height="4.5" rx="1" fill={B}/>
-        <path d="M47 15 L51 13.5 L55 15 L59 13.5 L63 15 L67 13.5 L71 15 L75 13.5 L79 15"
-          stroke={W} strokeWidth="0.9" fill="none" opacity="0.6"/>
-        <ellipse cx="63" cy="18" rx="21" ry="4.5" fill={G} stroke={B} strokeWidth="0.7"/>
+        {/* Copa — forma ovalada baja */}
+        <ellipse cx="63" cy="16" rx="13" ry="8.5" fill="#1E1A16" stroke={G} strokeWidth="1.2"/>
+        {/* Ala — MUY ancha y plana (doble del ancho de la cabeza) */}
+        <ellipse cx="63" cy="22" rx="27" ry="5" fill="#252018" stroke={G} strokeWidth="1.3"/>
+        {/* Cinta negra sobre el ala */}
+        <rect x="36" y="19.5" width="54" height="4.5" rx="2.2" fill="#111"/>
+        {/* Patrón zigzag dorado — identidad del vueltiao */}
+        <path d="M38,21.8 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2"
+          fill="none" stroke={G} strokeWidth="1.1" strokeLinecap="round"/>
       </g>
-      <circle cx="63" cy="33" r="13" fill="none" stroke={W} strokeWidth="2.5"/>
-      {/* Rubor cálido del fuego en mejillas */}
+
+      {/* Cara */}
+      <circle cx="63" cy="35" r="14" fill="none" stroke={W} strokeWidth={sw}/>
+
+      {/* Rubor cálido del fuego */}
       {state !== 'sleeping' && <>
-        <ellipse cx="47" cy="37" rx="7" ry="4" fill="#E8743A" opacity="0.18"/>
-        <ellipse cx="79" cy="37" rx="7" ry="4" fill="#E8743A" opacity="0.18"/>
+        <ellipse cx="46" cy="38" rx="7" ry="4" fill="#E8743A" opacity="0.12"/>
+        <ellipse cx="80" cy="38" rx="7" ry="4" fill="#E8743A" opacity="0.12"/>
       </>}
+
       {eyes}
+
       {/* Reflejo del fuego en los ojos */}
       {!blink && state !== 'sleeping' && <>
-        <circle cx="57" cy="28" r="1" fill="#F59E0B" opacity="0.55"/>
-        <circle cx="72" cy="28" r="1" fill="#F59E0B" opacity="0.55"/>
+        <circle cx="57" cy="29" r="1.1" fill="#F59E0B" opacity="0.55"/>
+        <circle cx="72" cy="29" r="1.1" fill="#F59E0B" opacity="0.55"/>
       </>}
+
       {mouth}
       {body}
+
       {state === 'sleeping' && <>
-        <text x="76" y="26" fontSize="8" fill={W} opacity="0.7"
+        <text x="78" y="28" fontSize="8" fill={W} opacity="0.7"
           style={{animation:'zzz 2.2s ease-in-out infinite', fontFamily:'sans-serif', fontWeight:700}}>z</text>
-        <text x="84" y="15" fontSize="11" fill={W} opacity="0.8"
+        <text x="86" y="16" fontSize="11" fill={W} opacity="0.8"
           style={{animation:'zzz 2.2s ease-in-out infinite 0.55s', fontFamily:'sans-serif', fontWeight:700}}>z</text>
-        <text x="94" y="3" fontSize="14" fill={W} opacity="0.9"
+        <text x="96" y="4" fontSize="14" fill={W} opacity="0.9"
           style={{animation:'zzz 2.2s ease-in-out infinite 1.1s', fontFamily:'sans-serif', fontWeight:700}}>Z</text>
       </>}
     </svg>
@@ -5601,108 +5613,155 @@ function ParceroSVG({ state = 'sitting' }) {
 }
 
 // ─────────────────────────────────────────────
-//  FOGATA SVG — Fuego animado proporcional a la racha
+//  FOGATA SVG — Fuego SVG real con path morphing, proporcional a la racha
 // ─────────────────────────────────────────────
 function FogataSVG({ streakDays }) {
   const s = streakDays || 0;
-  // 2x bigger than before — protagonista visual de la escena
-  const fw = s === 0 ? 0 : s <= 2 ? 56 : s <= 6 ? 86 : s <= 13 ? 116 : s <= 29 ? 144 : 172;
-  const fh = s === 0 ? 0 : s <= 2 ? 82 : s <= 6 ? 122 : s <= 13 ? 168 : s <= 29 ? 210 : 256;
   const isLegendary = s >= 30;
-  const outerColor  = isLegendary ? '#FF6B00' : '#EF4444';
-  const midColor    = isLegendary ? '#FF9500' : '#F59E0B';
-  const innerColor  = isLegendary ? '#FFD700' : '#FBBF24';
+  const cR = isLegendary ? '#FF6B00' : '#EF4444';
+  const cO = isLegendary ? '#FF9500' : '#F59E0B';
+  const cY = isLegendary ? '#FFD700' : '#FBBF24';
 
   if (s === 0) {
     return (
-      <div style={{ position: 'relative', width: 70, height: 38 }}>
-        <div style={{ position: 'absolute', top: 0, left: '45%',
-          width: 6, height: 18, borderRadius: 3,
-          background: 'radial-gradient(ellipse, rgba(130,120,110,0.5), transparent)',
+      <div style={{ position: 'relative', width: 100, height: 52 }}>
+        <div style={{ position: 'absolute', top: 0, left: '44%',
+          width: 6, height: 20, borderRadius: 3,
+          background: 'radial-gradient(ellipse, rgba(130,120,110,0.4), transparent)',
           animation: 'ashSmoke 2.8s ease-out infinite' }}/>
-        <div style={{ position: 'absolute', top: 2, left: '32%',
+        <div style={{ position: 'absolute', top: 4, left: '30%',
           width: 4, height: 14, borderRadius: 3,
-          background: 'radial-gradient(ellipse, rgba(130,120,110,0.35), transparent)',
-          animation: 'ashSmoke 2.8s ease-out infinite 0.9s' }}/>
-        <div style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', width: 58 }}>
-          <div style={{ position: 'absolute', bottom: 0, left: '5%', width: '58%', height: 8,
-            background: '#3D2E20', borderRadius: 4,
-            transform: 'rotate(-18deg)', transformOrigin: 'right center' }}/>
-          <div style={{ position: 'absolute', bottom: 0, right: '5%', width: '58%', height: 8,
-            background: '#3D2E20', borderRadius: 4,
-            transform: 'rotate(18deg)', transformOrigin: 'left center' }}/>
-          <div style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)',
-            width: 38, height: 5, background: 'radial-gradient(ellipse, #706060, #504848)',
-            borderRadius: '50%' }}/>
-        </div>
+          background: 'radial-gradient(ellipse, rgba(130,120,110,0.28), transparent)',
+          animation: 'ashSmoke 2.8s ease-out infinite 1.1s' }}/>
+        <svg viewBox="0 0 100 36" width="100" height="36"
+          style={{ position: 'absolute', bottom: 0 }} xmlns="http://www.w3.org/2000/svg">
+          <line x1="15" y1="30" x2="68" y2="16" stroke="#5C4033" strokeWidth="8" strokeLinecap="round"/>
+          <line x1="85" y1="30" x2="32" y2="16" stroke="#4A3224" strokeWidth="8" strokeLinecap="round"/>
+          <ellipse cx="50" cy="32" rx="28" ry="4" fill="#706060" opacity="0.3"/>
+        </svg>
       </div>
     );
   }
 
-  const containerW = fw + 40;
+  // Tiers: [small, medium, large, xlarge, epic]
+  const tier = s <= 2 ? 0 : s <= 6 ? 1 : s <= 13 ? 2 : s <= 29 ? 3 : 4;
+  const W  = [110, 148, 186, 224, 260][tier];
+  const H  = [138, 186, 230, 276, 320][tier];
+  const cx = W / 2;
+  const baseY = H - 24;  // llamas nacen aquí (sobre los leños)
+  const fH  = H - 44;   // altura total de llama
+
+  const rd = (n) => Math.round(n * 10) / 10;
+
+  // Generador de path: llama simétrica con 2 beziers cúbicos
+  // Estructura IDENTICA en todos los keyframes para que SVG animate funcione
+  const fp = (hw, fh, ctrl) => {
+    const tx = rd(cx), ty = rd(baseY);
+    const c1x = rd(hw * ctrl), c2x = rd(hw * 0.55);
+    const h1 = rd(fh * 0.35), h2 = rd(fh * 0.88), h3 = rd(fh);
+    return `M${tx},${ty} C${rd(tx-hw)},${rd(ty-h1)} ${rd(tx-c2x)},${rd(ty-h2)} ${tx},${rd(ty-h3)} C${rd(tx+c2x)},${rd(ty-h2)} ${rd(tx+hw)},${rd(ty-h1)} ${tx},${ty} Z`;
+  };
+
+  const ow = W * 0.40;
+  const mw = W * 0.28;
+  const iw = W * 0.17;
+  const cw = W * 0.085;
+
+  // Llama exterior (roja) — 3 keyframes, oscila suave
+  const pR0 = fp(ow,       fH,      0.95);
+  const pR1 = fp(ow*1.08,  fH*1.04, 0.88);
+  const pR2 = fp(ow*0.92,  fH*0.97, 1.02);
+  // Llama media (naranja)
+  const pO0 = fp(mw,       fH*0.80, 0.90);
+  const pO1 = fp(mw*1.10,  fH*0.84, 0.82);
+  const pO2 = fp(mw*0.90,  fH*0.78, 0.98);
+  // Llama interior (amarilla)
+  const pY0 = fp(iw,       fH*0.60, 0.92);
+  const pY1 = fp(iw*1.12,  fH*0.63, 0.82);
+  // Corazón blanco
+  const pW0 = fp(cw,       fH*0.38, 0.90);
+  const pW1 = fp(cw*1.15,  fH*0.40, 0.80);
+
+  const ll = rd(W * 0.40);
+
   return (
-    <div style={{ position: 'relative', width: containerW, height: fh + 26 }}>
-      {/* Resplandor */}
-      <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: fw * 2.8, height: fh * 1.4, pointerEvents: 'none',
-        background: `radial-gradient(ellipse at 50% 80%, ${outerColor}32, ${outerColor}14, transparent 62%)`,
-        animation: 'mordorGlow 2.2s ease-in-out infinite' }}/>
-      {/* Llama exterior */}
-      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-        width: fw, height: fh, transformOrigin: 'bottom center',
-        background: `linear-gradient(180deg, ${outerColor}00 0%, ${outerColor} 55%, ${outerColor} 100%)`,
-        borderRadius: '42% 58% 40% 60% / 55% 45% 55% 45%',
-        animation: 'fireDistort 1.4s ease-in-out infinite, flameFlicker 0.9s ease-in-out infinite' }}/>
-      {/* Llama media */}
-      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-        width: fw * 0.72, height: fh * 0.73, transformOrigin: 'bottom center',
-        background: `linear-gradient(180deg, ${midColor}00 0%, ${midColor} 55%, ${outerColor} 100%)`,
-        borderRadius: '44% 56% 42% 58% / 58% 42% 58% 42%',
-        animation: 'fireDistort 1.05s ease-in-out infinite 0.18s, flameFlicker 0.9s ease-in-out infinite 0.3s' }}/>
-      {/* Llama interior */}
-      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-        width: fw * 0.46, height: fh * 0.5, transformOrigin: 'bottom center',
-        background: `linear-gradient(180deg, ${innerColor}00 0%, ${innerColor} 60%, ${midColor} 100%)`,
-        borderRadius: '48% 52% 44% 56% / 60% 40% 60% 40%',
-        animation: 'fireDistort 0.8s ease-in-out infinite 0.28s' }}/>
-      {/* Núcleo */}
-      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-        width: fw * 0.22, height: fh * 0.26, transformOrigin: 'bottom center',
-        background: `linear-gradient(180deg, #FFFDE7 0%, ${innerColor} 100%)`,
-        borderRadius: '50%', opacity: 0.88,
-        animation: 'fireDistort 0.6s ease-in-out infinite 0.08s' }}/>
-      {/* Leños */}
-      <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', width: fw + 16 }}>
-        <div style={{ position: 'absolute', bottom: 0, left: '5%', width: '58%', height: 9,
-          background: 'linear-gradient(90deg, #6B4A28, #4A3220)', borderRadius: 4,
-          transform: 'rotate(-22deg)', transformOrigin: 'right center' }}/>
-        <div style={{ position: 'absolute', bottom: 0, right: '5%', width: '58%', height: 9,
-          background: 'linear-gradient(90deg, #4A3220, #6B4A28)', borderRadius: 4,
-          transform: 'rotate(22deg)', transformOrigin: 'left center' }}/>
-      </div>
-      {/* Chispas */}
+    <div style={{ position: 'relative', width: W, height: H }}>
+      {/* Chispas (divs con CSS animation para performance) */}
       {s >= 3 && [0,1,2,3,4].map(i => (
         <div key={i} style={{
-          position: 'absolute', bottom: fh * 0.35 + 20,
-          left: `${20 + i * 15}%`,
-          width: i % 2 === 0 ? 3 : 2, height: i % 2 === 0 ? 3 : 2,
+          position: 'absolute',
+          bottom: 24 + fH * 0.28,
+          left: `${16 + i * 16}%`,
+          width: i%2===0 ? 3 : 2, height: i%2===0 ? 3 : 2,
           borderRadius: '50%', pointerEvents: 'none',
-          background: i % 3 === 0 ? '#FBBF24' : i % 3 === 1 ? '#F59E0B' : '#FFF8E0',
-          '--sx': `${(i - 2) * 14}px`, '--sy': `${-38 - i * 9}px`,
-          animation: `sparkRise ${1.1 + i * 0.25}s ease-out infinite ${i * 0.38}s`,
+          background: i%3===0 ? cY : i%3===1 ? cO : '#FFF8E0',
+          '--sx': `${(i-2)*16}px`,
+          '--sy': `${-38-i*9}px`,
+          animation: `sparkRise ${1.1+i*0.24}s ease-out infinite ${i*0.38}s`,
         }}/>
       ))}
-      {/* Chispas legendarias */}
       {isLegendary && [0,1,2,3,4,5,6].map(i => (
         <div key={`lg${i}`} style={{
-          position: 'absolute', bottom: fh * 0.5 + 20,
-          left: `${8 + i * 12}%`,
-          width: 4, height: 4, borderRadius: '50%', pointerEvents: 'none',
-          background: i % 2 === 0 ? '#FFD700' : '#FFF',
-          '--sx': `${(i - 3) * 20}px`, '--sy': `${-55 - i * 8}px`,
-          animation: `sparkRise ${0.9 + i * 0.2}s ease-out infinite ${i * 0.25}s`,
+          position: 'absolute',
+          bottom: 24 + fH * 0.5,
+          left: `${7 + i * 13}%`,
+          width: 3.5, height: 3.5, borderRadius: '50%', pointerEvents: 'none',
+          background: i%2===0 ? '#FFD700' : '#FFF8F0',
+          '--sx': `${(i-3)*18}px`,
+          '--sy': `${-52-i*8}px`,
+          animation: `sparkRise ${0.9+i*0.2}s ease-out infinite ${i*0.26}s`,
         }}/>
       ))}
+      {/* SVG con llamas, leños y brasas */}
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+        <defs>
+          <radialGradient id="pkFgGl" cx="50%" cy="100%" r="58%">
+            <stop offset="0%" stopColor={cO} stopOpacity="0.16"/>
+            <stop offset="100%" stopColor={cO} stopOpacity="0"/>
+          </radialGradient>
+        </defs>
+        {/* Resplandor en el piso */}
+        <ellipse cx={cx} cy={H-8} rx={rd(W*0.75)} ry={15} fill="url(#pkFgGl)"
+          style={{animation:'mordorGlow 2.2s ease-in-out infinite'}}/>
+        {/* Leños cruzados en X */}
+        <line x1={rd(cx-ll)} y1={rd(baseY-2)} x2={rd(cx+ll*0.38)} y2={H-4}
+          stroke="#5C4033" strokeWidth={rd(8*(W/148))} strokeLinecap="round"/>
+        <line x1={rd(cx+ll)} y1={rd(baseY-2)} x2={rd(cx-ll*0.38)} y2={H-4}
+          stroke="#4A3224" strokeWidth={rd(8*(W/148))} strokeLinecap="round"/>
+        {/* Brasas — parpadean */}
+        <circle cx={rd(cx-6*(W/148))} cy={rd(baseY+3)} r={rd(2.5*(W/148))} fill="#EF4444" opacity="0.9"
+          style={{animation:'mordorGlow 0.7s ease-in-out infinite'}}/>
+        <circle cx={rd(cx+5*(W/148))} cy={rd(baseY+2)} r={rd(2*(W/148))} fill="#F59E0B" opacity="0.8"
+          style={{animation:'mordorGlow 1.0s ease-in-out infinite 0.22s'}}/>
+        <circle cx={cx} cy={rd(baseY+5)} r={rd(2.2*(W/148))} fill="#FF6B00" opacity="0.7"
+          style={{animation:'mordorGlow 0.85s ease-in-out infinite 0.48s'}}/>
+        {/* Llama exterior (roja) — más ancha, baja opacidad */}
+        <path fill={cR} opacity="0.54">
+          <animate attributeName="d" values={`${pR0};${pR1};${pR2};${pR0}`}
+            dur="1.4s" repeatCount="indefinite" calcMode="spline"
+            keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"/>
+        </path>
+        {/* Llama media (naranja) */}
+        <path fill={cO} opacity="0.85">
+          <animate attributeName="d" values={`${pO0};${pO1};${pO2};${pO0}`}
+            dur="1.05s" repeatCount="indefinite" begin="0.18s" calcMode="spline"
+            keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"/>
+        </path>
+        {/* Llama interior (amarilla) */}
+        <path fill={cY} opacity="0.95">
+          <animate attributeName="d" values={`${pY0};${pY1};${pY0}`}
+            dur="0.80s" repeatCount="indefinite" begin="0.28s" calcMode="spline"
+            keySplines="0.4 0 0.6 1; 0.4 0 0.6 1"/>
+        </path>
+        {/* Corazón blanco — más vivo, parpadea rápido */}
+        <path fill="#FFFDE7" opacity="0.82">
+          <animate attributeName="d" values={`${pW0};${pW1};${pW0}`}
+            dur="0.60s" repeatCount="indefinite" begin="0.08s" calcMode="spline"
+            keySplines="0.4 0 0.6 1; 0.4 0 0.6 1"/>
+        </path>
+      </svg>
     </div>
   );
 }
@@ -5825,87 +5884,84 @@ function LeñitosMisiones({ appState, setAppState, onMissionReward }) {
 }
 
 // ─────────────────────────────────────────────
-//  PÁRAMO BIOMA SVG — Noche de páramo colombiano (siempre nocturno)
+//  PÁRAMO BIOMA SVG — Noche atmosférica de páramo (premium, minimalista)
 // ─────────────────────────────────────────────
 function ParamoBiomaSVG() {
+  // Pocas estrellas, tamaño y opacidad variados — discreción es elegancia
   const STARS = [
-    [6,4],[14,9],[22,6],[33,3],[41,8],[52,4],[61,7],[72,3],[80,6],[88,9],[92,4],[97,7],
-    [3,12],[10,15],[18,12],[26,18],[35,14],[45,11],[55,16],[65,12],[75,15],[85,12],[95,16],
-    [8,22],[19,25],[30,20],[42,24],[53,19],[63,23],[74,20],[84,25],[90,22],
-    [12,30],[24,28],[38,32],[50,27],[68,30],[82,28],[96,32],
+    [5,3,1.1],[13,7,0.9],[23,5,1.3],[34,3,0.8],[44,8,1.0],[55,4,1.2],[65,7,0.85],
+    [74,3,1.1],[83,6,0.9],[90,9,0.8],[95,4,1.2],[98,7,0.9],
+    [4,13,0.8],[11,16,1.0],[20,11,0.85],[29,18,1.3],[38,14,0.8],[48,11,1.1],
+    [58,16,0.9],[67,12,1.2],[77,15,0.8],[87,12,0.95],[97,17,1.0],
   ];
   return (
-    <svg viewBox="0 0 430 285" xmlns="http://www.w3.org/2000/svg"
+    <svg viewBox="0 0 430 300" xmlns="http://www.w3.org/2000/svg"
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       preserveAspectRatio="xMidYMid slice">
       <defs>
         <linearGradient id="pkSkyGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor="#0a0e1a"/>
-          <stop offset="55%"  stopColor="#0d1322"/>
-          <stop offset="100%" stopColor="#16201A"/>
+          <stop offset="40%"  stopColor="#12182a"/>
+          <stop offset="70%"  stopColor="#1a2035"/>
+          <stop offset="100%" stopColor="#1e2540"/>
         </linearGradient>
-        <radialGradient id="pkFireGlow" cx="50%" cy="84%" r="45%">
-          <stop offset="0%"   stopColor="#E8743A" stopOpacity="0.22"/>
-          <stop offset="45%"  stopColor="#E8743A" stopOpacity="0.09"/>
+        <radialGradient id="pkMoonHalo" cx="87%" cy="14%" r="24%">
+          <stop offset="0%"   stopColor="#FFF5D4" stopOpacity="0.09"/>
+          <stop offset="50%"  stopColor="#FFF5D4" stopOpacity="0.03"/>
+          <stop offset="100%" stopColor="#FFF5D4" stopOpacity="0"/>
+        </radialGradient>
+        <radialGradient id="pkFireGlow" cx="50%" cy="90%" r="42%">
+          <stop offset="0%"   stopColor="#E8743A" stopOpacity="0.20"/>
+          <stop offset="50%"  stopColor="#E8743A" stopOpacity="0.07"/>
           <stop offset="100%" stopColor="#E8743A" stopOpacity="0"/>
         </radialGradient>
-        <radialGradient id="pkMoonGlow" cx="86%" cy="14%" r="18%">
-          <stop offset="0%"   stopColor="#FFF8DC" stopOpacity="0.14"/>
-          <stop offset="100%" stopColor="#FFF8DC" stopOpacity="0"/>
-        </radialGradient>
       </defs>
-      <rect x="0" y="0" width="430" height="285" fill="url(#pkSkyGrad)"/>
+
+      {/* Cielo */}
+      <rect x="0" y="0" width="430" height="300" fill="url(#pkSkyGrad)"/>
       {/* Halo lunar */}
-      <rect x="0" y="0" width="430" height="285" fill="url(#pkMoonGlow)"/>
-      {/* Luna llena */}
-      <circle cx="374" cy="44" r="18" fill="#FFF8DC" opacity="0.88"/>
-      <circle cx="374" cy="44" r="14" fill="#FFFEF5" opacity="0.95"/>
-      {/* Cráteres sutiles en la luna */}
-      <circle cx="368" cy="40" r="3" fill="#F0E8C0" opacity="0.4"/>
-      <circle cx="378" cy="50" r="2" fill="#F0E8C0" opacity="0.3"/>
-      {/* Estrellas — variedad de tamaños, 1/3 titilan */}
-      {STARS.map(([x,y],i) => (
-        <circle key={i} cx={`${x}%`} cy={`${y}%`}
-          r={0.5 + (i % 5) * 0.38} fill="white"
-          opacity={0.3 + (i % 6) * 0.09}
-          style={i % 3 === 0 ? {animation:`starTwinkle ${3.8+(i%5)*0.9}s ease-in-out infinite ${(i%7)*0.7}s`} : undefined}/>
+      <rect x="0" y="0" width="430" height="300" fill="url(#pkMoonHalo)"/>
+      {/* Luna — elegante, sin detalles */}
+      <circle cx="374" cy="42" r="16" fill="#FFF5D4" opacity="0.85"/>
+
+      {/* Estrellas — 4-5 con titileo muy sutil, resto estáticas */}
+      {STARS.map(([x,y,r],i) => (
+        <circle key={i} cx={`${x}%`} cy={`${y}%`} r={r} fill="#F5F2EB"
+          style={{
+            opacity: 0.13 + (i % 5) * 0.048,
+            ...(i < 5 ? {animation:`starTwinkle ${3.6+i*1.2}s ease-in-out infinite ${i*0.9}s`} : {}),
+          }}/>
       ))}
-      {/* Montañas lejanas — azul-indigo oscuro, borde lunar sutil */}
-      <path d="M0 198 L50 128 L100 162 L160 108 L218 140 L284 97 L338 130 L390 110 L430 122 L430 285 L0 285Z"
-        fill="#1C2040" opacity="0.97"/>
-      {/* Rim de luz lunar en cimas de montañas traseras */}
-      <path d="M0 198 L50 128 L100 162 L160 108 L218 140 L284 97 L338 130 L390 110 L430 122"
-        fill="none" stroke="#3A3860" strokeWidth="1.5" opacity="0.5"/>
-      {/* Montañas medias — violeta-azul, más visibles */}
-      <path d="M0 218 L68 160 L128 185 L192 154 L258 172 L318 150 L372 166 L430 157 L430 285 L0 285Z"
-        fill="#2C1E42" opacity="0.97"/>
-      {/* Neblina del páramo */}
-      <ellipse cx="215" cy="238" rx="240" ry="20" fill="white" opacity="0.035"
-        style={{animation:'cloudDrift 22s ease-in-out infinite'}}/>
-      <ellipse cx="180" cy="252" rx="210" ry="14" fill="white" opacity="0.025"
-        style={{animation:'cloudDrift 28s ease-in-out infinite 8s'}}/>
-      <ellipse cx="215" cy="250" rx="242" ry="16" fill="#120E1A" opacity="0.6"/>
-      {/* Frailejones izquierda — siluetas oscuras con toque verdoso */}
-      <rect x="18" y="218" width="6" height="44" rx="3" fill="#0C1A0C"/>
-      <ellipse cx="21" cy="215" rx="11" ry="9" fill="#102014"/>
-      <ellipse cx="17" cy="209" rx="6.5" ry="5" fill="#0C1A0C"/>
-      <rect x="8" y="228" width="5" height="34" rx="2.5" fill="#0C1A0C"/>
-      <ellipse cx="10" cy="225" rx="8.5" ry="7" fill="#102014"/>
-      {/* Frailejón pequeño izq extra */}
-      <rect x="34" y="232" width="4" height="26" rx="2" fill="#0C1A0C"/>
-      <ellipse cx="36" cy="229" rx="7" ry="5.5" fill="#102014"/>
-      {/* Frailejones derecha */}
-      <rect x="352" y="216" width="7" height="48" rx="3.5" fill="#0C1A0C"/>
-      <ellipse cx="355" cy="213" rx="13" ry="10" fill="#102014"/>
-      <ellipse cx="359" cy="208" rx="7" ry="5.5" fill="#0C1A0C"/>
-      <rect x="370" y="222" width="8" height="40" rx="4" fill="#0C1A0C"/>
-      <ellipse cx="374" cy="218" rx="15" ry="11.5" fill="#102014"/>
-      <rect x="396" y="230" width="6" height="30" rx="3" fill="#0C1A0C"/>
-      <ellipse cx="399" cy="227" rx="9" ry="7.5" fill="#102014"/>
-      {/* Suelo */}
-      <ellipse cx="215" cy="279" rx="180" ry="22" fill="#180A06" opacity="0.98"/>
-      {/* Resplandor del fuego pulsando */}
-      <rect x="0" y="0" width="430" height="285" fill="url(#pkFireGlow)"
+
+      {/* Montaña trasera — silueta onda suave, fill plano sin bordes */}
+      <path d="M0 215 L40 162 L90 185 L148 138 L205 163 L265 125 L318 150 L375 132 L430 144 L430 300 L0 300Z"
+        fill="#151d28"/>
+
+      {/* Montaña delantera — un poco más clara */}
+      <path d="M0 238 L55 195 L115 215 L178 183 L238 202 L298 175 L358 192 L430 180 L430 300 L0 300Z"
+        fill="#1a2430"/>
+
+      {/* Arbustos abstractos izquierda — formas simples, apenas distinguibles */}
+      <rect x="10" y="270" width="9" height="28" rx="4" fill="#131b11" opacity="0.78"/>
+      <rect x="26" y="276" width="7" height="22" rx="3" fill="#141c12" opacity="0.62"/>
+      <rect x="40" y="278" width="10" height="20" rx="4" fill="#131b11" opacity="0.70"/>
+
+      {/* Arbustos abstractos derecha */}
+      <rect x="368" y="268" width="10" height="30" rx="4" fill="#131b11" opacity="0.78"/>
+      <rect x="385" y="274" width="8" height="24" rx="3" fill="#141c12" opacity="0.62"/>
+      <rect x="403" y="276" width="9" height="22" rx="4" fill="#131b11" opacity="0.70"/>
+
+      {/* Neblina atmosférica — 2 bandas horizontales muy suaves */}
+      <ellipse cx="215" cy="252" rx="225" ry="9" fill="white" opacity="0.020"
+        style={{animation:'cloudDrift 30s ease-in-out infinite'}}/>
+      <ellipse cx="175" cy="264" rx="195" ry="6" fill="white" opacity="0.014"
+        style={{animation:'cloudDrift 38s ease-in-out infinite 14s'}}/>
+
+      {/* Suelo oscuro */}
+      <rect x="0" y="278" width="430" height="22" fill="#0c1018" opacity="0.75"/>
+
+      {/* Resplandor del fuego — pulsa suave */}
+      <rect x="0" y="0" width="430" height="300" fill="url(#pkFireGlow)"
         style={{animation:'mordorGlow 2.2s ease-in-out infinite'}}/>
     </svg>
   );
@@ -5971,9 +6027,17 @@ function FogataScene({ C, appState, setAppState, onMissionReward }) {
         <FogataSVG streakDays={streak}/>
       </div>
 
-      {/* El Parcero — más grande */}
-      <div style={{ position: 'absolute', bottom: 18, left: '22%',
-        transform: 'translateX(-50%)', width: 128, height: 168, zIndex: 3 }}>
+      {/* Sombra de contacto — pega al Parcero al suelo visualmente */}
+      <div style={{ position: 'absolute', bottom: 10, left: '22%',
+        transform: 'translateX(-50%)', width: 88, height: 14,
+        borderRadius: '50%',
+        background: 'rgba(0,0,0,0.32)',
+        filter: 'blur(4px)',
+        zIndex: 2 }}/>
+
+      {/* El Parcero — sentado junto al fuego */}
+      <div style={{ position: 'absolute', bottom: 16, left: '22%',
+        transform: 'translateX(-50%)', width: 136, height: 178, zIndex: 3 }}>
         <ParceroSVG state={parceroState}/>
       </div>
 
@@ -6060,7 +6124,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     ctaTextColor = '#fff'; ctaAction = () => onGoTab('icfes');
   }
 
-  // 2 chips contextuales (el CTA ya cubre una acción)
+  // 2 chips contextuales
   const chips = ctaIcon === 'rana'
     ? [{ label: 'Leer', icon: 'book', color: '#2D8A5E', tab: 'books' },
        { label: 'El Combo', icon: 'swords', color: '#C1553B', tab: 'friends' }]
@@ -6068,8 +6132,6 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
        { label: 'El Combo', icon: 'swords', color: '#C1553B', tab: 'friends' }];
 
   // Gancho social
-  const myCorrectas = rankInfo?.myCorrectas
-    ?? (appState.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0);
   let socialText = null;
   if (rankInfo) {
     if (rankInfo.pos === 1)
@@ -6077,8 +6139,40 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     else if (rankInfo.aheadGap !== null && rankInfo.aheadGap <= 5)
       socialText = `Pispe: el #${rankInfo.pos - 1} te lleva solo ${rankInfo.aheadGap} aciertos — ¡ya lo soplas!`;
     else
-      socialText = `Vas #${rankInfo.pos} de ${rankInfo.total} — ¡dale que el ICFES no espera, parce!`;
+      socialText = `Vas #${rankInfo.pos} de ${rankInfo.total} — ¡dale que el ICFES no espera!`;
   }
+
+  // Racha
+  const streak = appState.streakDays || 0;
+  const streakColor = streak >= 30 ? '#EF4444' : streak >= 7 ? '#E8743A' : '#F59E0B';
+
+  // Últimos 7 días de actividad (para dots de racha)
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    const ds = d.toDateString();
+    return (appState.icfesHistory || []).some(r => r.date === ds || (r.ts && new Date(r.ts).toDateString() === ds))
+      || (ds === today && appState.yourConfirmed);
+  });
+
+  // Misión más cercana a completarse
+  const allMissions = generateDailyMissions(today);
+  const rewarded = appState.missionsRewarded || [];
+  const nearestMission = allMissions
+    .filter(m => !rewarded.includes(m.id))
+    .map(m => ({ ...m, progress: getMissionProgress(m, appState), pct: getMissionProgress(m, appState) / m.target }))
+    .sort((a, b) => b.pct - a.pct)[0] || null;
+  const nearestCanCollect = nearestMission && nearestMission.progress >= nearestMission.target;
+
+  // Último simulacro
+  const icfesHist = appState.icfesHistory || [];
+  const lastSim = icfesHist.length > 0 ? icfesHist[icfesHist.length - 1] : null;
+  const lastSimDaysAgo = lastSim?.ts ? Math.floor((Date.now() - lastSim.ts) / 86400000) : null;
+  const lastSimColor = !lastSim ? C.textMuted
+    : (lastSim.correct || 0) >= 8 ? '#2D8A5E'
+    : (lastSim.correct || 0) >= 5 ? '#2E86AB'
+    : (lastSim.correct || 0) >= 3 ? '#E8743A' : '#EF4444';
+
+  const divider = <div style={{ height: 1, background: `${C.border}44`, margin: '0 14px' }}/>;
 
   return (
     <div className="fi" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -6096,66 +6190,180 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           onPointerUp={() => setCtaPressed(false)}
           onPointerLeave={() => setCtaPressed(false)}
           style={{
-            width: '100%', padding: '15px 20px',
-            background: ctaBg,
-            border: 'none',
+            width: '100%', padding: '16px 20px',
+            background: ctaBg, border: 'none',
             borderBottom: ctaDone ? `3px solid ${ctaBorder}` : ctaPressed ? `2px solid ${ctaBorder}` : `5px solid ${ctaBorder}`,
-            borderRadius: 20,
-            fontSize: 15, fontWeight: 800,
-            color: ctaTextColor,
-            cursor: ctaDone ? 'default' : 'pointer',
+            borderRadius: 20, fontSize: 15, fontWeight: 800,
+            color: ctaTextColor, cursor: ctaDone ? 'default' : 'pointer',
             fontFamily: 'inherit',
             transform: ctaPressed ? 'translateY(3px)' : 'translateY(0)',
             transition: 'transform 0.08s ease, border-bottom 0.08s ease',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
           }}>
-          <PkIc n={ctaIcon} s={18} c={ctaTextColor}/>
+          <PkIc n={ctaIcon} s={20} c={ctaTextColor}/>
           {ctaLabel}
         </button>
       </div>
 
-      {/* ── 2 CHIPS CONTEXTUALES ── */}
-      <div style={{ display: 'flex', gap: 10, padding: '12px 14px 0' }}>
-        {chips.map(({ label, icon, color, tab }) => (
-          <ChipBtn key={tab} label={label} icon={icon} color={color} onPress={() => onGoTab(tab)}/>
-        ))}
-      </div>
-
-      {/* ── GANCHO SOCIAL — una línea, no una tarjeta ── */}
+      {/* ── GANCHO SOCIAL — arriba de los chips, con acento dorado ── */}
       {socialText && (
         <button onClick={() => onGoTab('friends')} style={{
-          margin: '9px 14px 0',
-          background: 'none', border: 'none', padding: '4px 2px',
-          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          display: 'flex', alignItems: 'center', gap: 6,
+          margin: '10px 14px 0',
+          background: `linear-gradient(90deg, ${C.accent}10, transparent)`,
+          border: 'none', borderLeft: `3px solid ${C.accent}`,
+          borderRadius: '0 10px 10px 0',
+          padding: '9px 14px', cursor: 'pointer', fontFamily: 'inherit',
+          textAlign: 'left', width: 'calc(100% - 28px)',
+          display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <PkIc n="star" s={13} c="#2E86AB"/>
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, lineHeight: 1.4 }}>
+          <PkIc n="star" s={14} c={C.accent}/>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.3 }}>
             {socialText}
           </span>
         </button>
       )}
 
-      {/* ── BARRA DE PULSO — 3 secciones con íconos ── */}
+      {/* ── 2 CHIPS CONTEXTUALES ── */}
+      <div style={{ display: 'flex', gap: 10, padding: '10px 14px 0' }}>
+        {chips.map(({ label, icon, color, tab }) => (
+          <ChipBtn key={tab} label={label} icon={icon} color={color} onPress={() => onGoTab(tab)}/>
+        ))}
+      </div>
+
+      {divider && <div style={{ height: 1, background: `${C.border}44`, margin: '10px 14px 0' }}/>}
+
+      {/* ── RACHA DESTACADA ── */}
+      {streak > 0 && (
+        <div style={{
+          margin: '6px 14px 0', padding: '10px 14px',
+          background: `linear-gradient(90deg, ${streakColor}12, ${streakColor}04)`,
+          borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <PkIc n="flame" s={26} c={streakColor}/>
+          <span style={{ fontSize: 30, fontWeight: 900, color: streakColor, lineHeight: 1 }}>{streak}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: `${streakColor}AA` }}>
+            {streak === 1 ? 'día de racha' : 'días de racha'}
+          </span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+            {last7.map((active, i) => (
+              <div key={i} style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: active ? '#2D8A5E' : `${C.border}88`,
+              }}/>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── PRÓXIMA MISIÓN ── */}
+      {nearestMission && (
+        <div style={{ margin: '6px 14px 0', padding: '9px 12px',
+          background: nearestCanCollect ? `rgba(45,138,94,0.10)` : C.bgAlt,
+          borderRadius: 12,
+          border: nearestCanCollect ? '1px solid rgba(45,138,94,0.3)' : 'none',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PkIc n="swords" s={14} c={nearestCanCollect ? '#2D8A5E' : C.textMuted}/>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: nearestCanCollect ? '#2D8A5E' : C.text,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {nearestMission.text}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: nearestCanCollect ? '#2D8A5E' : C.textMuted,
+              whiteSpace: 'nowrap' }}>
+              {nearestMission.progress}/{nearestMission.target}
+            </span>
+          </div>
+          <div style={{ height: 4, background: `${C.border}66`, borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.min(100, Math.round(nearestMission.pct * 100))}%`,
+              background: nearestCanCollect ? '#2D8A5E' : C.accent,
+              borderRadius: 99, transition: 'width 0.5s ease',
+              animation: nearestCanCollect ? 'logGlow 1.2s ease-in-out infinite' : 'none',
+            }}/>
+          </div>
+        </div>
+      )}
+
+      {/* ── ÚLTIMO SIMULACRO ── */}
+      {lastSim && (
+        <button onClick={() => onGoTab('icfes')} style={{
+          margin: '4px 14px 0', padding: '8px 12px',
+          background: 'none', border: 'none', borderRadius: 10,
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <PkIc n="rana" s={14} c={lastSimColor}/>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, flex: 1 }}>
+            Último simulacro:{' '}
+            <span style={{ color: lastSimColor, fontWeight: 800 }}>
+              {lastSim.correct || 0} aciertos
+            </span>
+            {lastSimDaysAgo !== null && lastSimDaysAgo >= 0 && (
+              <span style={{ color: C.textMuted, fontWeight: 500 }}>
+                {' '}· {lastSimDaysAgo === 0 ? 'hoy' : lastSimDaysAgo === 1 ? 'ayer' : `hace ${lastSimDaysAgo} días`}
+              </span>
+            )}
+          </span>
+          <PkIc n="right" s={10} c={C.textMuted}/>
+        </button>
+      )}
+
+      {/* ── LIBRO ACTIVO ── */}
+      {currentBook && (() => {
+        const prog = appState.bookProgress?.[currentBook.id] || 0;
+        return (
+          <button onClick={() => onGoTab('books')} style={{
+            margin: '4px 14px 0', padding: '8px 12px',
+            background: 'none', border: 'none', borderRadius: 10,
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <PkIc n="book" s={14} c="#2D8A5E"/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.text,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentBook.title}
+              </div>
+              <div style={{ height: 3, background: `${C.border}66`, borderRadius: 99, marginTop: 3 }}>
+                <div style={{ height: '100%', width: `${prog}%`,
+                  background: '#2D8A5E', borderRadius: 99 }}/>
+              </div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#2D8A5E', whiteSpace: 'nowrap' }}>
+              {Math.round(prog)}%
+            </span>
+            <PkIc n="right" s={10} c={C.textMuted}/>
+          </button>
+        );
+      })()}
+
+      {/* ── BARRA DE PULSO — 3 secciones, todas tocables ── */}
       <div style={{ display: 'flex', alignItems: 'stretch',
-        borderTop: `1px solid ${C.border}55`,
+        borderTop: `1px solid ${C.border}44`,
         margin: '8px 14px 0', paddingTop: 2 }}>
         <button onClick={() => onGoTab('friends')} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
           background: 'none', border: 'none', padding: '8px 0',
           cursor: 'pointer', fontFamily: 'inherit',
-        }}>
+          opacity: 1, transition: 'opacity 0.12s',
+        }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
+           onPointerUp={e => e.currentTarget.style.opacity='1'}
+           onPointerLeave={e => e.currentTarget.style.opacity='1'}>
           <PkIc n="star" s={13} c="#2E86AB"/>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#2E86AB' }}>
             {rankInfo ? `#${rankInfo.pos}` : '—'}
           </span>
         </button>
         <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
-        <button onClick={() => {}} style={{
+        <button onClick={() => onGoTab('perfil')} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
           background: 'none', border: 'none', padding: '8px 0',
-          cursor: 'default', fontFamily: 'inherit',
-        }}>
+          cursor: 'pointer', fontFamily: 'inherit',
+          opacity: 1, transition: 'opacity 0.12s',
+        }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
+           onPointerUp={e => e.currentTarget.style.opacity='1'}
+           onPointerLeave={e => e.currentTarget.style.opacity='1'}>
           <PkIc n="sombrero" s={13} c={C.accent}/>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>Nv.{lvl.level}</span>
         </button>
@@ -6164,7 +6372,10 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
           background: 'none', border: 'none', padding: '8px 0',
           cursor: 'pointer', fontFamily: 'inherit',
-        }}>
+          opacity: 1, transition: 'opacity 0.12s',
+        }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
+           onPointerUp={e => e.currentTarget.style.opacity='1'}
+           onPointerLeave={e => e.currentTarget.style.opacity='1'}>
           <PkIc n="empanada" s={13} c={C.amberMid}/>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.amberMid }}>Tienda</span>
         </button>
