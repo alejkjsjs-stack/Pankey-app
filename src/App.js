@@ -290,6 +290,17 @@ button:active { transform: scale(0.95); opacity: 0.88; }
   0%, 100% { transform: scale(1) rotate(-1deg); filter: drop-shadow(0 0 20px #F59E0B) drop-shadow(0 0 40px #EF4444); }
   50%       { transform: scale(1.06) rotate(1deg); filter: drop-shadow(0 0 30px #FBBF24) drop-shadow(0 0 60px #F59E0B); }
 }
+@keyframes parceroBreath { 0%,100%{transform:scale(0.97) translateY(0px);} 50%{transform:scale(1.03) translateY(-2px);} }
+@keyframes parceroWave { 0%{transform:rotate(0deg);} 30%{transform:rotate(-22deg);} 70%{transform:rotate(13deg);} 100%{transform:rotate(0deg);} }
+@keyframes sparkRise { 0%{transform:translate(0,0) scale(1);opacity:1;} 100%{transform:translate(var(--sx),var(--sy)) scale(0);opacity:0;} }
+@keyframes starTwinkle { 0%,100%{opacity:0.28;} 50%{opacity:0.82;} }
+@keyframes zzz { 0%{opacity:0;transform:translate(0,0) scale(0.5);} 30%{opacity:1;} 100%{opacity:0;transform:translate(8px,-22px) scale(1.1);} }
+@keyframes mordorGlow { 0%,100%{opacity:0.35;} 50%{opacity:0.68;} }
+@keyframes logFlyToFire { 0%{transform:translate(0,0) rotate(0deg);opacity:1;} 60%{opacity:1;} 100%{transform:translate(var(--tx),var(--ty)) rotate(-55deg);opacity:0;} }
+@keyframes ashSmoke { 0%{opacity:0;transform:translateX(-50%) scaleX(1) translateY(0);} 30%{opacity:0.35;} 100%{opacity:0;transform:translateX(-50%) scaleX(1.8) translateY(-28px);} }
+@keyframes cloudDrift { 0%,100%{transform:translateX(0px);} 50%{transform:translateX(10px);} }
+@keyframes ctaPulse { 0%,88%,100%{transform:scale(1);}94%{transform:scale(1.025);} }
+@keyframes logGlow { 0%,100%{opacity:0.6;}50%{opacity:1;} }
 `;
 
 
@@ -5400,20 +5411,612 @@ function SabioLoading({ C }) {
   );
 }
 // ─────────────────────────────────────────────
-//  INICIO TAB — El hogar de Pankey (racha, misiones, gancho social, tienda)
+//  PARCERO SVG — Mascota stick figure con sombrero vueltiao
+// ─────────────────────────────────────────────
+function ParceroSVG({ state = 'sitting' }) {
+  const [blink, setBlink] = useState(false);
+  useEffect(() => {
+    let timer;
+    const tick = () => {
+      setBlink(true);
+      setTimeout(() => setBlink(false), 140);
+      timer = setTimeout(tick, 4000 + Math.random() * 3500);
+    };
+    timer = setTimeout(tick, 4500 + Math.random() * 2000);
+    return () => clearTimeout(timer);
+  }, []);
+  // Parcero waves periodically in calm states
+  const [waving, setWaving] = useState(false);
+  useEffect(() => {
+    if (state !== 'sitting' && state !== 'happy') return;
+    let t;
+    const cycle = () => {
+      setWaving(true);
+      setTimeout(() => setWaving(false), 1400);
+      t = setTimeout(cycle, 5000 + Math.random() * 4000);
+    };
+    t = setTimeout(cycle, 3000 + Math.random() * 2000);
+    return () => clearTimeout(t);
+  }, [state]);
+
+  const W = '#F5F2EB'; // Blanco hueso
+  const G = '#D4AF37'; // Oro tumbaga
+  const B = '#6B4A1E'; // Marrón oscuro sombrero
+
+  const eyes = blink
+    ? <>
+        <line x1="53" y1="30" x2="60" y2="30" stroke={W} strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="67" y1="30" x2="74" y2="30" stroke={W} strokeWidth="2.5" strokeLinecap="round"/>
+      </>
+    : state === 'sleeping'
+    ? <>
+        <path d="M52 28 L57 33 M57 28 L52 33" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M68 28 L73 33 M73 28 L68 33" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
+      </>
+    : (state === 'happy' || state === 'celebrating')
+    ? <>
+        <path d="M52 31 Q56 27 60 31" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>
+        <path d="M67 31 Q71 27 75 31" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>
+      </>
+    : state === 'worried'
+    ? <>
+        <circle cx="56" cy="30" r="2.2" fill={W}/>
+        <circle cx="71" cy="30" r="2.2" fill={W}/>
+        <path d="M50 25 L57 28" stroke={W} strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M70 28 L77 25" stroke={W} strokeWidth="1.5" strokeLinecap="round"/>
+      </>
+    : <>
+        <circle cx="56" cy="29" r="2.2" fill={W}/>
+        <circle cx="71" cy="29" r="2.2" fill={W}/>
+      </>;
+
+  const mouth = state === 'sleeping'
+    ? <path d="M57 38 Q63 41 69 38" stroke={W} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    : state === 'happy'
+    ? <path d="M52 37 Q63 44 74 37" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+    : state === 'celebrating'
+    ? <path d="M51 36 Q63 46 75 36" stroke={W} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+    : state === 'worried'
+    ? <path d="M56 41 Q63 37 70 41" stroke={W} strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+    : <path d="M56 38 Q63 42 70 38" stroke={W} strokeWidth="1.8" fill="none" strokeLinecap="round"/>;
+
+  const sw = 2.4;
+  let body;
+  if (state === 'celebrating') {
+    body = <>
+      <line x1="63" y1="45" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M63 62 L38 34 L30 23" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 62 L88 34 L96 23" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M50 92 L40 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <path d="M76 92 L86 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+    </>;
+  } else if (state === 'sleeping') {
+    body = <>
+      <path d="M63 45 Q60 65 58 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
+      <path d="M62 62 L42 78 L36 70" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M62 62 L84 74 L88 66" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="46" y1="92" x2="72" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M46 92 L28 104 L18 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M72 92 L90 104 L100 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </>;
+  } else if (state === 'worried') {
+    body = <>
+      <path d="M63 45 Q60 68 63 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
+      <path d="M63 65 L44 73 L38 64" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 60 L78 52 L82 43" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M50 92 L32 104 L22 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 92 L94 104 L104 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </>;
+  } else if (state === 'happy') {
+    body = <>
+      <line x1="63" y1="45" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M63 62 L42 50 L36 42" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <g style={armWaveStyle}>
+        <path d="M63 62 L84 50 L90 42" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      </g>
+      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M50 92 L32 104 L22 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 92 L94 104 L104 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </>;
+  } else if (state === 'coffee') {
+    body = <>
+      <line x1="63" y1="45" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M63 62 L42 78 L36 70" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M63 62 L88 70 L94 63" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="91" y="58" width="12" height="10" rx="2" fill="none" stroke={W} strokeWidth="1.6"/>
+      <path d="M103 62 Q108 64 103 68" stroke={W} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+      <path d="M95 56 Q97 51 95 46" stroke={W} strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.5" style={{animation:'steamRise 2s ease-in-out infinite'}}/>
+      <path d="M100 57 Q102 51 100 45" stroke={W} strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.4" style={{animation:'steamRise 2.5s ease-in-out infinite 0.4s'}}/>
+      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M50 92 L32 104 L22 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 92 L94 104 L104 94" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </>;
+  } else {
+    // sitting — sentado con piernas dobladas, mano derecha al fuego
+    body = <>
+      {/* Torso */}
+      <line x1="63" y1="46" x2="63" y2="88" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      {/* Brazo izquierdo descansando en la rodilla */}
+      <path d="M63 64 L44 80 L40 76" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Brazo derecho hacia el fuego — calentándose */}
+      <g style={armWaveStyle}>
+        <path d="M63 64 L98 78 L114 72" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      </g>
+      {/* Caderas */}
+      <line x1="48" y1="88" x2="78" y2="88" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      {/* Pierna izquierda doblada (muslo + espinilla cruzada) */}
+      <path d="M48 88 Q30 98 26 112" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <path d="M26 112 Q38 122 62 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      {/* Pierna derecha doblada (muslo + espinilla) */}
+      <path d="M78 88 Q96 98 100 112" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+      <path d="M100 112 Q88 122 64 116" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+    </>;
+  }
+
+  const armWaveStyle = {
+    animation: waving ? 'parceroWave 0.9s ease-in-out' : 'none',
+    transformOrigin: '63px 62px',
+  };
+
+  const hatTransform = state === 'sleeping' ? 'rotate(18 63 18)' : undefined;
+
+  return (
+    <svg viewBox="0 0 126 130" xmlns="http://www.w3.org/2000/svg"
+      style={{ width: '100%', height: '100%', overflow: 'visible',
+        animation: 'parceroBreath 4.5s ease-in-out infinite',
+        transformOrigin: '50% 70%' }}>
+      <g transform={hatTransform}>
+        <path d="M46 18 Q46 4 63 4 Q80 4 80 18" fill={G} stroke={B} strokeWidth="0.8"/>
+        <rect x="46" y="13" width="34" height="4.5" rx="1" fill={B}/>
+        <path d="M47 15 L51 13.5 L55 15 L59 13.5 L63 15 L67 13.5 L71 15 L75 13.5 L79 15"
+          stroke={W} strokeWidth="0.9" fill="none" opacity="0.6"/>
+        <ellipse cx="63" cy="18" rx="21" ry="4.5" fill={G} stroke={B} strokeWidth="0.7"/>
+      </g>
+      <circle cx="63" cy="33" r="13" fill="none" stroke={W} strokeWidth="2.5"/>
+      {/* Rubor cálido del fuego en mejillas */}
+      {state !== 'sleeping' && <>
+        <ellipse cx="47" cy="37" rx="7" ry="4" fill="#E8743A" opacity="0.18"/>
+        <ellipse cx="79" cy="37" rx="7" ry="4" fill="#E8743A" opacity="0.18"/>
+      </>}
+      {eyes}
+      {/* Reflejo del fuego en los ojos */}
+      {!blink && state !== 'sleeping' && <>
+        <circle cx="57" cy="28" r="1" fill="#F59E0B" opacity="0.55"/>
+        <circle cx="72" cy="28" r="1" fill="#F59E0B" opacity="0.55"/>
+      </>}
+      {mouth}
+      {body}
+      {state === 'sleeping' && <>
+        <text x="76" y="26" fontSize="8" fill={W} opacity="0.7"
+          style={{animation:'zzz 2.2s ease-in-out infinite', fontFamily:'sans-serif', fontWeight:700}}>z</text>
+        <text x="84" y="15" fontSize="11" fill={W} opacity="0.8"
+          style={{animation:'zzz 2.2s ease-in-out infinite 0.55s', fontFamily:'sans-serif', fontWeight:700}}>z</text>
+        <text x="94" y="3" fontSize="14" fill={W} opacity="0.9"
+          style={{animation:'zzz 2.2s ease-in-out infinite 1.1s', fontFamily:'sans-serif', fontWeight:700}}>Z</text>
+      </>}
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  FOGATA SVG — Fuego animado proporcional a la racha
+// ─────────────────────────────────────────────
+function FogataSVG({ streakDays }) {
+  const s = streakDays || 0;
+  // 2x bigger than before — protagonista visual de la escena
+  const fw = s === 0 ? 0 : s <= 2 ? 56 : s <= 6 ? 86 : s <= 13 ? 116 : s <= 29 ? 144 : 172;
+  const fh = s === 0 ? 0 : s <= 2 ? 82 : s <= 6 ? 122 : s <= 13 ? 168 : s <= 29 ? 210 : 256;
+  const isLegendary = s >= 30;
+  const outerColor  = isLegendary ? '#FF6B00' : '#EF4444';
+  const midColor    = isLegendary ? '#FF9500' : '#F59E0B';
+  const innerColor  = isLegendary ? '#FFD700' : '#FBBF24';
+
+  if (s === 0) {
+    return (
+      <div style={{ position: 'relative', width: 70, height: 38 }}>
+        <div style={{ position: 'absolute', top: 0, left: '45%',
+          width: 6, height: 18, borderRadius: 3,
+          background: 'radial-gradient(ellipse, rgba(130,120,110,0.5), transparent)',
+          animation: 'ashSmoke 2.8s ease-out infinite' }}/>
+        <div style={{ position: 'absolute', top: 2, left: '32%',
+          width: 4, height: 14, borderRadius: 3,
+          background: 'radial-gradient(ellipse, rgba(130,120,110,0.35), transparent)',
+          animation: 'ashSmoke 2.8s ease-out infinite 0.9s' }}/>
+        <div style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', width: 58 }}>
+          <div style={{ position: 'absolute', bottom: 0, left: '5%', width: '58%', height: 8,
+            background: '#3D2E20', borderRadius: 4,
+            transform: 'rotate(-18deg)', transformOrigin: 'right center' }}/>
+          <div style={{ position: 'absolute', bottom: 0, right: '5%', width: '58%', height: 8,
+            background: '#3D2E20', borderRadius: 4,
+            transform: 'rotate(18deg)', transformOrigin: 'left center' }}/>
+          <div style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)',
+            width: 38, height: 5, background: 'radial-gradient(ellipse, #706060, #504848)',
+            borderRadius: '50%' }}/>
+        </div>
+      </div>
+    );
+  }
+
+  const containerW = fw + 40;
+  return (
+    <div style={{ position: 'relative', width: containerW, height: fh + 26 }}>
+      {/* Resplandor */}
+      <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: fw * 2.8, height: fh * 1.4, pointerEvents: 'none',
+        background: `radial-gradient(ellipse at 50% 80%, ${outerColor}32, ${outerColor}14, transparent 62%)`,
+        animation: 'mordorGlow 2.2s ease-in-out infinite' }}/>
+      {/* Llama exterior */}
+      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+        width: fw, height: fh, transformOrigin: 'bottom center',
+        background: `linear-gradient(180deg, ${outerColor}00 0%, ${outerColor} 55%, ${outerColor} 100%)`,
+        borderRadius: '42% 58% 40% 60% / 55% 45% 55% 45%',
+        animation: 'fireDistort 1.4s ease-in-out infinite, flameFlicker 0.9s ease-in-out infinite' }}/>
+      {/* Llama media */}
+      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+        width: fw * 0.72, height: fh * 0.73, transformOrigin: 'bottom center',
+        background: `linear-gradient(180deg, ${midColor}00 0%, ${midColor} 55%, ${outerColor} 100%)`,
+        borderRadius: '44% 56% 42% 58% / 58% 42% 58% 42%',
+        animation: 'fireDistort 1.05s ease-in-out infinite 0.18s, flameFlicker 0.9s ease-in-out infinite 0.3s' }}/>
+      {/* Llama interior */}
+      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+        width: fw * 0.46, height: fh * 0.5, transformOrigin: 'bottom center',
+        background: `linear-gradient(180deg, ${innerColor}00 0%, ${innerColor} 60%, ${midColor} 100%)`,
+        borderRadius: '48% 52% 44% 56% / 60% 40% 60% 40%',
+        animation: 'fireDistort 0.8s ease-in-out infinite 0.28s' }}/>
+      {/* Núcleo */}
+      <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+        width: fw * 0.22, height: fh * 0.26, transformOrigin: 'bottom center',
+        background: `linear-gradient(180deg, #FFFDE7 0%, ${innerColor} 100%)`,
+        borderRadius: '50%', opacity: 0.88,
+        animation: 'fireDistort 0.6s ease-in-out infinite 0.08s' }}/>
+      {/* Leños */}
+      <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', width: fw + 16 }}>
+        <div style={{ position: 'absolute', bottom: 0, left: '5%', width: '58%', height: 9,
+          background: 'linear-gradient(90deg, #6B4A28, #4A3220)', borderRadius: 4,
+          transform: 'rotate(-22deg)', transformOrigin: 'right center' }}/>
+        <div style={{ position: 'absolute', bottom: 0, right: '5%', width: '58%', height: 9,
+          background: 'linear-gradient(90deg, #4A3220, #6B4A28)', borderRadius: 4,
+          transform: 'rotate(22deg)', transformOrigin: 'left center' }}/>
+      </div>
+      {/* Chispas */}
+      {s >= 3 && [0,1,2,3,4].map(i => (
+        <div key={i} style={{
+          position: 'absolute', bottom: fh * 0.35 + 20,
+          left: `${20 + i * 15}%`,
+          width: i % 2 === 0 ? 3 : 2, height: i % 2 === 0 ? 3 : 2,
+          borderRadius: '50%', pointerEvents: 'none',
+          background: i % 3 === 0 ? '#FBBF24' : i % 3 === 1 ? '#F59E0B' : '#FFF8E0',
+          '--sx': `${(i - 2) * 14}px`, '--sy': `${-38 - i * 9}px`,
+          animation: `sparkRise ${1.1 + i * 0.25}s ease-out infinite ${i * 0.38}s`,
+        }}/>
+      ))}
+      {/* Chispas legendarias */}
+      {isLegendary && [0,1,2,3,4,5,6].map(i => (
+        <div key={`lg${i}`} style={{
+          position: 'absolute', bottom: fh * 0.5 + 20,
+          left: `${8 + i * 12}%`,
+          width: 4, height: 4, borderRadius: '50%', pointerEvents: 'none',
+          background: i % 2 === 0 ? '#FFD700' : '#FFF',
+          '--sx': `${(i - 3) * 20}px`, '--sy': `${-55 - i * 8}px`,
+          animation: `sparkRise ${0.9 + i * 0.2}s ease-out infinite ${i * 0.25}s`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  LEÑITO SVG — Un leñito que representa una misión
+// ─────────────────────────────────────────────
+function LeñitoSVG({ done, canCollect }) {
+  const logFill  = done ? '#6B5A4A' : '#4A3828';
+  const dotFill  = done ? '#2D8A5E' : canCollect ? '#F2B705' : '#554A42';
+  const glowFilt = canCollect ? 'drop-shadow(0 0 5px rgba(242,183,5,0.7))' : 'none';
+  return (
+    <svg viewBox="0 0 46 24" xmlns="http://www.w3.org/2000/svg"
+      style={{ width: 54, height: 28, display: 'block', filter: glowFilt }}>
+      <rect x="6" y="9" width="34" height="10" rx="5" fill={logFill}/>
+      <ellipse cx="6" cy="14" rx="4" ry="5" fill="#5D4A38" stroke="#3D2E20" strokeWidth="0.8"/>
+      <ellipse cx="6" cy="14" rx="2.2" ry="3" fill="none" stroke="#3D2E2040" strokeWidth="0.7"/>
+      <ellipse cx="40" cy="14" rx="4" ry="5" fill="#5D4A38" stroke="#3D2E20" strokeWidth="0.8"/>
+      <ellipse cx="40" cy="14" rx="2.2" ry="3" fill="none" stroke="#3D2E2040" strokeWidth="0.7"/>
+      <circle cx="23" cy="5" r="4" fill={dotFill}/>
+      {done && <path d="M20.5 5 L22.5 7 L26 3" stroke="#fff" strokeWidth="1.5" fill="none"
+        strokeLinecap="round" strokeLinejoin="round"/>}
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  LEÑITOS MISIONES — 3 leños que representan las misiones del día
+// ─────────────────────────────────────────────
+function LeñitosMisiones({ appState, setAppState, onMissionReward }) {
+  const [activeIdx, setActiveIdx] = useState(null);
+  const [flyingIdx, setFlyingIdx] = useState(null);
+  const today    = todayStr();
+  const missions = generateDailyMissions(today);
+  const rewarded = appState.missionsRewarded || [];
+
+  useEffect(() => {
+    if (appState.missionsDate !== today && rewarded.length > 0) {
+      setAppState(s => ({ ...s, missionsDate: today, missionsRewarded: [] }));
+    }
+  }, [today]);
+
+  const collectMission = (m, idx) => {
+    if (rewarded.includes(m.id)) return;
+    setFlyingIdx(idx);
+    FX.play('levelUp'); FX.vibrate('success');
+    setTimeout(() => {
+      setFlyingIdx(null);
+      setActiveIdx(null);
+      setAppState(s => ({
+        ...s,
+        ryo: (s.ryo || 0) + m.ryo,
+        xp:  (s.xp  || 0) + m.xp,
+        missionsDate: today,
+        missionsRewarded: [...(s.missionsRewarded || []), m.id],
+      }));
+      onMissionReward?.(m.ryo, m.xp);
+    }, 700);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'flex-end', position: 'relative' }}>
+      {missions.map((m, i) => {
+        const progress   = getMissionProgress(m, appState);
+        const isDone     = progress >= m.target;
+        const isRewarded = rewarded.includes(m.id);
+        const canCollect = isDone && !isRewarded;
+        const isActive   = activeIdx === i;
+        const isFlying   = flyingIdx === i;
+        return (
+          <div key={m.id} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            {/* Tooltip arriba del leño */}
+            {isActive && !isFlying && (
+              <div style={{
+                position: 'absolute', bottom: '115%', left: '50%', transform: 'translateX(-50%)',
+                width: 152, zIndex: 20,
+                background: 'rgba(14,12,11,0.97)',
+                border: `1px solid ${canCollect ? '#2D8A5E66' : '#3D383566'}`,
+                borderRadius: 12, padding: '10px 11px',
+                animation: 'fadeUp 0.15s ease both',
+                backdropFilter: 'blur(12px)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#F5F2EB', marginBottom: 6, lineHeight: 1.35 }}>{m.text}</div>
+                <div style={{ height: 3, background: '#2A2624', borderRadius: 99, overflow: 'hidden', marginBottom: 4 }}>
+                  <div style={{ height: '100%',
+                    width: `${Math.min(100, Math.round((progress / m.target) * 100))}%`,
+                    background: isDone ? '#2D8A5E' : '#D4AF37', borderRadius: 99,
+                    transition: 'width 0.5s ease' }}/>
+                </div>
+                <div style={{ fontSize: 10, color: '#A39C95' }}>{progress}/{m.target}</div>
+                {canCollect && (
+                  <button onClick={() => collectMission(m, i)} style={{
+                    marginTop: 7, width: '100%', padding: '6px 0',
+                    background: '#2D8A5E', border: 'none', borderRadius: 8,
+                    color: '#fff', fontSize: 11, fontWeight: 800,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}>¡Cobrar! +{m.ryo} emp.</button>
+                )}
+              </div>
+            )}
+            {/* Botón leñito */}
+            <button
+              onClick={() => setActiveIdx(isActive ? null : i)}
+              style={{
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'block',
+                ...(isFlying ? {
+                  '--tx': '0px', '--ty': '-80px',
+                  animation: 'logFlyToFire 0.7s ease-in forwards',
+                } : {}),
+              }}
+            >
+              <LeñitoSVG done={isRewarded} canCollect={canCollect}/>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  PÁRAMO BIOMA SVG — Noche de páramo colombiano (siempre nocturno)
+// ─────────────────────────────────────────────
+function ParamoBiomaSVG() {
+  const STARS = [
+    [6,4],[14,9],[22,6],[33,3],[41,8],[52,4],[61,7],[72,3],[80,6],[88,9],[92,4],[97,7],
+    [3,12],[10,15],[18,12],[26,18],[35,14],[45,11],[55,16],[65,12],[75,15],[85,12],[95,16],
+    [8,22],[19,25],[30,20],[42,24],[53,19],[63,23],[74,20],[84,25],[90,22],
+    [12,30],[24,28],[38,32],[50,27],[68,30],[82,28],[96,32],
+  ];
+  return (
+    <svg viewBox="0 0 430 285" xmlns="http://www.w3.org/2000/svg"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+      preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="pkSkyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#0a0e1a"/>
+          <stop offset="55%"  stopColor="#0d1322"/>
+          <stop offset="100%" stopColor="#16201A"/>
+        </linearGradient>
+        <radialGradient id="pkFireGlow" cx="50%" cy="84%" r="45%">
+          <stop offset="0%"   stopColor="#E8743A" stopOpacity="0.22"/>
+          <stop offset="45%"  stopColor="#E8743A" stopOpacity="0.09"/>
+          <stop offset="100%" stopColor="#E8743A" stopOpacity="0"/>
+        </radialGradient>
+        <radialGradient id="pkMoonGlow" cx="86%" cy="14%" r="18%">
+          <stop offset="0%"   stopColor="#FFF8DC" stopOpacity="0.14"/>
+          <stop offset="100%" stopColor="#FFF8DC" stopOpacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect x="0" y="0" width="430" height="285" fill="url(#pkSkyGrad)"/>
+      {/* Halo lunar */}
+      <rect x="0" y="0" width="430" height="285" fill="url(#pkMoonGlow)"/>
+      {/* Luna llena */}
+      <circle cx="374" cy="44" r="18" fill="#FFF8DC" opacity="0.88"/>
+      <circle cx="374" cy="44" r="14" fill="#FFFEF5" opacity="0.95"/>
+      {/* Cráteres sutiles en la luna */}
+      <circle cx="368" cy="40" r="3" fill="#F0E8C0" opacity="0.4"/>
+      <circle cx="378" cy="50" r="2" fill="#F0E8C0" opacity="0.3"/>
+      {/* Estrellas — variedad de tamaños, 1/3 titilan */}
+      {STARS.map(([x,y],i) => (
+        <circle key={i} cx={`${x}%`} cy={`${y}%`}
+          r={0.5 + (i % 5) * 0.38} fill="white"
+          opacity={0.3 + (i % 6) * 0.09}
+          style={i % 3 === 0 ? {animation:`starTwinkle ${3.8+(i%5)*0.9}s ease-in-out infinite ${(i%7)*0.7}s`} : undefined}/>
+      ))}
+      {/* Montañas lejanas — azul-indigo oscuro, borde lunar sutil */}
+      <path d="M0 198 L50 128 L100 162 L160 108 L218 140 L284 97 L338 130 L390 110 L430 122 L430 285 L0 285Z"
+        fill="#1C2040" opacity="0.97"/>
+      {/* Rim de luz lunar en cimas de montañas traseras */}
+      <path d="M0 198 L50 128 L100 162 L160 108 L218 140 L284 97 L338 130 L390 110 L430 122"
+        fill="none" stroke="#3A3860" strokeWidth="1.5" opacity="0.5"/>
+      {/* Montañas medias — violeta-azul, más visibles */}
+      <path d="M0 218 L68 160 L128 185 L192 154 L258 172 L318 150 L372 166 L430 157 L430 285 L0 285Z"
+        fill="#2C1E42" opacity="0.97"/>
+      {/* Neblina del páramo */}
+      <ellipse cx="215" cy="238" rx="240" ry="20" fill="white" opacity="0.035"
+        style={{animation:'cloudDrift 22s ease-in-out infinite'}}/>
+      <ellipse cx="180" cy="252" rx="210" ry="14" fill="white" opacity="0.025"
+        style={{animation:'cloudDrift 28s ease-in-out infinite 8s'}}/>
+      <ellipse cx="215" cy="250" rx="242" ry="16" fill="#120E1A" opacity="0.6"/>
+      {/* Frailejones izquierda — siluetas oscuras con toque verdoso */}
+      <rect x="18" y="218" width="6" height="44" rx="3" fill="#0C1A0C"/>
+      <ellipse cx="21" cy="215" rx="11" ry="9" fill="#102014"/>
+      <ellipse cx="17" cy="209" rx="6.5" ry="5" fill="#0C1A0C"/>
+      <rect x="8" y="228" width="5" height="34" rx="2.5" fill="#0C1A0C"/>
+      <ellipse cx="10" cy="225" rx="8.5" ry="7" fill="#102014"/>
+      {/* Frailejón pequeño izq extra */}
+      <rect x="34" y="232" width="4" height="26" rx="2" fill="#0C1A0C"/>
+      <ellipse cx="36" cy="229" rx="7" ry="5.5" fill="#102014"/>
+      {/* Frailejones derecha */}
+      <rect x="352" y="216" width="7" height="48" rx="3.5" fill="#0C1A0C"/>
+      <ellipse cx="355" cy="213" rx="13" ry="10" fill="#102014"/>
+      <ellipse cx="359" cy="208" rx="7" ry="5.5" fill="#0C1A0C"/>
+      <rect x="370" y="222" width="8" height="40" rx="4" fill="#0C1A0C"/>
+      <ellipse cx="374" cy="218" rx="15" ry="11.5" fill="#102014"/>
+      <rect x="396" y="230" width="6" height="30" rx="3" fill="#0C1A0C"/>
+      <ellipse cx="399" cy="227" rx="9" ry="7.5" fill="#102014"/>
+      {/* Suelo */}
+      <ellipse cx="215" cy="279" rx="180" ry="22" fill="#180A06" opacity="0.98"/>
+      {/* Resplandor del fuego pulsando */}
+      <rect x="0" y="0" width="430" height="285" fill="url(#pkFireGlow)"
+        style={{animation:'mordorGlow 2.2s ease-in-out infinite'}}/>
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  CHIP BTN — Chip con efecto 3D (borderBottom)
+// ─────────────────────────────────────────────
+function ChipBtn({ label, icon, color, onPress }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <button
+      onClick={onPress}
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+      style={{
+        flex: 1, padding: '10px 0',
+        background: `${color}15`,
+        border: `1.5px solid ${color}40`,
+        borderBottom: pressed ? `3px solid ${color}70` : `5px solid ${color}50`,
+        borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit',
+        transform: pressed ? 'translateY(2px)' : 'translateY(0)',
+        transition: 'transform 0.08s ease, border-bottom 0.08s ease',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+      }}>
+      <PkIc n={icon} s={15} c={color}/>
+      <span style={{ fontSize: 12, fontWeight: 800, color }}>{label}</span>
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  FOGATA SCENE — Escena completa interactiva
+// ─────────────────────────────────────────────
+function FogataScene({ C, appState, setAppState, onMissionReward }) {
+  const streak  = appState.streakDays || 0;
+  const hora    = new Date().getHours();
+  const today   = todayStr();
+  const missions = generateDailyMissions(today);
+  const completedCount = missions.filter(m => getMissionProgress(m, appState) >= m.target).length;
+
+  const hizoAlgoHoy = appState.yourConfirmed ||
+    (appState.icfesHistory || []).some(r =>
+      r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
+
+  let parceroState = 'sitting';
+  if (hora < 6 && !hizoAlgoHoy)                              parceroState = 'sleeping';
+  else if (hora >= 6 && hora < 10)                           parceroState = 'coffee';
+  else if (completedCount === 3)                             parceroState = 'happy';
+  else if (streak > 0 && !appState.yourConfirmed && hora >= 20) parceroState = 'worried';
+
+  const streakColor = streak >= 30 ? '#FF9500' : streak >= 7 ? '#F59E0B' : '#E8743A';
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: 300,
+      borderRadius: '0 0 28px 28px', overflow: 'hidden' }}>
+      <ParamoBiomaSVG/>
+
+      {/* Fuego — protagonista, centrado en la escena */}
+      <div style={{ position: 'absolute', bottom: 34, left: '50%',
+        transform: 'translateX(-46%)', zIndex: 2 }}>
+        <FogataSVG streakDays={streak}/>
+      </div>
+
+      {/* El Parcero — más grande */}
+      <div style={{ position: 'absolute', bottom: 18, left: '22%',
+        transform: 'translateX(-50%)', width: 128, height: 168, zIndex: 3 }}>
+        <ParceroSVG state={parceroState}/>
+      </div>
+
+      {/* Leñitos en el piso, junto al fuego */}
+      <div style={{ position: 'absolute', bottom: 12, left: '56%', zIndex: 4 }}>
+        <LeñitosMisiones
+          appState={appState}
+          setAppState={setAppState}
+          onMissionReward={onMissionReward}
+        />
+      </div>
+
+      {/* Racha visual en la escena */}
+      <div style={{ position: 'absolute', bottom: 16, right: 14, zIndex: 6,
+        display: 'flex', alignItems: 'flex-end', gap: 3 }}>
+        {streak > 0 ? (
+          <>
+            <PkIc n="flame" s={16} c={streakColor}/>
+            <span style={{ fontSize: 26, fontWeight: 900, color: streakColor, lineHeight: 1,
+              textShadow: `0 0 14px ${streakColor}88` }}>{streak}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: `${streakColor}BB`,
+              marginBottom: 3 }}>días</span>
+          </>
+        ) : (
+          <span style={{ fontSize: 10, fontWeight: 700,
+            color: 'rgba(245,242,235,0.45)', textAlign: 'right', maxWidth: 72 }}>
+            Prende tu fogata
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  INICIO TAB — La Fogata del Parcero
 // ─────────────────────────────────────────────
 function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif }) {
-  const lvl = computeLevel(appState.xp || 0);
-  const streak = appState.streakDays || 0;
+  const lvl         = computeLevel(appState.xp || 0);
   const currentBook = books.find(b => b.id === appState.currentBookId) || null;
-
-  // Posición en el ranking (gancho social)
-  const [rankInfo, setRankInfo] = useState(null); // { pos, total, ahead }
-
-  // Objetos destacados de la tienda (resueltos contra SHOP_ITEMS)
-  const DESTACADOS_TIENDA = (typeof SHOP_ITEMS !== 'undefined')
-    ? DESTACADOS_IDS.map(id => SHOP_ITEMS.find(i => i.id === id)).filter(Boolean)
-    : [];
+  const [rankInfo, setRankInfo] = useState(null);
+  const [ctaPressed, setCtaPressed] = useState(false);
+  const today = todayStr();
 
   useEffect(() => {
     if (!fbOK() || !user?.code) return;
@@ -5422,212 +6025,149 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       const ranked = Object.values(snap.val())
         .map(u => ({
           code: u.code,
-          name: u.name,
           correctas: (u.appState?.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0),
         }))
         .sort((a, b) => b.correctas - a.correctas);
       const myIdx = ranked.findIndex(u => u.code === user.code);
       if (myIdx === -1) return;
-      setRankInfo({
-        pos: myIdx + 1,
-        total: ranked.length,
-        ahead: myIdx > 0 ? ranked[myIdx - 1] : null, // el que está justo arriba
-        myCorrectas: ranked[myIdx].correctas,
-      });
+      const myCorrectas = ranked[myIdx].correctas;
+      const aheadGap = myIdx > 0 ? ranked[myIdx - 1].correctas - myCorrectas : null;
+      setRankInfo({ pos: myIdx + 1, total: ranked.length, myCorrectas, aheadGap });
     }).catch(() => {});
   }, [user?.code]);
-  const hora = new Date().getHours();
-  const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
-  const nombre = user?.name ? user.name.split(' ')[0] : 'Explorador';
 
-  // Intensidad del fuego según la racha
-  const fuego = streak >= 30 ? '#EF4444' : streak >= 7 ? '#F59E0B' : C.amberMid;
+  // ICFES como CTA principal — leer es secundario
+  const hizoSimHoy = (appState.icfesHistory || []).some(r => r.date === today);
+  const todoListo  = hizoSimHoy && appState.yourConfirmed;
+
+  let ctaDone = false, ctaLabel, ctaIcon, ctaBg, ctaBorder, ctaTextColor, ctaAction;
+  if (todoListo) {
+    ctaDone = true;
+    ctaLabel = 'Hoy quedó sellado, descansa parce';
+    ctaIcon = 'check'; ctaBg = C.bgAlt; ctaBorder = C.border;
+    ctaTextColor = C.textMuted; ctaAction = () => {};
+  } else if (!hizoSimHoy) {
+    ctaLabel = 'Échate un simulacro'; ctaIcon = 'rana';
+    ctaBg = '#E8743A'; ctaBorder = '#b85a2a';
+    ctaTextColor = '#fff'; ctaAction = () => onGoTab('icfes');
+  } else if (currentBook) {
+    ctaLabel = 'Seguir leyendo'; ctaIcon = 'book';
+    ctaBg = '#2D8A5E'; ctaBorder = '#1A5238';
+    ctaTextColor = '#fff'; ctaAction = () => onGoTab('books');
+  } else {
+    ctaLabel = 'Échate un simulacro'; ctaIcon = 'rana';
+    ctaBg = '#E8743A'; ctaBorder = '#b85a2a';
+    ctaTextColor = '#fff'; ctaAction = () => onGoTab('icfes');
+  }
+
+  // 2 chips contextuales (el CTA ya cubre una acción)
+  const chips = ctaIcon === 'rana'
+    ? [{ label: 'Leer', icon: 'book', color: '#2D8A5E', tab: 'books' },
+       { label: 'El Combo', icon: 'swords', color: '#C1553B', tab: 'friends' }]
+    : [{ label: 'Simulacro', icon: 'rana', color: '#E8743A', tab: 'icfes' },
+       { label: 'El Combo', icon: 'swords', color: '#C1553B', tab: 'friends' }];
+
+  // Gancho social
+  const myCorrectas = rankInfo?.myCorrectas
+    ?? (appState.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0);
+  let socialText = null;
+  if (rankInfo) {
+    if (rankInfo.pos === 1)
+      socialText = '¡Nadie te tose, parce! Eres #1 del combo';
+    else if (rankInfo.aheadGap !== null && rankInfo.aheadGap <= 5)
+      socialText = `Pispe: el #${rankInfo.pos - 1} te lleva solo ${rankInfo.aheadGap} aciertos — ¡ya lo soplas!`;
+    else
+      socialText = `Vas #${rankInfo.pos} de ${rankInfo.total} — ¡dale que el ICFES no espera, parce!`;
+  }
 
   return (
-    <div className="fi su" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="fi" style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── SALUDO ── */}
-      <div style={{ marginTop: 4 }}>
-        <div style={{ fontSize: 13, color: C.textMuted, fontWeight: 600 }}>{saludo},</div>
-        <div className="serif" style={{ fontSize: 26, fontWeight: 800, color: C.text, lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {nombre} <PkIc n="rana" s={24} c={C.accent} />
-        </div>
+      {/* ── ESCENA ── */}
+      <FogataScene C={C} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward}/>
+
+      {/* ── CTA 3D — flota sobre la escena ── */}
+      <div style={{ padding: '0 14px', marginTop: -18, position: 'relative', zIndex: 10,
+        animation: ctaDone ? 'none' : 'ctaPulse 5s ease-in-out infinite 2s' }}>
+        <button
+          onClick={ctaAction}
+          disabled={ctaDone}
+          onPointerDown={() => !ctaDone && setCtaPressed(true)}
+          onPointerUp={() => setCtaPressed(false)}
+          onPointerLeave={() => setCtaPressed(false)}
+          style={{
+            width: '100%', padding: '15px 20px',
+            background: ctaBg,
+            border: 'none',
+            borderBottom: ctaDone ? `3px solid ${ctaBorder}` : ctaPressed ? `2px solid ${ctaBorder}` : `5px solid ${ctaBorder}`,
+            borderRadius: 20,
+            fontSize: 15, fontWeight: 800,
+            color: ctaTextColor,
+            cursor: ctaDone ? 'default' : 'pointer',
+            fontFamily: 'inherit',
+            transform: ctaPressed ? 'translateY(3px)' : 'translateY(0)',
+            transition: 'transform 0.08s ease, border-bottom 0.08s ease',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}>
+          <PkIc n={ctaIcon} s={18} c={ctaTextColor}/>
+          {ctaLabel}
+        </button>
       </div>
 
-      {/* ── RACHA VIVA (protagonista) ── */}
-      <div style={{
-        position: 'relative', overflow: 'hidden', borderRadius: 24,
-        background: `linear-gradient(150deg, ${fuego}22 0%, ${C.bgAlt} 55%, ${C.bgAlt} 100%)`,
-        border: `1px solid ${fuego}35`, padding: '22px',
-        boxShadow: `0 12px 40px ${fuego}18, inset 0 1px 0 rgba(255,255,255,0.05)`,
-      }}>
-        {/* Resplandor de fondo */}
-        <div style={{ position: 'absolute', top: -40, right: -20, width: 180, height: 180, borderRadius: '50%',
-          background: `radial-gradient(circle, ${fuego}25 0%, transparent 65%)`, pointerEvents: 'none',
-          animation: 'celestialPulse 3.5s ease-in-out infinite' }} />
-
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 18 }}>
-          {/* Llama latiendo */}
-          <div style={{ flexShrink: 0, animation: 'streakPulse 2s ease-in-out infinite' }}>
-            <div style={{ position: 'relative', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, ${fuego}30, transparent 70%)` }} />
-              <PkIc n="flame" s={52} c={fuego} />
-            </div>
-          </div>
-
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span className="serif" style={{ fontSize: 44, fontWeight: 900, color: fuego, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 24px ${fuego}50` }}>{streak}</span>
-              <span style={{ fontSize: 14, color: C.textMid, fontWeight: 700 }}>día{streak !== 1 ? 's' : ''}</span>
-            </div>
-            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>
-              {streak === 0 ? 'Sella tu primer día, ¡no le saque el cuerpo!'
-                : appState.yourConfirmed ? 'Hoy ya quedó sellado. ¡Finísimo!'
-                : 'Te falta sellar hoy. ¡No pierdas el hilo, parce!'}
-            </div>
-          </div>
-        </div>
-
-        {/* Barra de nivel embebida */}
-        <div style={{ position: 'relative', zIndex: 1, marginTop: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, marginBottom: 6 }}>
-            <span style={{ color: C.accent }}>Nivel {lvl.level}</span>
-            <span style={{ color: C.textMuted }}>{lvl.current.toLocaleString()} / {lvl.needed.toLocaleString()} XP</span>
-          </div>
-          <div style={{ height: 6, borderRadius: 99, background: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${lvl.pct}%`, borderRadius: 99, background: `linear-gradient(90deg, ${C.accent}88, ${C.accent})`, boxShadow: `0 0 8px ${C.accent}60`, transition: 'width 1.2s cubic-bezier(0.22,1,0.36,1)' }} />
-          </div>
-        </div>
+      {/* ── 2 CHIPS CONTEXTUALES ── */}
+      <div style={{ display: 'flex', gap: 10, padding: '12px 14px 0' }}>
+        {chips.map(({ label, icon, color, tab }) => (
+          <ChipBtn key={tab} label={label} icon={icon} color={color} onPress={() => onGoTab(tab)}/>
+        ))}
       </div>
 
-      {/* ── GANCHO SOCIAL: tu puesto en El Combo ── */}
-      {rankInfo && (
+      {/* ── GANCHO SOCIAL — una línea, no una tarjeta ── */}
+      {socialText && (
         <button onClick={() => onGoTab('friends')} style={{
-          position: 'relative', overflow: 'hidden', width: '100%', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          background: `linear-gradient(135deg, ${C.accent}18, ${C.bgAlt})`, border: `1px solid ${C.accent}35`,
-          borderRadius: 20, padding: '18px',
+          margin: '9px 14px 0',
+          background: 'none', border: 'none', padding: '4px 2px',
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          <div style={{ position: 'absolute', top: -30, right: -10, opacity: 0.08, transform: 'rotate(-12deg)' }}>
-            <PkIc n="people" s={120} c={C.accent} />
-          </div>
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 11, color: C.accent, fontWeight: 800, letterSpacing: 1.5 }}>TU PUESTO EN EL COMBO</span>
-              <PkIc n="right" s={15} c={C.accent} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-              <span className="serif" style={{ fontSize: 40, fontWeight: 900, color: C.text, lineHeight: 1 }}>
-                #{rankInfo.pos}
-              </span>
-              <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 600 }}>de {rankInfo.total} berracos</span>
-            </div>
-            <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.5 }}>
-              {rankInfo.pos === 1
-                ? '¡De primero, parce! Nadie le tose.'
-                : rankInfo.ahead
-                  ? <>Pispe a <b style={{ color: C.accent }}>@{rankInfo.ahead.code}</b>: le faltan <b style={{ color: C.accent }}>{Math.max(1, rankInfo.ahead.correctas - rankInfo.myCorrectas)}</b> acertadas para pasarlo.</>
-                  : 'Sigue acertando para escalar el ranking.'}
-            </div>
-          </div>
+          <PkIc n="star" s={13} c="#2E86AB"/>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, lineHeight: 1.4 }}>
+            {socialText}
+          </span>
         </button>
       )}
 
-      {/* ── MISIONES DEL DÍA ── */}
-      <div>
-        <SectionTitle C={C} icon="mochila">El Morral del Día</SectionTitle>
-        <DailyMissions C={C} isLight={isLight} appState={appState} setAppState={setAppState} onReward={onMissionReward} />
-      </div>
-
-      {/* ── ACCESOS (pastillas anchas, con jerarquía) ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button onClick={() => onGoTab('icfes')} style={{
-          display: 'flex', alignItems: 'center', gap: 14, width: '100%', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          background: `linear-gradient(100deg, ${C.accent}1A, transparent 70%)`, border: `1px solid ${C.accent}25`,
-          borderRadius: 16, padding: '14px 16px',
+      {/* ── BARRA DE PULSO — 3 secciones con íconos ── */}
+      <div style={{ display: 'flex', alignItems: 'stretch',
+        borderTop: `1px solid ${C.border}55`,
+        margin: '8px 14px 0', paddingTop: 2 }}>
+        <button onClick={() => onGoTab('friends')} style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+          background: 'none', border: 'none', padding: '8px 0',
+          cursor: 'pointer', fontFamily: 'inherit',
         }}>
-          <div style={{ width: 42, height: 42, borderRadius: 13, background: `${C.accent}1A`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <PkIc n="rana" s={24} c={C.accent} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>Échate un simulacro</div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>El Saber te espera, parce</div>
-          </div>
-          <PkIc n="right" s={16} c={C.accent} />
+          <PkIc n="star" s={13} c="#2E86AB"/>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#2E86AB' }}>
+            {rankInfo ? `#${rankInfo.pos}` : '—'}
+          </span>
         </button>
-
-        <button onClick={() => onGoTab('books')} style={{
-          display: 'flex', alignItems: 'center', gap: 14, width: '100%', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          background: `linear-gradient(100deg, ${C.amberMid}15, transparent 70%)`, border: `1px solid ${C.amberMid}25`,
-          borderRadius: 16, padding: '14px 16px',
+        <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
+        <button onClick={() => {}} style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+          background: 'none', border: 'none', padding: '8px 0',
+          cursor: 'default', fontFamily: 'inherit',
         }}>
-          <div style={{ width: 42, height: 42, borderRadius: 13, background: `${C.amberMid}1A`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <PkIc n="coffee" s={22} c={C.amberMid} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>
-              {currentBook ? 'Seguir leyendo' : 'Abrir un pergamino'}
-            </div>
-            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentBook ? currentBook.title : 'A los libros'}
-            </div>
-          </div>
-          <PkIc n="right" s={16} c={C.amberMid} />
+          <PkIc n="sombrero" s={13} c={C.accent}/>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>Nv.{lvl.level}</span>
         </button>
-      </div>
-
-      {/* ── VITRINA DE LA TIENDITA ── */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PkIc n="mochila" s={14} c={C.amberMid} /> LA TIENDITA
-          </div>
-          <button onClick={() => onGoShop?.()} style={{ background: 'none', border: 'none', color: C.amberMid, fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
-            Ver todo <PkIc n="right" s={12} c={C.amberMid} />
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none', margin: '0 -20px', padding: '0 20px 8px' }}>
-          {DESTACADOS_TIENDA.map((item, idx) => {
-            const rarity = RARITY_META[item.rarity] || RARITY_META['común'];
-            const isOwned = (appState.inventory || []).includes(item.id);
-            const canAfford = (appState.ryo || 0) >= item.price;
-            return (
-              <button key={item.id} onClick={() => onGoShop?.()} className="fu" style={{
-                animationDelay: `${idx * 0.07}s`, flexShrink: 0, width: 150, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                background: `linear-gradient(150deg, ${rarity.color}1A, ${C.bgAlt})`,
-                border: `1px solid ${rarity.color}40`, borderRadius: 18, padding: 14,
-                boxShadow: rarity.glow || `0 6px 20px rgba(0,0,0,0.3)`,
-                display: 'flex', flexDirection: 'column', gap: 10,
-              }}>
-                {/* Preview del objeto */}
-                <div style={{ height: 72, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: item.type === 'banner' ? undefined : `${rarity.color}12`,
-                  position: 'relative', overflow: 'hidden' }}
-                  className={item.type === 'banner' ? (item.animClass || '') : ''}>
-                  {item.type === 'banner' && <div style={{ position: 'absolute', inset: 0, background: item.css }} />}
-                  {item.type === 'frame' && <Av name={user?.name || '?'} sz={52} C={C} photoURL={appState.photoURL} frameData={item} />}
-                  {item.type === 'title' && <div style={{ position: 'relative', zIndex: 1, fontSize: 11, fontWeight: 900, letterSpacing: 1, color: rarity.color, textAlign: 'center', padding: '0 8px' }}>{item.name.toUpperCase()}</div>}
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: 1, color: rarity.color, marginBottom: 3 }}>{rarity.label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: C.text, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 'auto' }}>
-                  {isOwned ? (
-                    <span style={{ fontSize: 12, fontWeight: 800, color: rarity.color }}>✓ Tuyo</span>
-                  ) : (
-                    <>
-                      <PkIc n="empanada" s={14} c={canAfford ? C.amberMid : C.textMuted} />
-                      <span style={{ fontSize: 14, fontWeight: 800, color: canAfford ? C.amberMid : C.textMuted }}>{item.price}</span>
-                    </>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
+        <button onClick={() => onGoShop?.()} style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+          background: 'none', border: 'none', padding: '8px 0',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <PkIc n="empanada" s={13} c={C.amberMid}/>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.amberMid }}>Tienda</span>
+        </button>
       </div>
 
     </div>
