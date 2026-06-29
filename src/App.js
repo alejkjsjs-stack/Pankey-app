@@ -299,8 +299,9 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes logFlyToFire { 0%{transform:translate(0,0) rotate(0deg);opacity:1;} 60%{opacity:1;} 100%{transform:translate(var(--tx),var(--ty)) rotate(-55deg);opacity:0;} }
 @keyframes ashSmoke { 0%{opacity:0;transform:translateX(-50%) scaleX(1) translateY(0);} 30%{opacity:0.35;} 100%{opacity:0;transform:translateX(-50%) scaleX(1.8) translateY(-28px);} }
 @keyframes cloudDrift { 0%,100%{transform:translateX(0px);} 50%{transform:translateX(10px);} }
-@keyframes ctaPulse { 0%,88%,100%{transform:scale(1);}94%{transform:scale(1.025);} }
+@keyframes ctaPulse { 0%,85%,100%{transform:scale(1);}90%{transform:scale(1.015);}95%{transform:scale(1.008);} }
 @keyframes logGlow { 0%,100%{opacity:0.6;}50%{opacity:1;} }
+@keyframes breathe { 0%,100%{transform:translateY(0px);}50%{transform:translateY(-2px);} }
 `;
 
 
@@ -5411,21 +5412,20 @@ function SabioLoading({ C }) {
   );
 }
 // ─────────────────────────────────────────────
-//  PARCERO SVG — Mascota stick figure con sombrero vueltiao
+//  PARCERO SVG — Mascota premium: trazos gruesos, sentado en tronco
 // ─────────────────────────────────────────────
 function ParceroSVG({ state = 'sitting' }) {
   const [blink, setBlink] = useState(false);
   useEffect(() => {
-    let timer;
+    let t;
     const tick = () => {
       setBlink(true);
-      setTimeout(() => setBlink(false), 140);
-      timer = setTimeout(tick, 4000 + Math.random() * 3500);
+      setTimeout(() => setBlink(false), 150);
+      t = setTimeout(tick, 4000 + Math.random() * 3500);
     };
-    timer = setTimeout(tick, 4500 + Math.random() * 2000);
-    return () => clearTimeout(timer);
+    t = setTimeout(tick, 3500 + Math.random() * 2000);
+    return () => clearTimeout(t);
   }, []);
-  // Parcero waves periodically in calm states
   const [waving, setWaving] = useState(false);
   useEffect(() => {
     if (state !== 'sitting' && state !== 'happy') return;
@@ -5439,173 +5439,185 @@ function ParceroSVG({ state = 'sitting' }) {
     return () => clearTimeout(t);
   }, [state]);
 
-  const W = '#F5F2EB'; // Blanco hueso
+  const W = '#F0E6D3'; // Warm fire-lit white
   const G = '#D4AF37'; // Oro tumbaga
-  const sw = 3.0;     // trazo principal más grueso para que se vea en fondo oscuro
+  const sw = 3.8;      // trazo grueso premium
 
-  // armWaveStyle definido ANTES del if-else para evitar TDZ
   const armWaveStyle = {
     animation: waving ? 'parceroWave 0.9s ease-in-out' : 'none',
-    transformOrigin: '63px 64px',
+    transformOrigin: '74px 60px',
   };
 
   const eyes = blink
     ? <>
-        <line x1="51" y1="31" x2="61" y2="31" stroke={W} strokeWidth="2.8" strokeLinecap="round"/>
-        <line x1="66" y1="31" x2="76" y2="31" stroke={W} strokeWidth="2.8" strokeLinecap="round"/>
+        <line x1="47" y1="26" x2="56" y2="26" stroke={W} strokeWidth="3.2" strokeLinecap="round"/>
+        <line x1="61" y1="26" x2="70" y2="26" stroke={W} strokeWidth="3.2" strokeLinecap="round"/>
       </>
     : state === 'sleeping'
     ? <>
-        <path d="M51 28 L57 34 M57 28 L51 34" stroke={W} strokeWidth="2" strokeLinecap="round"/>
-        <path d="M67 28 L73 34 M73 28 L67 34" stroke={W} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M47 24 L54 30 M54 24 L47 30" stroke={W} strokeWidth="2.4" strokeLinecap="round"/>
+        <path d="M60 24 L67 30 M67 24 L60 30" stroke={W} strokeWidth="2.4" strokeLinecap="round"/>
       </>
     : (state === 'happy' || state === 'celebrating')
     ? <>
-        <path d="M50 32 Q56 26 62 32" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-        <path d="M65 32 Q71 26 77 32" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+        <path d="M46 28 Q52 22 58 28" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
+        <path d="M60 28 Q66 22 72 28" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
       </>
     : state === 'worried'
     ? <>
-        <circle cx="56" cy="30" r="3" fill={W}/>
-        <circle cx="71" cy="30" r="3" fill={W}/>
-        <path d="M49 25 L58 28" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
-        <path d="M69 28 L78 25" stroke={W} strokeWidth="1.8" strokeLinecap="round"/>
+        <circle cx="51" cy="26" r="3.5" fill={W}/>
+        <circle cx="64" cy="26" r="3.5" fill={W}/>
+        <path d="M44 21 L55 25" stroke={W} strokeWidth="2.2" strokeLinecap="round"/>
+        <path d="M63 25 L74 21" stroke={W} strokeWidth="2.2" strokeLinecap="round"/>
       </>
     : <>
-        <circle cx="56" cy="30" r="3" fill={W}/>
-        <circle cx="71" cy="30" r="3" fill={W}/>
+        <circle cx="51" cy="26" r="3.5" fill={W}/>
+        <circle cx="64" cy="26" r="3.5" fill={W}/>
       </>;
 
   const mouth = state === 'sleeping'
-    ? <path d="M57 40 Q63 43 69 40" stroke={W} strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+    ? <path d="M50 38 Q57 41 64 38" stroke={W} strokeWidth="2.2" fill="none" strokeLinecap="round"/>
     : state === 'happy'
-    ? <path d="M50 39 Q63 47 76 39" stroke={W} strokeWidth="2.4" fill="none" strokeLinecap="round"/>
+    ? <path d="M46 37 Q57 46 68 37" stroke={W} strokeWidth="3" fill="none" strokeLinecap="round"/>
     : state === 'celebrating'
-    ? <path d="M49 38 Q63 49 77 38" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
+    ? <path d="M44 36 Q57 48 70 36" stroke={W} strokeWidth="3.2" fill="none" strokeLinecap="round"/>
     : state === 'worried'
-    ? <path d="M55 43 Q63 38 71 43" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>
-    : <path d="M54 40 Q63 46 72 40" stroke={W} strokeWidth="2" fill="none" strokeLinecap="round"/>;
+    ? <path d="M50 41 Q57 37 64 41" stroke={W} strokeWidth="2.4" fill="none" strokeLinecap="round"/>
+    : <path d="M49 39 Q57 44 65 39" stroke={W} strokeWidth="2.4" fill="none" strokeLinecap="round"/>;
+
+  const tronco = <>
+    <rect x="4" y="92" width="106" height="16" rx="8" fill="#5C4033" stroke="#3D2A1A" strokeWidth="2.5"/>
+    <path d="M12 97 Q32 95 52 97" stroke="#4A3224" strokeWidth="1.3" fill="none" opacity="0.5"/>
+    <path d="M62 102 Q82 100 102 102" stroke="#4A3224" strokeWidth="1.3" fill="none" opacity="0.5"/>
+  </>;
 
   let body;
   if (state === 'celebrating') {
     body = <>
-      <line x1="63" y1="47" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M63 64 L36 34 L28 22" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M63 64 L90 34 L98 22" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L40 116" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
-      <path d="M76 92 L86 116" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round"/>
+      <line x1="57" y1="45" x2="57" y2="90" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <line x1="38" y1="60" x2="76" y2="60" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M38 60 L18 36 L12 22" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 60 L96 36 L102 22" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {tronco}
+      <path d="M47 108 Q42 126 44 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M67 108 Q72 126 70 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M44 146 L35 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
+      <path d="M70 146 L79 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
     </>;
   } else if (state === 'sleeping') {
     body = <>
-      <path d="M63 47 Q60 66 58 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
-      <path d="M62 64 L40 80 L34 70" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M62 64 L84 76 L88 66" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <line x1="46" y1="92" x2="72" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M46 92 L28 106 L18 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M72 92 L90 106 L100 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M57 45 Q54 68 55 90" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
+      <line x1="38" y1="62" x2="72" y2="62" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M38 62 L20 84 L14 98" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M72 62 L90 78 L96 90" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {tronco}
+      <path d="M46 108 Q40 126 42 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M64 108 Q70 126 68 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M42 146 L33 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
+      <path d="M68 146 L77 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
     </>;
   } else if (state === 'worried') {
     body = <>
-      <path d="M63 47 Q60 68 63 92" stroke={W} strokeWidth={sw} fill="none" strokeLinecap="round"/>
-      <path d="M63 66 L42 75 L36 64" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M63 62 L79 52 L83 42" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L32 106 L22 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M76 92 L94 106 L104 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="57" y1="45" x2="57" y2="90" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <line x1="38" y1="60" x2="76" y2="60" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M38 60 L20 76 L14 70" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 60 L88 52 L92 42" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {tronco}
+      <path d="M46 108 Q41 126 43 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M68 108 Q73 126 71 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M43 146 L34 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
+      <path d="M71 146 L80 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
     </>;
   } else if (state === 'happy') {
     body = <>
-      <line x1="63" y1="47" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M63 64 L40 50 L34 40" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="57" y1="45" x2="57" y2="90" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <line x1="38" y1="60" x2="76" y2="60" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M38 60 L20 44 L14 32" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       <g style={armWaveStyle}>
-        <path d="M63 64 L86 50 L92 40" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M76 60 L96 46 L102 34" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       </g>
-      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L32 106 L22 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M76 92 L94 106 L104 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {tronco}
+      <path d="M47 108 Q42 126 44 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M67 108 Q72 126 70 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M44 146 L35 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
+      <path d="M70 146 L79 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
     </>;
   } else if (state === 'coffee') {
     body = <>
-      <line x1="63" y1="47" x2="63" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M63 64 L40 80 L34 70" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M63 64 L88 72 L94 64" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <rect x="91" y="59" width="13" height="11" rx="2.5" fill="none" stroke={W} strokeWidth="1.8"/>
-      <path d="M104 63 Q109 65 104 69" stroke={W} strokeWidth="1.6" fill="none" strokeLinecap="round"/>
-      <path d="M95 57 Q97 51 95 46" stroke={W} strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.5" style={{animation:'steamRise 2s ease-in-out infinite'}}/>
-      <path d="M100 58 Q102 51 100 45" stroke={W} strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.4" style={{animation:'steamRise 2.5s ease-in-out infinite 0.4s'}}/>
-      <line x1="50" y1="92" x2="76" y2="92" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      <path d="M50 92 L32 106 L22 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M76 92 L94 106 L104 96" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="57" y1="45" x2="57" y2="90" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <line x1="38" y1="60" x2="76" y2="60" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M38 60 L22 80 L18 96" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M76 60 L94 72 L100 65" stroke={W} strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="97" y="60" width="14" height="12" rx="3" fill="none" stroke={W} strokeWidth="2"/>
+      <path d="M111 64 Q116 67 111 70" stroke={W} strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+      <path d="M101 58 Q103 52 101 46" stroke={W} strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.5" style={{animation:'steamRise 2s ease-in-out infinite'}}/>
+      <path d="M107 59 Q109 52 107 45" stroke={W} strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.4" style={{animation:'steamRise 2.5s ease-in-out infinite 0.4s'}}/>
+      {tronco}
+      <path d="M47 108 Q42 126 44 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M67 108 Q72 126 70 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M44 146 L35 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
+      <path d="M70 146 L79 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
     </>;
   } else {
-    // sitting — sentado en el piso, piernas dobladas hacia adelante, brazo derecho al fuego
+    // sitting — brazo izquierdo descansa en tronco, brazo derecho al fuego
     body = <>
-      {/* Torso vertical */}
-      <line x1="63" y1="47" x2="63" y2="86" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      {/* Brazo izquierdo — descansando sobre rodilla */}
-      <path d="M63 66 L44 82 L39 78" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* Brazo derecho — extendido hacia el fuego, animado */}
+      <line x1="57" y1="45" x2="57" y2="90" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <line x1="38" y1="60" x2="76" y2="60" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
+      <path d="M38 60 L20 82 L16 98" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       <g style={armWaveStyle}>
-        <path d="M63 66 L96 78 L112 72" stroke={W} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M76 60 L98 74 L112 70" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
       </g>
-      {/* Caderas */}
-      <line x1="50" y1="86" x2="76" y2="86" stroke={W} strokeWidth={sw} strokeLinecap="round"/>
-      {/* Pierna izquierda: muslo adelante, rodilla doblada, pie al piso */}
-      <path d="M50 86 L34 106" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
-      <path d="M34 106 L54 120" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
-      {/* Pierna derecha: muslo adelante, rodilla doblada, pie al piso */}
-      <path d="M76 86 L92 106" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
-      <path d="M92 106 L72 120" stroke={W} strokeWidth="2.8" fill="none" strokeLinecap="round"/>
+      {tronco}
+      <path d="M47 108 Q42 126 44 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M67 108 Q72 126 70 146" stroke={W} strokeWidth="3.6" fill="none" strokeLinecap="round"/>
+      <path d="M44 146 L35 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
+      <path d="M70 146 L79 150" stroke={W} strokeWidth="3.5" strokeLinecap="round"/>
     </>;
   }
 
-  const hatTransform = state === 'sleeping' ? 'rotate(18 63 18)' : undefined;
+  const hatTransform = state === 'sleeping' ? 'rotate(18 57 20)' : undefined;
 
   return (
-    <svg viewBox="0 0 126 134" xmlns="http://www.w3.org/2000/svg"
+    <svg viewBox="0 0 114 162" xmlns="http://www.w3.org/2000/svg"
       style={{ width: '100%', height: '100%', overflow: 'visible',
-        animation: 'parceroBreath 4.5s ease-in-out infinite',
-        transformOrigin: '50% 70%' }}>
-      {/* ── SOMBRERO VUELTIAO — Copa baja + ala ancha + zigzag negro y oro ── */}
+        animation: 'breathe 4s ease-in-out infinite',
+        transformOrigin: '50% 60%',
+        filter: 'drop-shadow(0 0 12px rgba(232,116,58,0.18))' }}>
+      {/* ── SOMBRERO VUELTIAO — Copa + ala muy ancha + zigzag cinta ── */}
       <g transform={hatTransform}>
-        {/* Copa — forma ovalada baja */}
-        <ellipse cx="63" cy="16" rx="13" ry="8.5" fill="#1E1A16" stroke={G} strokeWidth="1.2"/>
-        {/* Ala — MUY ancha y plana (doble del ancho de la cabeza) */}
-        <ellipse cx="63" cy="22" rx="27" ry="5" fill="#252018" stroke={G} strokeWidth="1.3"/>
-        {/* Cinta negra sobre el ala */}
-        <rect x="36" y="19.5" width="54" height="4.5" rx="2.2" fill="#111"/>
-        {/* Patrón zigzag dorado — identidad del vueltiao */}
-        <path d="M38,21.8 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2 l2.4,-2.2 l2.4,2.2"
-          fill="none" stroke={G} strokeWidth="1.1" strokeLinecap="round"/>
+        <ellipse cx="57" cy="10" rx="14" ry="9" fill="#1E1A16" stroke={G} strokeWidth="1.6"/>
+        <ellipse cx="57" cy="18" rx="29" ry="4.5" fill="#252018" stroke={G} strokeWidth="1.5"/>
+        <rect x="28" y="15.5" width="58" height="4" rx="2" fill="#111"/>
+        <path d="M28,17.5 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2 l2.5,2 l2.5,-2"
+          fill="none" stroke={G} strokeWidth="1.2" strokeLinecap="round"/>
       </g>
 
       {/* Cara */}
-      <circle cx="63" cy="35" r="14" fill="none" stroke={W} strokeWidth={sw}/>
+      <circle cx="57" cy="27" r="18" fill="none" stroke={W} strokeWidth={sw}/>
 
       {/* Rubor cálido del fuego */}
       {state !== 'sleeping' && <>
-        <ellipse cx="46" cy="38" rx="7" ry="4" fill="#E8743A" opacity="0.12"/>
-        <ellipse cx="80" cy="38" rx="7" ry="4" fill="#E8743A" opacity="0.12"/>
+        <ellipse cx="43" cy="31" rx="7" ry="4.5" fill="#E8743A" opacity="0.15"/>
+        <ellipse cx="72" cy="31" rx="7" ry="4.5" fill="#E8743A" opacity="0.15"/>
       </>}
 
       {eyes}
 
       {/* Reflejo del fuego en los ojos */}
       {!blink && state !== 'sleeping' && <>
-        <circle cx="57" cy="29" r="1.1" fill="#F59E0B" opacity="0.55"/>
-        <circle cx="72" cy="29" r="1.1" fill="#F59E0B" opacity="0.55"/>
+        <circle cx="52" cy="25" r="1.5" fill="#F59E0B" opacity="0.6"/>
+        <circle cx="65" cy="25" r="1.5" fill="#F59E0B" opacity="0.6"/>
       </>}
 
       {mouth}
       {body}
 
       {state === 'sleeping' && <>
-        <text x="78" y="28" fontSize="8" fill={W} opacity="0.7"
+        <text x="77" y="24" fontSize="9" fill={W} opacity="0.7"
           style={{animation:'zzz 2.2s ease-in-out infinite', fontFamily:'sans-serif', fontWeight:700}}>z</text>
-        <text x="86" y="16" fontSize="11" fill={W} opacity="0.8"
+        <text x="86" y="13" fontSize="12" fill={W} opacity="0.8"
           style={{animation:'zzz 2.2s ease-in-out infinite 0.55s', fontFamily:'sans-serif', fontWeight:700}}>z</text>
-        <text x="96" y="4" fontSize="14" fill={W} opacity="0.9"
+        <text x="97" y="2" fontSize="15" fill={W} opacity="0.9"
           style={{animation:'zzz 2.2s ease-in-out infinite 1.1s', fontFamily:'sans-serif', fontWeight:700}}>Z</text>
       </>}
     </svg>
@@ -6073,13 +6085,25 @@ function FogataScene({ C, appState, setAppState, onMissionReward }) {
 }
 
 // ─────────────────────────────────────────────
-//  INICIO TAB — La Fogata del Parcero
+//  INICIO TAB v4 — La Fogata: atmósfera total
 // ─────────────────────────────────────────────
+const STARS_V4 = [
+  {x:'8%',y:'12%',r:1.2,op:0.6,tw:true}, {x:'15%',y:'6%',r:0.9,op:0.45},
+  {x:'24%',y:'18%',r:1.0,op:0.5,tw:true}, {x:'35%',y:'8%',r:1.3,op:0.55},
+  {x:'48%',y:'5%',r:0.8,op:0.38}, {x:'57%',y:'14%',r:1.1,op:0.52,tw:true},
+  {x:'68%',y:'7%',r:0.9,op:0.42}, {x:'78%',y:'11%',r:1.2,op:0.58},
+  {x:'86%',y:'4%',r:1.0,op:0.48,tw:true}, {x:'92%',y:'16%',r:0.8,op:0.36},
+  {x:'5%',y:'28%',r:0.7,op:0.32}, {x:'72%',y:'24%',r:0.9,op:0.44},
+  {x:'41%',y:'22%',r:0.7,op:0.3,tw:true}, {x:'88%',y:'28%',r:1.1,op:0.5},
+  {x:'19%',y:'32%',r:0.8,op:0.36}, {x:'62%',y:'30%',r:0.7,op:0.3},
+];
+
 function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif }) {
   const lvl         = computeLevel(appState.xp || 0);
   const currentBook = books.find(b => b.id === appState.currentBookId) || null;
   const [rankInfo, setRankInfo] = useState(null);
-  const [ctaPressed, setCtaPressed] = useState(false);
+  const [icfesPressed, setIcfesPressed] = useState(false);
+  const [leerPressed, setLeerPressed]   = useState(false);
   const today = todayStr();
 
   useEffect(() => {
@@ -6094,59 +6118,41 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
         .sort((a, b) => b.correctas - a.correctas);
       const myIdx = ranked.findIndex(u => u.code === user.code);
       if (myIdx === -1) return;
-      const myCorrectas = ranked[myIdx].correctas;
-      const aheadGap = myIdx > 0 ? ranked[myIdx - 1].correctas - myCorrectas : null;
-      setRankInfo({ pos: myIdx + 1, total: ranked.length, myCorrectas, aheadGap });
+      setRankInfo({
+        pos: myIdx + 1, total: ranked.length,
+        myCorrectas: ranked[myIdx].correctas,
+        aheadGap: myIdx > 0 ? ranked[myIdx - 1].correctas - ranked[myIdx].correctas : null,
+      });
     }).catch(() => {});
   }, [user?.code]);
 
-  // ICFES como CTA principal — leer es secundario
+  const streak      = appState.streakDays || 0;
+  const streakColor = streak >= 30 ? '#EF4444' : streak >= 7 ? '#E8743A' : '#F59E0B';
+  const hora        = new Date().getHours();
+  const hizoAlgoHoy = appState.yourConfirmed ||
+    (appState.icfesHistory || []).some(r =>
+      r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
+
+  let parceroState = 'sitting';
+  if (hora < 6 && !hizoAlgoHoy)   parceroState = 'sleeping';
+  else if (hora >= 6 && hora < 10) parceroState = 'coffee';
+  else if (generateDailyMissions(today).filter(m => getMissionProgress(m, appState) >= m.target).length === 3)
+    parceroState = 'happy';
+  else if (streak > 0 && !appState.yourConfirmed && hora >= 20) parceroState = 'worried';
+
   const hizoSimHoy = (appState.icfesHistory || []).some(r => r.date === today);
-  const todoListo  = hizoSimHoy && appState.yourConfirmed;
+  const todoDone   = hizoSimHoy && appState.yourConfirmed;
 
-  let ctaDone = false, ctaLabel, ctaIcon, ctaBg, ctaBorder, ctaTextColor, ctaAction;
-  if (todoListo) {
-    ctaDone = true;
-    ctaLabel = 'Hoy quedó sellado, descansa parce';
-    ctaIcon = 'check'; ctaBg = C.bgAlt; ctaBorder = C.border;
-    ctaTextColor = C.textMuted; ctaAction = () => {};
-  } else if (!hizoSimHoy) {
-    ctaLabel = 'Échate un simulacro'; ctaIcon = 'rana';
-    ctaBg = '#E8743A'; ctaBorder = '#b85a2a';
-    ctaTextColor = '#fff'; ctaAction = () => onGoTab('icfes');
-  } else if (currentBook) {
-    ctaLabel = 'Seguir leyendo'; ctaIcon = 'book';
-    ctaBg = '#2D8A5E'; ctaBorder = '#1A5238';
-    ctaTextColor = '#fff'; ctaAction = () => onGoTab('books');
-  } else {
-    ctaLabel = 'Échate un simulacro'; ctaIcon = 'rana';
-    ctaBg = '#E8743A'; ctaBorder = '#b85a2a';
-    ctaTextColor = '#fff'; ctaAction = () => onGoTab('icfes');
-  }
-
-  // 2 chips contextuales
-  const chips = ctaIcon === 'rana'
-    ? [{ label: 'Leer', icon: 'book', color: '#2D8A5E', tab: 'books' },
-       { label: 'El Combo', icon: 'swords', color: '#C1553B', tab: 'friends' }]
-    : [{ label: 'Simulacro', icon: 'rana', color: '#E8743A', tab: 'icfes' },
-       { label: 'El Combo', icon: 'swords', color: '#C1553B', tab: 'friends' }];
-
-  // Gancho social
   let socialText = null;
   if (rankInfo) {
     if (rankInfo.pos === 1)
       socialText = '¡Nadie te tose, parce! Eres #1 del combo';
     else if (rankInfo.aheadGap !== null && rankInfo.aheadGap <= 5)
-      socialText = `Pispe: el #${rankInfo.pos - 1} te lleva solo ${rankInfo.aheadGap} aciertos — ¡ya lo soplas!`;
+      socialText = `Pispe: el #${rankInfo.pos - 1} te lleva solo ${rankInfo.aheadGap} aciertos`;
     else
-      socialText = `Vas #${rankInfo.pos} de ${rankInfo.total} — ¡dale que el ICFES no espera!`;
+      socialText = `Vas #${rankInfo.pos} de ${rankInfo.total}`;
   }
 
-  // Racha
-  const streak = appState.streakDays || 0;
-  const streakColor = streak >= 30 ? '#EF4444' : streak >= 7 ? '#E8743A' : '#F59E0B';
-
-  // Últimos 7 días de actividad (para dots de racha)
   const last7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const ds = d.toDateString();
@@ -6154,233 +6160,361 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       || (ds === today && appState.yourConfirmed);
   });
 
-  // Misión más cercana a completarse
   const allMissions = generateDailyMissions(today);
-  const rewarded = appState.missionsRewarded || [];
+  const rewarded    = appState.missionsRewarded || [];
   const nearestMission = allMissions
     .filter(m => !rewarded.includes(m.id))
     .map(m => ({ ...m, progress: getMissionProgress(m, appState), pct: getMissionProgress(m, appState) / m.target }))
     .sort((a, b) => b.pct - a.pct)[0] || null;
   const nearestCanCollect = nearestMission && nearestMission.progress >= nearestMission.target;
 
-  // Último simulacro
   const icfesHist = appState.icfesHistory || [];
-  const lastSim = icfesHist.length > 0 ? icfesHist[icfesHist.length - 1] : null;
+  const lastSim   = icfesHist.length > 0 ? icfesHist[icfesHist.length - 1] : null;
   const lastSimDaysAgo = lastSim?.ts ? Math.floor((Date.now() - lastSim.ts) / 86400000) : null;
   const lastSimColor = !lastSim ? C.textMuted
     : (lastSim.correct || 0) >= 8 ? '#2D8A5E'
     : (lastSim.correct || 0) >= 5 ? '#2E86AB'
     : (lastSim.correct || 0) >= 3 ? '#E8743A' : '#EF4444';
 
-  const divider = <div style={{ height: 1, background: `${C.border}44`, margin: '0 14px' }}/>;
+  const rarityColor = { común: '#888', raro: '#2E86AB', épico: '#9D4E7C', legendario: '#D4AF37', mítico: '#EF4444' };
+  const destacados  = (SHOP_ITEMS || []).filter(i => DESTACADOS_IDS.includes(i.id)).slice(0, 4);
 
   return (
-    <div className="fi" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="fi" style={{ display: 'flex', flexDirection: 'column',
+      background: 'linear-gradient(180deg, #06090f 0%, #0d1220 28%, #121828 55%, #0f1420 100%)',
+      minHeight: '100%' }}>
 
-      {/* ── ESCENA ── */}
-      <FogataScene C={C} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward}/>
+      {/* ══ HERO — Atmósfera nocturna completa ══ */}
+      <div style={{ position: 'relative', width: '100%', height: 340, flexShrink: 0 }}>
 
-      {/* ── CTA 3D — flota sobre la escena ── */}
-      <div style={{ padding: '0 14px', marginTop: -18, position: 'relative', zIndex: 10,
-        animation: ctaDone ? 'none' : 'ctaPulse 5s ease-in-out infinite 2s' }}>
-        <button
-          onClick={ctaAction}
-          disabled={ctaDone}
-          onPointerDown={() => !ctaDone && setCtaPressed(true)}
-          onPointerUp={() => setCtaPressed(false)}
-          onPointerLeave={() => setCtaPressed(false)}
-          style={{
-            width: '100%', padding: '16px 20px',
-            background: ctaBg, border: 'none',
-            borderBottom: ctaDone ? `3px solid ${ctaBorder}` : ctaPressed ? `2px solid ${ctaBorder}` : `5px solid ${ctaBorder}`,
-            borderRadius: 20, fontSize: 15, fontWeight: 800,
-            color: ctaTextColor, cursor: ctaDone ? 'default' : 'pointer',
-            fontFamily: 'inherit',
-            transform: ctaPressed ? 'translateY(3px)' : 'translateY(0)',
-            transition: 'transform 0.08s ease, border-bottom 0.08s ease',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          }}>
-          <PkIc n={ctaIcon} s={20} c={ctaTextColor}/>
-          {ctaLabel}
-        </button>
-      </div>
+        {/* Luna */}
+        <div style={{ position: 'absolute', top: 22, right: '18%', width: 34, height: 34,
+          borderRadius: '50%', background: '#FFF5D4', opacity: 0.88,
+          boxShadow: '0 0 18px 6px rgba(255,245,212,0.18)' }}/>
 
-      {/* ── GANCHO SOCIAL — arriba de los chips, con acento dorado ── */}
-      {socialText && (
-        <button onClick={() => onGoTab('friends')} style={{
-          margin: '10px 14px 0',
-          background: `linear-gradient(90deg, ${C.accent}10, transparent)`,
-          border: 'none', borderLeft: `3px solid ${C.accent}`,
-          borderRadius: '0 10px 10px 0',
-          padding: '9px 14px', cursor: 'pointer', fontFamily: 'inherit',
-          textAlign: 'left', width: 'calc(100% - 28px)',
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          <PkIc n="star" s={14} c={C.accent}/>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.3 }}>
-            {socialText}
-          </span>
-        </button>
-      )}
-
-      {/* ── 2 CHIPS CONTEXTUALES ── */}
-      <div style={{ display: 'flex', gap: 10, padding: '10px 14px 0' }}>
-        {chips.map(({ label, icon, color, tab }) => (
-          <ChipBtn key={tab} label={label} icon={icon} color={color} onPress={() => onGoTab(tab)}/>
+        {/* Estrellas */}
+        {STARS_V4.map((s, i) => (
+          <div key={i} style={{
+            position: 'absolute', left: s.x, top: s.y,
+            width: s.r * 2, height: s.r * 2, borderRadius: '50%',
+            background: '#FFF5D4', opacity: s.op,
+            animation: s.tw ? 'starTwinkle 3.5s ease-in-out infinite' : 'none',
+            animationDelay: `${i * 0.22}s`,
+          }}/>
         ))}
+
+        {/* Fuego — protagonista centrado */}
+        <div style={{ position: 'absolute', bottom: 30, left: '54%',
+          transform: 'translateX(-50%)', zIndex: 2 }}>
+          <FogataSVG streakDays={streak}/>
+        </div>
+
+        {/* El Parcero */}
+        <div style={{ position: 'absolute', bottom: 10, left: '10%',
+          width: 130, height: 162, zIndex: 3 }}>
+          <ParceroSVG state={parceroState}/>
+        </div>
+
+        {/* Leñitos */}
+        <div style={{ position: 'absolute', bottom: 8, left: '58%', zIndex: 4 }}>
+          <LeñitosMisiones
+            appState={appState}
+            setAppState={setAppState}
+            onMissionReward={onMissionReward}
+          />
+        </div>
+
+        {/* Racha superpuesta */}
+        <div style={{ position: 'absolute', bottom: 18, right: 16, zIndex: 6,
+          display: 'flex', alignItems: 'flex-end', gap: 3 }}>
+          {streak > 0 ? (
+            <>
+              <PkIc n="flame" s={16} c={streakColor}/>
+              <span style={{ fontSize: 28, fontWeight: 900, color: streakColor, lineHeight: 1,
+                textShadow: `0 0 14px ${streakColor}88` }}>{streak}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: `${streakColor}BB`,
+                marginBottom: 3 }}>días</span>
+            </>
+          ) : (
+            <span style={{ fontSize: 10, fontWeight: 700,
+              color: 'rgba(245,242,235,0.40)', textAlign: 'right', maxWidth: 72 }}>
+              Prende tu fogata
+            </span>
+          )}
+        </div>
       </div>
 
-      {divider && <div style={{ height: 1, background: `${C.border}44`, margin: '10px 14px 0' }}/>}
+      {/* ══ CONTENT CARD — sube sobre el hero ══ */}
+      <div style={{ flex: 1, background: C.bg,
+        borderRadius: '24px 24px 0 0', marginTop: -24,
+        paddingTop: 16, display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── RACHA DESTACADA ── */}
-      {streak > 0 && (
-        <div style={{
-          margin: '6px 14px 0', padding: '10px 14px',
-          background: `linear-gradient(90deg, ${streakColor}12, ${streakColor}04)`,
-          borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <PkIc n="flame" s={26} c={streakColor}/>
-          <span style={{ fontSize: 30, fontWeight: 900, color: streakColor, lineHeight: 1 }}>{streak}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: `${streakColor}AA` }}>
-            {streak === 1 ? 'día de racha' : 'días de racha'}
-          </span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-            {last7.map((active, i) => (
-              <div key={i} style={{
-                width: 7, height: 7, borderRadius: '50%',
-                background: active ? '#2D8A5E' : `${C.border}88`,
-              }}/>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── PRÓXIMA MISIÓN ── */}
-      {nearestMission && (
-        <div style={{ margin: '6px 14px 0', padding: '9px 12px',
-          background: nearestCanCollect ? `rgba(45,138,94,0.10)` : C.bgAlt,
-          borderRadius: 12,
-          border: nearestCanCollect ? '1px solid rgba(45,138,94,0.3)' : 'none',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PkIc n="swords" s={14} c={nearestCanCollect ? '#2D8A5E' : C.textMuted}/>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: nearestCanCollect ? '#2D8A5E' : C.text,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {nearestMission.text}
+        {/* ── RANKING BANNER ── */}
+        {rankInfo && socialText && (
+          <button onClick={() => onGoTab('friends')} style={{
+            margin: '0 14px 10px', padding: '9px 14px',
+            background: rankInfo.pos === 1
+              ? 'rgba(212,175,55,0.10)'
+              : `linear-gradient(90deg, ${C.accent}10, transparent)`,
+            border: 'none',
+            borderLeft: rankInfo.pos !== 1 ? `3px solid ${C.accent}` : 'none',
+            outline: rankInfo.pos === 1 ? `1px solid rgba(212,175,55,0.28)` : 'none',
+            borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <PkIc n="star" s={14} c={rankInfo.pos === 1 ? '#D4AF37' : C.accent}/>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.3, flex: 1 }}>
+              {socialText}
             </span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: nearestCanCollect ? '#2D8A5E' : C.textMuted,
-              whiteSpace: 'nowrap' }}>
-              {nearestMission.progress}/{nearestMission.target}
-            </span>
-          </div>
-          <div style={{ height: 4, background: `${C.border}66`, borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%',
-              width: `${Math.min(100, Math.round(nearestMission.pct * 100))}%`,
-              background: nearestCanCollect ? '#2D8A5E' : C.accent,
-              borderRadius: 99, transition: 'width 0.5s ease',
-              animation: nearestCanCollect ? 'logGlow 1.2s ease-in-out infinite' : 'none',
-            }}/>
-          </div>
-        </div>
-      )}
-
-      {/* ── ÚLTIMO SIMULACRO ── */}
-      {lastSim && (
-        <button onClick={() => onGoTab('icfes')} style={{
-          margin: '4px 14px 0', padding: '8px 12px',
-          background: 'none', border: 'none', borderRadius: 10,
-          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          <PkIc n="rana" s={14} c={lastSimColor}/>
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, flex: 1 }}>
-            Último simulacro:{' '}
-            <span style={{ color: lastSimColor, fontWeight: 800 }}>
-              {lastSim.correct || 0} aciertos
-            </span>
-            {lastSimDaysAgo !== null && lastSimDaysAgo >= 0 && (
-              <span style={{ color: C.textMuted, fontWeight: 500 }}>
-                {' '}· {lastSimDaysAgo === 0 ? 'hoy' : lastSimDaysAgo === 1 ? 'ayer' : `hace ${lastSimDaysAgo} días`}
+            {rankInfo.aheadGap !== null && rankInfo.pos > 1 && (
+              <span style={{ fontSize: 12, fontWeight: 800,
+                color: '#2D8A5E', whiteSpace: 'nowrap' }}>
+                +{rankInfo.aheadGap} →
               </span>
             )}
-          </span>
-          <PkIc n="right" s={10} c={C.textMuted}/>
-        </button>
-      )}
+          </button>
+        )}
 
-      {/* ── LIBRO ACTIVO ── */}
-      {currentBook && (() => {
-        const prog = appState.bookProgress?.[currentBook.id] || 0;
-        return (
-          <button onClick={() => onGoTab('books')} style={{
+        {/* ── CTA DUAL ── */}
+        <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* ICFES — verde */}
+          <div style={{ animation: todoDone ? 'none' : 'ctaPulse 5s ease-in-out infinite 2s' }}>
+            <button
+              onClick={() => onGoTab('icfes')}
+              disabled={todoDone}
+              onPointerDown={() => !todoDone && setIcfesPressed(true)}
+              onPointerUp={() => setIcfesPressed(false)}
+              onPointerLeave={() => setIcfesPressed(false)}
+              style={{
+                width: '100%', padding: '15px 20px',
+                background: todoDone ? C.bgAlt : '#2D8A5E', border: 'none',
+                borderBottom: todoDone ? `3px solid ${C.border}`
+                  : icfesPressed ? `2px solid #1a6b45` : `5px solid #1a6b45`,
+                borderRadius: 20, fontSize: 15, fontWeight: 800,
+                color: todoDone ? C.textMuted : '#fff',
+                cursor: todoDone ? 'default' : 'pointer', fontFamily: 'inherit',
+                transform: icfesPressed ? 'translateY(3px)' : 'translateY(0)',
+                transition: 'transform 0.08s ease, border-bottom 0.08s ease',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              }}>
+              <PkIc n="rana" s={20} c={todoDone ? C.textMuted : '#fff'}/>
+              {todoDone ? 'Hoy quedó sellado, descansa parce'
+                : hizoSimHoy ? 'Otro simulacro más' : 'Échate un simulacro'}
+            </button>
+          </div>
+          {/* LEER — azul */}
+          <button
+            onClick={() => onGoTab('books')}
+            onPointerDown={() => setLeerPressed(true)}
+            onPointerUp={() => setLeerPressed(false)}
+            onPointerLeave={() => setLeerPressed(false)}
+            style={{
+              width: '100%', padding: '14px 20px',
+              background: '#2E86AB', border: 'none',
+              borderBottom: leerPressed ? `2px solid #1d6b8a` : `5px solid #1d6b8a`,
+              borderRadius: 20, fontSize: 15, fontWeight: 800,
+              color: '#fff', cursor: 'pointer', fontFamily: 'inherit',
+              transform: leerPressed ? 'translateY(3px)' : 'translateY(0)',
+              transition: 'transform 0.08s ease, border-bottom 0.08s ease',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            }}>
+            <PkIc n="book" s={20} c="#fff"/>
+            {currentBook
+              ? `Seguir: ${currentBook.title.length > 22 ? currentBook.title.slice(0, 22) + '…' : currentBook.title}`
+              : 'Explora los libros'}
+          </button>
+        </div>
+
+        {/* ── CHIPS SECUNDARIOS ── */}
+        <div style={{ display: 'flex', gap: 10, padding: '10px 14px 0' }}>
+          <ChipBtn label="El Combo" icon="swords" color="#C1553B" onPress={() => onGoTab('friends')}/>
+          <ChipBtn label="Perfil"   icon="sombrero" color={C.accent} onPress={() => onGoTab('perfil')}/>
+        </div>
+
+        <div style={{ height: 1, background: `${C.border}44`, margin: '10px 14px 0' }}/>
+
+        {/* ── RACHA ── */}
+        {streak > 0 && (
+          <div style={{ margin: '6px 14px 0', padding: '10px 14px',
+            background: `linear-gradient(90deg, ${streakColor}12, ${streakColor}04)`,
+            borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <PkIc n="flame" s={26} c={streakColor}/>
+            <span style={{ fontSize: 30, fontWeight: 900, color: streakColor, lineHeight: 1 }}>{streak}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: `${streakColor}AA` }}>
+              {streak === 1 ? 'día de racha' : 'días de racha'}
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+              {last7.map((active, i) => (
+                <div key={i} style={{ width: 7, height: 7, borderRadius: '50%',
+                  background: active ? '#2D8A5E' : `${C.border}88` }}/>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── MISIÓN ── */}
+        {nearestMission && (
+          <div style={{ margin: '6px 14px 0', padding: '9px 12px',
+            background: nearestCanCollect ? `rgba(45,138,94,0.10)` : C.bgAlt,
+            borderRadius: 12,
+            border: nearestCanCollect ? '1px solid rgba(45,138,94,0.3)' : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PkIc n="swords" s={14} c={nearestCanCollect ? '#2D8A5E' : C.textMuted}/>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 600,
+                color: nearestCanCollect ? '#2D8A5E' : C.text,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {nearestMission.text}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700,
+                color: nearestCanCollect ? '#2D8A5E' : C.textMuted, whiteSpace: 'nowrap' }}>
+                {nearestMission.progress}/{nearestMission.target}
+              </span>
+            </div>
+            <div style={{ height: 4, background: `${C.border}66`, borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${Math.min(100, Math.round(nearestMission.pct * 100))}%`,
+                background: nearestCanCollect ? '#2D8A5E' : C.accent,
+                borderRadius: 99, transition: 'width 0.5s ease',
+                animation: nearestCanCollect ? 'logGlow 1.2s ease-in-out infinite' : 'none',
+              }}/>
+            </div>
+          </div>
+        )}
+
+        {/* ── ÚLTIMO SIMULACRO ── */}
+        {lastSim && (
+          <button onClick={() => onGoTab('icfes')} style={{
             margin: '4px 14px 0', padding: '8px 12px',
             background: 'none', border: 'none', borderRadius: 10,
             cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <PkIc n="book" s={14} c="#2D8A5E"/>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: C.text,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {currentBook.title}
-              </div>
-              <div style={{ height: 3, background: `${C.border}66`, borderRadius: 99, marginTop: 3 }}>
-                <div style={{ height: '100%', width: `${prog}%`,
-                  background: '#2D8A5E', borderRadius: 99 }}/>
-              </div>
-            </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#2D8A5E', whiteSpace: 'nowrap' }}>
-              {Math.round(prog)}%
+            display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PkIc n="rana" s={14} c={lastSimColor}/>
+            <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, flex: 1 }}>
+              Último simulacro:{' '}
+              <span style={{ color: lastSimColor, fontWeight: 800 }}>{lastSim.correct || 0} aciertos</span>
+              {lastSimDaysAgo !== null && lastSimDaysAgo >= 0 && (
+                <span style={{ color: C.textMuted, fontWeight: 500 }}>
+                  {' '}· {lastSimDaysAgo === 0 ? 'hoy' : lastSimDaysAgo === 1 ? 'ayer' : `hace ${lastSimDaysAgo} días`}
+                </span>
+              )}
             </span>
             <PkIc n="right" s={10} c={C.textMuted}/>
           </button>
-        );
-      })()}
+        )}
 
-      {/* ── BARRA DE PULSO — 3 secciones, todas tocables ── */}
-      <div style={{ display: 'flex', alignItems: 'stretch',
-        borderTop: `1px solid ${C.border}44`,
-        margin: '8px 14px 0', paddingTop: 2 }}>
-        <button onClick={() => onGoTab('friends')} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          background: 'none', border: 'none', padding: '8px 0',
-          cursor: 'pointer', fontFamily: 'inherit',
-          opacity: 1, transition: 'opacity 0.12s',
-        }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
-           onPointerUp={e => e.currentTarget.style.opacity='1'}
-           onPointerLeave={e => e.currentTarget.style.opacity='1'}>
-          <PkIc n="star" s={13} c="#2E86AB"/>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#2E86AB' }}>
-            {rankInfo ? `#${rankInfo.pos}` : '—'}
-          </span>
-        </button>
-        <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
-        <button onClick={() => onGoTab('perfil')} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          background: 'none', border: 'none', padding: '8px 0',
-          cursor: 'pointer', fontFamily: 'inherit',
-          opacity: 1, transition: 'opacity 0.12s',
-        }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
-           onPointerUp={e => e.currentTarget.style.opacity='1'}
-           onPointerLeave={e => e.currentTarget.style.opacity='1'}>
-          <PkIc n="sombrero" s={13} c={C.accent}/>
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>Nv.{lvl.level}</span>
-        </button>
-        <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
-        <button onClick={() => onGoShop?.()} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          background: 'none', border: 'none', padding: '8px 0',
-          cursor: 'pointer', fontFamily: 'inherit',
-          opacity: 1, transition: 'opacity 0.12s',
-        }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
-           onPointerUp={e => e.currentTarget.style.opacity='1'}
-           onPointerLeave={e => e.currentTarget.style.opacity='1'}>
-          <PkIc n="empanada" s={13} c={C.amberMid}/>
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.amberMid }}>Tienda</span>
-        </button>
+        {/* ── LIBRO ACTIVO ── */}
+        {currentBook && (() => {
+          const prog = appState.bookProgress?.[currentBook.id] || 0;
+          return (
+            <button onClick={() => onGoTab('books')} style={{
+              margin: '4px 14px 0', padding: '8px 12px',
+              background: 'none', border: 'none', borderRadius: 10,
+              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PkIc n="book" s={14} c="#2D8A5E"/>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.text,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {currentBook.title}
+                </div>
+                <div style={{ height: 3, background: `${C.border}66`, borderRadius: 99, marginTop: 3 }}>
+                  <div style={{ height: '100%', width: `${prog}%`, background: '#2D8A5E', borderRadius: 99 }}/>
+                </div>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#2D8A5E', whiteSpace: 'nowrap' }}>
+                {Math.round(prog)}%
+              </span>
+              <PkIc n="right" s={10} c={C.textMuted}/>
+            </button>
+          );
+        })()}
+
+        <div style={{ height: 1, background: `${C.border}44`, margin: '8px 14px 0' }}/>
+
+        {/* ── SHOP VITRINA ── */}
+        {destacados.length > 0 && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 14px 4px' }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.textMuted,
+                textTransform: 'uppercase', letterSpacing: 0.8 }}>Tienda</span>
+              <button onClick={() => onGoShop?.()} style={{
+                background: 'none', border: 'none', padding: 0,
+                cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 11, fontWeight: 700, color: C.accent }}>
+                Ver todo
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: 8, padding: '0 14px 8px',
+              overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              {destacados.map(item => (
+                <button key={item.id} onClick={() => onGoShop?.()} style={{
+                  flexShrink: 0, width: 88, padding: '10px 6px',
+                  background: C.bgAlt, border: `1px solid ${C.border}`,
+                  borderBottom: `3px solid ${rarityColor[item.rarity] || C.border}44`,
+                  borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%',
+                    background: `${rarityColor[item.rarity] || '#888'}22`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PkIc n="star" s={14} c={rarityColor[item.rarity] || C.textMuted}/>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: C.text,
+                    textAlign: 'center', lineHeight: 1.2, width: '100%',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.name}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: C.amberMid }}>
+                    {item.price}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── PULSE BAR ── */}
+        <div style={{ display: 'flex', alignItems: 'stretch',
+          borderTop: `1px solid ${C.border}44`,
+          margin: '4px 14px 0', paddingTop: 2 }}>
+          <button onClick={() => onGoTab('friends')} style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            background: 'none', border: 'none', padding: '8px 0',
+            cursor: 'pointer', fontFamily: 'inherit', opacity: 1, transition: 'opacity 0.12s',
+          }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
+             onPointerUp={e => e.currentTarget.style.opacity='1'}
+             onPointerLeave={e => e.currentTarget.style.opacity='1'}>
+            <PkIc n="star" s={13} c="#2E86AB"/>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#2E86AB' }}>
+              {rankInfo ? `#${rankInfo.pos}` : '—'}
+            </span>
+          </button>
+          <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
+          <button onClick={() => onGoTab('perfil')} style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            background: 'none', border: 'none', padding: '8px 0',
+            cursor: 'pointer', fontFamily: 'inherit', opacity: 1, transition: 'opacity 0.12s',
+          }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
+             onPointerUp={e => e.currentTarget.style.opacity='1'}
+             onPointerLeave={e => e.currentTarget.style.opacity='1'}>
+            <PkIc n="sombrero" s={13} c={C.accent}/>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>Nv.{lvl.level}</span>
+          </button>
+          <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
+          <button onClick={() => onGoShop?.()} style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            background: 'none', border: 'none', padding: '8px 0',
+            cursor: 'pointer', fontFamily: 'inherit', opacity: 1, transition: 'opacity 0.12s',
+          }} onPointerDown={e => e.currentTarget.style.opacity='0.6'}
+             onPointerUp={e => e.currentTarget.style.opacity='1'}
+             onPointerLeave={e => e.currentTarget.style.opacity='1'}>
+            <PkIc n="empanada" s={13} c={C.amberMid}/>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.amberMid }}>Tienda</span>
+          </button>
+        </div>
+
       </div>
-
     </div>
   );
 }
