@@ -492,7 +492,7 @@ const injectFirebase = () => {
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getDatabase, ref, set, get, onValue, update, push, onDisconnect }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider }
+    import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     const cfg = {
       apiKey: "AIzaSyDf308JcBu-8eXBW2OpmST-MK0gCD9lVPs",
@@ -507,7 +507,7 @@ const injectFirebase = () => {
       const app = initializeApp(cfg);
       const auth = getAuth(app);
       const provider = new GoogleAuthProvider();
-      window.__FB = { db: getDatabase(app), ref, set, get, onValue, update, push, onDisconnect, auth, provider, signInWithPopup };
+      window.__FB = { db: getDatabase(app), ref, set, get, onValue, update, push, onDisconnect, auth, provider, signInWithPopup, signInWithRedirect, getRedirectResult };
       window.__FB_READY = true;
     } catch(e) { 
       window.__FB_READY = false; 
@@ -2439,8 +2439,31 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
   // Firebase: inyectar
   useEffect(() => {
     injectFirebase();
-    const checkFb = setInterval(() => {
-      if (window.__FB_READY && window.__FB) { setFbLoaded(true); clearInterval(checkFb); }
+    const checkFb = setInterval(async () => {
+      if (!window.__FB_READY || !window.__FB) return;
+      clearInterval(checkFb);
+      setFbLoaded(true);
+      try {
+        const res = await window.__FB.getRedirectResult(window.__FB.auth);
+        if (!res?.user) return;
+        const uid = res.user.uid;
+        const snapUid = await window.__FB.get(window.__FB.ref(window.__FB.db, `uids/${uid}`));
+        if (snapUid.exists()) {
+          const existingCode = snapUid.val();
+          const userSnap = await window.__FB.get(window.__FB.ref(window.__FB.db, `users/${existingCode}`));
+          if (userSnap.exists()) {
+            const data = userSnap.val();
+            const { appState: cloudAppState, books: cloudBooks, ...basicUser } = data;
+            setUser(basicUser);
+            if (cloudAppState) setAppState(cloudAppState);
+            if (cloudBooks) setBooks(cloudBooks);
+            setScreen(basicUser.partnerCode || basicUser.sessionId ? 'app' : 'connect');
+          }
+        } else {
+          window.__FB_REDIRECT_USER = { uid, googleName: res.user.displayName || '' };
+          setScreen('onboarding');
+        }
+      } catch(e) { /* no redirect pendiente */ }
     }, 100);
     return () => clearInterval(checkFb);
   }, []);
@@ -3138,21 +3161,18 @@ function Onboarding({ C, isLight, onDone }) {
   const [loading, setLoading] = useState(false);
   const accent = C.accent || '#D4AF37';
 
-  const handleGoogleLogin = async () => {
+  useEffect(() => {
+    if (window.__FB_REDIRECT_USER) {
+      const { uid, googleName } = window.__FB_REDIRECT_USER;
+      window.__FB_REDIRECT_USER = null;
+      setTempUid(uid); setName(googleName); setStep('profile');
+    }
+  }, []);
+
+  const handleGoogleLogin = () => {
+    if (!fbOK()) { setError('Firebase no está listo. Espera un momento.'); return; }
     setLoading(true); setError('');
-    try {
-      if (!fbOK()) throw new Error('Firebase no está listo.');
-      const res = await window.__FB.signInWithPopup(window.__FB.auth, window.__FB.provider);
-      const uid = res.user.uid;
-      const googleName = res.user.displayName || '';
-      const snapUid = await window.__FB.get(window.__FB.ref(window.__FB.db, `uids/${uid}`));
-      if (snapUid.exists()) {
-        const existingCode = snapUid.val();
-        const userSnap = await window.__FB.get(window.__FB.ref(window.__FB.db, `users/${existingCode}`));
-        if (userSnap.exists()) { setLoading(false); onDone(userSnap.val()); return; }
-      }
-      setTempUid(uid); setName(googleName); setStep('profile'); setLoading(false);
-    } catch(e) { setError('Detalle del error: ' + e.message); setLoading(false); }
+    window.__FB.signInWithRedirect(window.__FB.auth, window.__FB.provider);
   };
 
   const submitProfile = async () => {
