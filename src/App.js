@@ -3139,20 +3139,25 @@ function Onboarding({ C, isLight, onDone }) {
   const accent = C.accent || '#D4AF37';
 
   useEffect(() => {
-    if (!fbOK()) return;
-    setLoading(true);
-    window.__FB.getRedirectResult(window.__FB.auth).then(async res => {
-      if (!res || !res.user) { setLoading(false); return; }
-      const uid = res.user.uid;
-      const googleName = res.user.displayName || '';
-      const snapUid = await window.__FB.get(window.__FB.ref(window.__FB.db, `uids/${uid}`));
-      if (snapUid.exists()) {
-        const existingCode = snapUid.val();
-        const userSnap = await window.__FB.get(window.__FB.ref(window.__FB.db, `users/${existingCode}`));
-        if (userSnap.exists()) { setLoading(false); onDone(userSnap.val()); return; }
-      }
-      setTempUid(uid); setName(googleName); setStep('profile'); setLoading(false);
-    }).catch(e => { setError('Error al volver de Google: ' + e.message); setLoading(false); });
+    const tryGetRedirect = setInterval(async () => {
+      if (!fbOK()) return;
+      clearInterval(tryGetRedirect);
+      try {
+        const res = await window.__FB.getRedirectResult(window.__FB.auth);
+        if (!res || !res.user) { setLoading(false); return; }
+        setLoading(true);
+        const uid = res.user.uid;
+        const googleName = res.user.displayName || '';
+        const snapUid = await window.__FB.get(window.__FB.ref(window.__FB.db, `uids/${uid}`));
+        if (snapUid.exists()) {
+          const existingCode = snapUid.val();
+          const userSnap = await window.__FB.get(window.__FB.ref(window.__FB.db, `users/${existingCode}`));
+          if (userSnap.exists()) { setLoading(false); onDone(userSnap.val()); return; }
+        }
+        setTempUid(uid); setName(googleName); setStep('profile'); setLoading(false);
+      } catch(e) { setError('Error al volver de Google: ' + e.message); setLoading(false); }
+    }, 100);
+    return () => clearInterval(tryGetRedirect);
   }, []);
 
   const handleGoogleLogin = () => {
