@@ -496,7 +496,7 @@ const injectFirebase = () => {
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     const cfg = {
       apiKey: "AIzaSyDf308JcBu-8eXBW2OpmST-MK0gCD9lVPs",
-      authDomain: "leemos-a-v.firebaseapp.com",
+      authDomain: "pankey.vercel.app",
       databaseURL: "https://leemos-a-v-default-rtdb.firebaseio.com",
       projectId: "leemos-a-v",
       storageBucket: "leemos-a-v.firebasestorage.app",

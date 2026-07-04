@@ -1,0 +1,9 @@
+{
+  "projectId": "leemos-a-v",
+  "appId": "1:519086900953:web:8dc1a5ca17ae699cd420c8",
+  "databaseURL": "https://leemos-a-v-default-rtdb.firebaseio.com",
+  "storageBucket": "leemos-a-v.firebasestorage.app",
+  "apiKey": "AIzaSyDf308JcBu-8eXBW2OpmST-MK0gCD9lVPs",
+  "authDomain": "pankey.vercel.app",
+  "messagingSenderId": "519086900953"
+}
