@@ -399,6 +399,19 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes modeExpand { 0%{transform:scale(0.4);opacity:0.4;border-radius:24px;} 100%{transform:scale(1);opacity:1;border-radius:0px;} }
 @keyframes iconFloatWiggle { 0%,100%{transform:translateY(0) rotate(0deg);} 30%{transform:translateY(-3px) rotate(-4deg);} 65%{transform:translateY(1px) rotate(3deg);} }
 
+/* ── ICFES TAB v3: carrusel de modos y ruleta Doble o Nada ── */
+.modos-carousel { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; gap:12px; scrollbar-width:none; padding:4px 2px 8px; }
+.modos-carousel::-webkit-scrollbar { display:none; }
+.modos-slide { flex:0 0 88%; scroll-snap-align:center; }
+@keyframes iconSweep { 0%{transform:translateX(-160%) skewX(-18deg);} 55%,100%{transform:translateX(260%) skewX(-18deg);} }
+@keyframes swordsClash { 0%,100%{transform:rotate(0deg) scale(1);} 35%{transform:rotate(-10deg) scale(1.1);} 55%{transform:rotate(9deg) scale(1.1);} 75%{transform:rotate(-3deg) scale(1.02);} }
+@keyframes miniArcDrain { 0%{stroke-dashoffset:0;} 85%,100%{stroke-dashoffset:63;} }
+@keyframes secondHand { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes indBlink3 { 0%,100%{opacity:1;} 16%,50%,83%{opacity:0.15;} 33%,66%{opacity:1;} }
+@keyframes decisionIn { 0%{opacity:0;transform:scale(1.04);} 100%{opacity:1;transform:scale(1);} }
+@keyframes goldBurst { 0%{transform:translate(0,0) scale(1);opacity:1;} 100%{transform:translate(var(--gx,40px),var(--gy,-40px)) scale(0.2);opacity:0;} }
+@keyframes chevronSpin { from{transform:rotate(0deg);} to{transform:rotate(180deg);} }
+
 /* ── BAZAR ── */
 @keyframes ofertaPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.55;transform:scale(0.96);} }
 @keyframes bazarHeroIn { 0%{opacity:0;transform:scale(1.06);} 100%{opacity:1;transform:scale(1);} }
@@ -4689,11 +4702,17 @@ function EstrellaSaber({ C, dominio, pred }) {
   const poly = mats.map((s, i) => punto(i, R * (viva ? vertice(s) : 0.06)).map(n => n.toFixed(1)).join(',')).join(' ');
   const conDatos = mats.some(s => !dominio[s]?.lvl?.sinDatos);
 
+  // Mejor y peor materia (para la estrella y la alerta en los badges)
+  const conPct = mats.filter(s => !dominio[s]?.lvl?.sinDatos);
+  const mejor = conPct.length >= 2 ? conPct.reduce((a, b) => (dominio[a].pct >= dominio[b].pct ? a : b)) : null;
+  const peor  = conPct.length >= 2 ? conPct.reduce((a, b) => (dominio[a].pct <= dominio[b].pct ? a : b)) : null;
+
+  const midPred = pred ? Math.round((pred.lo + pred.hi) / 2) : 0;
+  const predLevel = pred ? getPerfLevel(midPred) : null;
+
   return (
-    <div style={{ background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 22, padding: '16px 16px 14px', overflow: 'hidden', position: 'relative' }}>
-      <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 1.8, marginBottom: 4, textAlign: 'center' }}>
-        TU ESTRELLA DEL SABER
-      </div>
+    <div>
+      {/* 1. EL RADAR */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <svg width="210" height="188" viewBox="0 0 210 188" style={{ overflow: 'visible' }}>
           {[1, 0.66, 0.33].map((f, k) => (
@@ -4708,81 +4727,162 @@ function EstrellaSaber({ C, dominio, pred }) {
             style={{ transition: 'all 1.1s cubic-bezier(0.22,1,0.36,1)', filter: `drop-shadow(0 0 10px ${C.accent}50)` }}/>
           {mats.map((s, i) => {
             const meta = SUBJECT_META[s];
+            const d = dominio[s];
             const [px, py] = punto(i, R * (viva ? vertice(s) : 0.06));
-            const [lx, ly] = punto(i, R + 16);
+            const [lx, ly] = punto(i, R + 18);
             return (
               <g key={s}>
                 <circle cx={px} cy={py} r="3.6" fill={meta.color}
                   style={{ transition: 'all 1.1s cubic-bezier(0.22,1,0.36,1)', filter: `drop-shadow(0 0 4px ${meta.color})` }}/>
-                <text x={lx} y={ly + 3} textAnchor="middle" fontSize="10" fontWeight="800" fill={meta.color}>{meta.short}</text>
+                <text x={lx} y={ly} textAnchor="middle" fontSize="10" fontWeight="800" fill={meta.color}>{meta.short}</text>
+                {/* La etiqueta muestra el % además de la sigla */}
+                <text x={lx} y={ly + 11} textAnchor="middle" fontSize="8" fontWeight="700"
+                  fill={d?.lvl?.sinDatos ? C.textMuted : meta.color} opacity="0.8">
+                  {d?.lvl?.sinDatos ? '—' : `${d.pct}%`}
+                </text>
               </g>
             );
           })}
         </svg>
       </div>
-      {/* Niveles por materia */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 6 }}>
+      {!conDatos && (
+        <div style={{ textAlign: 'center', fontSize: 11, color: C.textMuted, marginTop: 4, marginBottom: 8 }}>
+          Haz simulacros para revelar tu estrella
+        </div>
+      )}
+
+      {/* 2. EL SABIO PREDICE — protagonista */}
+      {pred ? (
+        <div style={{ marginTop: 12, borderRadius: 18, padding: '16px 18px',
+          background: `${predLevel.color}10`, border: `1px solid ${predLevel.color}30` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <PkIc n="sabio" s={16} c={predLevel.color}/>
+            <span style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: 2, color: predLevel.color }}>EL SABIO PREDICE</span>
+            {pred.sube && <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 900, color: '#3DA873' }}>↑ en ascenso</span>}
+          </div>
+          <div style={{ fontSize: 12, color: C.textMid, marginBottom: 12 }}>Si haces un simulacro ahora mismo:</div>
+          {/* Barra de rango con los números en los extremos */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 26, fontWeight: 900, color: predLevel.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{pred.lo}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 9, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 0, bottom: 0,
+                  left: `${(pred.lo / 500) * 100}%`, width: `${((pred.hi - pred.lo) / 500) * 100}%`,
+                  borderRadius: 99, background: `linear-gradient(90deg, ${predLevel.color}88, ${predLevel.color})`,
+                  boxShadow: `0 0 10px ${predLevel.color}66` }}/>
+              </div>
+              <div style={{ textAlign: 'center', fontSize: 9.5, fontWeight: 700, color: C.textMuted, marginTop: 5 }}>
+                puntos de 500 · {Math.round((pred.lo / 500) * 100)}–{Math.round((pred.hi / 500) * 100)}%
+              </div>
+            </div>
+            <span style={{ fontSize: 26, fontWeight: 900, color: predLevel.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{pred.hi}</span>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: 12, borderRadius: 18, padding: '14px 18px', textAlign: 'center',
+          background: 'rgba(255,255,255,0.04)', border: `1px dashed ${C.border}` }}>
+          <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>
+            Completa al menos 2 simulacros y el Sabio podrá leer tu destino.
+          </div>
+        </div>
+      )}
+
+      {/* 3. BADGES DE NIVEL POR MATERIA (scroll horizontal) */}
+      <div style={{ display: 'flex', gap: 7, marginTop: 12, overflowX: 'auto', paddingBottom: 4,
+        WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
         {mats.map(s => {
           const d = dominio[s]; const meta = SUBJECT_META[s];
+          const esMejor = s === mejor && !d.lvl.sinDatos;
+          const esPeor  = s === peor && !d.lvl.sinDatos && mejor !== peor;
           return (
-            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 99,
-              background: `${meta.color}14`, border: `1px solid ${meta.color}35` }}>
-              <span style={{ fontSize: 9.5, fontWeight: 900, color: meta.color }}>{meta.short}</span>
-              <span style={{ fontSize: 9.5, fontWeight: 700, color: d.lvl.sinDatos ? C.textMuted : d.lvl.color }}>
-                {d.lvl.sinDatos ? '—' : `${d.lvl.name} · ${d.pct}%`}
+            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 99,
+              flexShrink: 0, background: `${meta.color}15`, border: `1px solid ${meta.color}` }}>
+              <span style={{ fontSize: 10, fontWeight: 900, color: meta.color }}>{meta.short}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: meta.color }}>
+                {d.lvl.sinDatos ? 'Sin datos' : `${d.lvl.name} ${d.pct}%`}
               </span>
+              {esMejor && <PkIc n="star" s={10} c="#FFD75E"/>}
+              {esPeor && <PkIc n="target" s={10} c="#EF4444"/>}
             </div>
           );
         })}
       </div>
-      {!conDatos && (
-        <div style={{ textAlign: 'center', fontSize: 11, color: C.textMuted, marginTop: 8 }}>
-          Haz simulacros para revelar tu estrella
-        </div>
-      )}
-      {pred && (
-        <div style={{ marginTop: 10, textAlign: 'center', fontSize: 12, fontWeight: 700,
-          color: C.textMid, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <PkIc n="sabio" s={14} c={C.accent}/>
-          El Sabio predice: <b style={{ color: C.accent }}>{pred.lo}–{pred.hi}</b>/500
-          {pred.sube && <span style={{ color: '#3DA873', fontWeight: 900 }}>↑</span>}
-        </div>
-      )}
     </div>
   );
 }
 
-// ── GRÁFICA DE EVOLUCIÓN ──
+// ── GRÁFICA DE EVOLUCIÓN (área, tooltip, promedio nacional) ──
 function EvolucionChart({ C, history }) {
-  const data = (history || []).slice(-10).map(r => r.score || 0);
+  const [tip, setTip] = useState(null); // índice del punto tocado
+  const items = (history || []).slice(-10);
+  const data = items.map(r => r.score || 0);
   if (data.length < 2) return null;
-  const W = 320, H = 104, P = 12;
+  const W = 320, H = 118, P = 16;
   const min = Math.min(...data), max = Math.max(...data);
-  const lo = Math.max(0, min - 25), hi = Math.min(500, max + 25);
+  // Incluir siempre el promedio nacional (300) en el rango para dar contexto
+  const lo = Math.max(0, Math.min(min - 25, 280));
+  const hi = Math.min(500, Math.max(max + 25, 320));
   const x = i => P + (i * (W - 2 * P)) / (data.length - 1);
   const y = v => H - P - ((v - lo) / Math.max(1, hi - lo)) * (H - 2 * P);
   const pts = data.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const delta = data[data.length - 1] - data[0];
-  const col = delta >= 0 ? '#3DA873' : '#E8743A';
+  // Delta contra el simulacro ANTERIOR (no contra el primero)
+  const delta = data[data.length - 1] - data[data.length - 2];
+  const col = '#F97316';
+  const deltaCol = delta >= 0 ? '#3DA873' : '#EF4444';
+  const yNac = y(300);
   return (
     <div style={{ background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 20, padding: '14px 16px 10px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 1.8 }}>EVOLUCIÓN</span>
-        <span style={{ fontSize: 11, fontWeight: 900, color: col, background: `${col}16`,
+        <span style={{ fontSize: 9.5, color: C.textMuted, fontWeight: 600 }}>últimos {data.length}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 900, color: deltaCol, background: `${deltaCol}16`,
           borderRadius: 99, padding: '2px 10px' }}>
-          {delta >= 0 ? '+' : ''}{delta} pts
+          {delta >= 0 ? '+' : ''}{delta} pts vs anterior
         </span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
-        <polygon points={`${pts} ${x(data.length - 1).toFixed(1)},${H - P} ${x(0).toFixed(1)},${H - P}`} fill={`${col}16`}/>
-        <polyline points={pts} fill="none" stroke={col} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {data.map((v, i) => (
-          <circle key={i} cx={x(i)} cy={y(v)} r={i === data.length - 1 ? 4.5 : 2.6} fill={col}
-            style={i === data.length - 1 ? { filter: `drop-shadow(0 0 5px ${col})` } : undefined}/>
-        ))}
-        <text x={P} y={y(max) - 5} fontSize="9" fontWeight="800" fill={C.textMuted}>{max}</text>
-        <text x={P} y={H - 2} fontSize="9" fontWeight="700" fill={C.textMuted} opacity="0.7">{data.length} simulacros</text>
-      </svg>
+      <div style={{ position: 'relative' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block', overflow: 'visible' }}
+          onClick={() => setTip(null)}>
+          <defs>
+            <linearGradient id="evoArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={col} stopOpacity="0.16"/>
+              <stop offset="100%" stopColor={col} stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+          {/* Grid horizontal sutil */}
+          {[0.25, 0.5, 0.75].map(f => (
+            <line key={f} x1={P} x2={W - P} y1={P + f * (H - 2 * P)} y2={P + f * (H - 2 * P)}
+              stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+          ))}
+          {/* Promedio nacional */}
+          <line x1={P} x2={W - P} y1={yNac} y2={yNac} stroke="rgba(255,255,255,0.25)" strokeWidth="1" strokeDasharray="4 4"/>
+          <text x={W - P} y={yNac - 4} textAnchor="end" fontSize="8" fontWeight="700" fill={C.textMuted}>Promedio Nacional · 300</text>
+          {/* Área bajo la línea */}
+          <polygon points={`${pts} ${x(data.length - 1).toFixed(1)},${H - P} ${x(0).toFixed(1)},${H - P}`} fill="url(#evoArea)"/>
+          <polyline points={pts} fill="none" stroke={col} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Puntos: rellenos con borde blanco, tocables */}
+          {data.map((v, i) => (
+            <g key={i} onClick={e => { e.stopPropagation(); setTip(tip === i ? null : i); }} style={{ cursor: 'pointer' }}>
+              <circle cx={x(i)} cy={y(v)} r="10" fill="transparent"/>
+              <circle cx={x(i)} cy={y(v)} r={i === data.length - 1 ? 4 : 3} fill={col} stroke="#fff" strokeWidth="1.6"
+                style={i === data.length - 1 ? { filter: `drop-shadow(0 0 5px ${col})` } : undefined}/>
+            </g>
+          ))}
+        </svg>
+        {/* Tooltip del punto tocado */}
+        {tip !== null && (
+          <div className="fi" style={{ position: 'absolute',
+            left: `${Math.min(78, Math.max(4, (x(tip) / W) * 100 - 11))}%`, top: `${(y(data[tip]) / H) * 100 - 8}%`,
+            transform: 'translateY(-100%)', background: C.bgAlt, border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: '6px 11px', boxShadow: '0 8px 22px rgba(0,0,0,0.45)', pointerEvents: 'none' }}>
+            <div style={{ fontSize: 14, fontWeight: 900, color: getPerfLevel(data[tip]).color, lineHeight: 1.1 }}>{data[tip]}</div>
+            <div style={{ fontSize: 9, color: C.textMuted, whiteSpace: 'nowrap' }}>{items[tip]?.date || `#${tip + 1}`}</div>
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 9.5, color: C.textMuted, fontWeight: 700, marginTop: 4 }}>
+        {data.length} simulacros completados
+      </div>
     </div>
   );
 }
@@ -5616,309 +5716,395 @@ function ModoSupervivencia({ C, appState, onTerminar, onOtra, onClose, onRevive 
 function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
   const VIOLETA = '#8B5CF6';
   const RONDAS = 5;
-  const BASE = 30;
-  // Cuñas: 5 materias + 3 multiplicadores angostos + 2 especiales (suman 360°)
-  const WEDGES = [
-    { t: 'materia', s: 'Lectura Crítica',    color: '#A78BFA', deg: 58 },
-    { t: 'mult', v: 2,  color: '#FBBF24', deg: 20, label: 'x2' },
-    { t: 'materia', s: 'Matemáticas',        color: '#60A5FA', deg: 58 },
-    { t: 'dorado',      color: '#FFD75E', deg: 15, label: '✦' },
-    { t: 'materia', s: 'Ciencias Naturales', color: '#34D399', deg: 58 },
-    { t: 'mult', v: 3,  color: '#F97316', deg: 12, label: 'x3' },
-    { t: 'materia', s: 'Ciencias Sociales',  color: '#E8B84B', deg: 58 },
-    { t: 'negra',       color: '#1A060D', deg: 12, label: '!' },
-    { t: 'materia', s: 'Inglés',             color: '#F472B6', deg: 61 },
-    { t: 'mult', v: 5,  color: '#EF4444', deg: 8,  label: 'x5' },
-  ];
-  // Ángulos acumulados para el conic-gradient y para saber dónde cayó
-  let acc = 0;
-  const stops = WEDGES.map(w => { const from = acc; acc += w.deg; return { ...w, from, to: acc }; });
-  const conic = `conic-gradient(${stops.map(w => `${w.color} ${w.from}deg ${w.to}deg`).join(', ')})`;
+  const BASE = 25;              // empanadas base por pregunta correcta
+  const DECISION_MS = 10000;    // 10s para decidir: cobrar o apostar
 
-  const ai = useAIQuestions({ count: 8, compact: true, dificultad: 'Alta' });
-  const [fase, setFase] = useState('girar');   // girar | cargando | girando | pregunta | dorado | fin
-  const [deg, setDeg] = useState(0);
-  const [ronda, setRonda] = useState(0);       // 0-based; se muestran 5 rondas
-  const [pot, setPot] = useState(0);
-  const [mult, setMult] = useState(1);
-  const [wedge, setWedge] = useState(null);    // cuña donde cayó
+  // 6 cuñas iguales de 60°: dos x2, un x3, un x1.5 y dos PIERDE
+  const WEDGES = [
+    { t: 'x2',     v: 2,   color: '#FBBF24', label: 'x2' },
+    { t: 'pierde', v: 0,   color: '#EF4444', label: 'PIERDE' },
+    { t: 'x2',     v: 2,   color: '#FBBF24', label: 'x2' },
+    { t: 'x15',    v: 1.5, color: '#22C55E', label: 'x1.5' },
+    { t: 'pierde', v: 0,   color: '#EF4444', label: 'PIERDE' },
+    { t: 'x3',     v: 3,   color: '#F97316', label: 'x3' },
+  ];
+  const conic = `conic-gradient(${WEDGES.map((w, i) => `${w.color} ${i * 60}deg ${(i + 1) * 60}deg`).join(', ')})`;
+
+  const ai = useAIQuestions({ count: 6, compact: true, dificultad: 'Alta' });
+  const [fase, setFase] = useState('inicio');  // inicio | pregunta | decision | giro | fin
+  const [ronda, setRonda] = useState(0);
+  const [total, setTotal] = useState(0);       // empanadas en juego (acumuladas en la sesión)
   const [q, setQ] = useState(null);
   const [sel, setSel] = useState(null);
   const [reveal, setReveal] = useState(false);
+  const [decPct, setDecPct] = useState(100);   // % restante de la barra de decisión
+  const [deg, setDeg] = useState(0);
+  const [girando, setGirando] = useState(false);
+  const [resGiro, setResGiro] = useState(null); // cuña donde cayó
+  const [winKey, setWinKey] = useState(0);      // partículas doradas
+  const [loseKey, setLoseKey] = useState(0);    // shake + flash rojo
   const [esRecord, setEsRecord] = useState(false);
-  const [doradoFlash, setDoradoFlash] = useState(0);
-  const rondasLog = useRef([]);                // { icono, texto, ganancia }
-  const paresRef = useRef([]);
-  const potRef = useRef(0);
-  const multRef = useRef(1);
+  const totalRef = useRef(0);
   const rondaRef = useRef(0);
+  const logRef = useRef([]);                    // resumen: { icono, color, texto, delta }
+  const paresRef = useRef([]);
   const finRef = useRef(false);
+  const decTimerRef = useRef(null);
   const tickTimers = useRef([]);
 
-  useEffect(() => () => tickTimers.current.forEach(clearTimeout), []);
+  useEffect(() => () => { clearInterval(decTimerRef.current); tickTimers.current.forEach(clearTimeout); }, []);
 
-  // Ticks que se van frenando mientras la ruleta gira
+  const siguienteRonda = () => {
+    clearInterval(decTimerRef.current);
+    if (rondaRef.current >= RONDAS) { finalizar(); return; }
+    setQ(ai.next()); setSel(null); setReveal(false);
+    setFase('pregunta');
+  };
+
+  const empezar = () => {
+    FX.play('duelStart'); FX.vibrate('medium');
+    rondaRef.current = 0; setRonda(0);
+    siguienteRonda();
+  };
+
+  const responder = (i) => {
+    if (reveal || !q) return;
+    const ok = i === q.correct;
+    setSel(i); setReveal(true);
+    paresRef.current.push({ subject: q.subject, nivel: q.nivel, ok });
+    if (ok) {
+      FX.play('coin'); FX.vibrate('success');
+      setTimeout(() => {
+        // FASE 2: LA DECISIÓN (10 segundos o cobra automático)
+        setDecPct(100);
+        setFase('decision');
+        FX.play('duel');
+        const t0 = Date.now();
+        clearInterval(decTimerRef.current);
+        decTimerRef.current = setInterval(() => {
+          const restante = Math.max(0, 100 - ((Date.now() - t0) / DECISION_MS) * 100);
+          setDecPct(restante);
+          if (restante <= 0) { clearInterval(decTimerRef.current); cobrar(true); }
+        }, 100);
+      }, 1000);
+    } else {
+      FX.play('error'); FX.vibrate('error');
+      logRef.current.push({ icono: 'x', color: '#EF4444', texto: `Ronda ${rondaRef.current + 1}: Incorrecto`, delta: 'Sin apuesta' });
+      setTimeout(() => {
+        rondaRef.current += 1; setRonda(rondaRef.current);
+        siguienteRonda();
+      }, 1400);
+    }
+  };
+
+  const cobrar = (auto = false) => {
+    clearInterval(decTimerRef.current);
+    totalRef.current += BASE; setTotal(totalRef.current);
+    logRef.current.push({ icono: 'check', color: '#22C55E',
+      texto: `Ronda ${rondaRef.current + 1}: Correcto · ${auto ? 'Cobró (auto)' : 'Cobró'}`, delta: `+${BASE}` });
+    FX.play('coin'); FX.vibrate('light');
+    rondaRef.current += 1; setRonda(rondaRef.current);
+    siguienteRonda();
+  };
+
+  const apostar = () => {
+    clearInterval(decTimerRef.current);
+    setResGiro(null); setGirando(false);
+    setFase('giro');
+    FX.play('conjure');
+  };
+
+  // Ticks que arrancan rápido y se frenan con la ruleta
   const sonarTicks = () => {
-    tickTimers.current.forEach(clearTimeout);
-    tickTimers.current = [];
-    let t = 0, gap = 90;
-    for (let i = 0; i < 22; i++) {
-      t += gap; gap = Math.min(gap * 1.16, 420);
+    tickTimers.current.forEach(clearTimeout); tickTimers.current = [];
+    let t = 0, gap = 70;
+    for (let k = 0; k < 24; k++) {
+      t += gap; gap = Math.min(gap * 1.17, 400);
       tickTimers.current.push(setTimeout(() => FX.play('tick'), t));
     }
   };
 
-  // Hold de carga (0.5s) antes de lanzar
-  const cargarYGirar = () => {
-    if (fase !== 'girar') return;
-    setFase('cargando');
-    FX.play('tap'); FX.vibrate('light');
-    setTimeout(girar, 520);
-  };
-
   const girar = () => {
-    setFase('girando');
-    FX.play('duel'); FX.vibrate('medium');
+    if (girando) return;
+    setGirando(true);
+    FX.play('duelStart'); FX.vibrate('medium');
     sonarTicks();
     const target = Math.random() * 360;
     const vueltas = 1440 + Math.round(target);
     setDeg(d => d - (d % 360) + vueltas);
     setTimeout(() => {
-      // ¿Qué cuña quedó bajo el puntero (arriba)?
       const land = (360 - (vueltas % 360)) % 360;
-      const w = stops.find(s => land >= s.from && land < s.to) || stops[0];
-      setWedge(w);
-      FX.vibrate('medium');
-      if (w.t === 'dorado') {
-        // EL DORADO: 200 emp directas, sin pregunta
-        potRef.current += 200; setPot(potRef.current);
-        rondasLog.current.push({ icono: 'star', color: '#FFD75E', texto: 'EL DORADO', ganancia: '+200 emp' });
-        setDoradoFlash(Date.now());
-        FX.play('chestOpen'); FX.vibrate('heavy');
-        setTimeout(cerrarRonda, 1600);
+      const w = WEDGES[Math.floor(land / 60) % 6];
+      setResGiro(w);
+      if (w.t === 'pierde') {
+        // Pierde lo ganado esta ronda (los +25 no entran)
+        setLoseKey(Date.now());
+        FX.play('glass'); FX.vibrate('heavy');
+        logRef.current.push({ icono: 'x', color: '#EF4444', texto: `Ronda ${rondaRef.current + 1}: Giró → PIERDE`, delta: `-${BASE}` });
       } else {
-        const materia = w.t === 'materia' ? w.s : null;
-        const pregunta = ai.next(materia);
-        setQ(pregunta); setSel(null); setReveal(false);
-        setFase('pregunta');
-        FX.play('conjure');
+        const ganancia = Math.round(BASE * w.v);
+        totalRef.current += ganancia; setTotal(totalRef.current);
+        setWinKey(Date.now());
+        FX.play('levelUp'); FX.vibrate('success');
+        logRef.current.push({ icono: 'star', color: w.color, texto: `Ronda ${rondaRef.current + 1}: Giró → ${w.label}`, delta: `+${ganancia}` });
       }
-    }, 3700);
-  };
-
-  const responder = (i) => {
-    if (reveal || !q || !wedge) return;
-    const ok = i === q.correct;
-    setSel(i); setReveal(true);
-    paresRef.current.push({ subject: q.subject, nivel: q.nivel, ok });
-    if (ok) { FX.play('coin'); FX.vibrate('success'); } else { FX.play('error'); FX.vibrate('error'); }
-    setTimeout(() => {
-      if (wedge.t === 'materia') {
-        const g = ok ? BASE * multRef.current : 0;
-        potRef.current += g; setPot(potRef.current);
-        rondasLog.current.push({ icono: ok ? 'check' : 'x', color: ok ? '#4ADE80' : '#EF4444',
-          texto: (SUBJECT_META[wedge.s] || {}).short || wedge.s, ganancia: ok ? `+${g} emp` : '0' });
-      } else if (wedge.t === 'mult') {
-        if (ok) { multRef.current *= wedge.v; setMult(multRef.current); }
-        rondasLog.current.push({ icono: ok ? 'star' : 'x', color: ok ? wedge.color : '#EF4444',
-          texto: `Multiplicador x${wedge.v}`, ganancia: ok ? `mult → x${multRef.current}` : 'falló' });
-      } else if (wedge.t === 'negra') {
-        const g = ok ? BASE * multRef.current * 5 : 0;
-        potRef.current += g; setPot(potRef.current);
-        rondasLog.current.push({ icono: ok ? 'flame' : 'x', color: ok ? '#EF4444' : '#EF4444',
-          texto: 'PREGUNTA NEGRA', ganancia: ok ? `+${g} emp` : '0' });
-      }
-      cerrarRonda();
-    }, 1200);
-  };
-
-  const cerrarRonda = () => {
-    rondaRef.current += 1;
-    setRonda(rondaRef.current);
-    setDoradoFlash(0);
-    if (rondaRef.current >= RONDAS) finalizar();
-    else setFase('girar');
+      setTimeout(() => {
+        rondaRef.current += 1; setRonda(rondaRef.current);
+        setGirando(false);
+        siguienteRonda();
+      }, 2100);
+    }, 3300);
   };
 
   const finalizar = () => {
     if (finRef.current) return; finRef.current = true;
+    clearInterval(decTimerRef.current);
     const aciertos = paresRef.current.filter(p => p.ok).length;
-    const rec = multRef.current > (appState.ruletaMaxMult || 0);
+    const rec = totalRef.current > (appState.ruletaMaxMult || 0);
     setEsRecord(rec);
     setFase('fin');
-    if (potRef.current > 0) { FX.play('levelUp'); FX.vibrate('heavy'); }
-    onTerminar({ tipo: 'ruleta', valor: multRef.current, pares: paresRef.current, emp: potRef.current, xp: aciertos * 10 });
+    if (totalRef.current > 0) { FX.play('levelUp'); FX.vibrate('heavy'); }
+    onTerminar({ tipo: 'ruleta', valor: totalRef.current, pares: paresRef.current, emp: totalRef.current, xp: aciertos * 10 });
   };
 
-  const meta = q ? (SUBJECT_META[q.subject] || {}) : {};
-  const totalContado = useCountUp(fase === 'fin' ? pot : 0, 1200);
+  const totalContado = useCountUp(fase === 'fin' ? total : 0, 1300);
+
+  // La rueda (compartida entre inicio y giro)
+  const Rueda = ({ size = 260, quieta = false }) => (
+    <div style={{ position: 'relative', width: size, height: size }}>
+      <div style={{ position: 'absolute', inset: 0, borderRadius: '50%',
+        border: `5px solid ${VIOLETA}`, boxShadow: `0 0 38px ${VIOLETA}55, inset 0 0 24px rgba(0,0,0,0.45)`,
+        background: conic,
+        transform: `rotate(${quieta ? 0 : deg}deg)`,
+        transition: girando ? 'transform 3.3s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
+        {WEDGES.map((w, i) => (
+          <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 52, marginLeft: -26,
+            textAlign: 'center', fontSize: w.t === 'pierde' ? 8.5 : 12, fontWeight: 900,
+            color: w.t === 'pierde' ? '#FEE2E2' : '#0F0A04',
+            transform: `rotate(${i * 60 + 30}deg) translateY(-${size * 0.37}px)` }}>
+            {w.label}
+          </div>
+        ))}
+      </div>
+      {/* Centro: la rana contra-rota */}
+      <div style={{ position: 'absolute', top: '50%', left: '50%', width: 64, height: 64, marginTop: -32, marginLeft: -32,
+        borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #2A1548, #140A24)',
+        border: `3px solid ${VIOLETA}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
+        <div style={{ animation: girando ? 'inkSpinRev 3.3s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
+          <PkIc n="rana" s={30} c="#C084FC"/>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <Portal>
-    <div style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-      background: 'linear-gradient(180deg, #0A0514 0%, #140A24 50%, #0A0514 100%)', display: 'flex', flexDirection: 'column' }}>
+    <div key={loseKey || 'rl'} style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+      background: 'linear-gradient(180deg, #0A0514 0%, #140A24 50%, #0A0514 100%)', display: 'flex', flexDirection: 'column',
+      animation: loseKey ? 'screenShakeX 0.4s ease both' : 'none' }}>
 
-      {/* Flash dorado de EL DORADO */}
-      {doradoFlash > 0 && (
-        <div key={doradoFlash} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 4,
-          background: 'radial-gradient(circle at 50% 40%, rgba(255,215,94,0.55), transparent 70%)',
-          animation: 'doradoFlash 1.4s ease-out both' }}/>
+      {/* Flash rojo al perder el giro */}
+      {loseKey > 0 && (
+        <div key={`lf${loseKey}`} style={{ position: 'fixed', inset: 0, background: '#DC2626', pointerEvents: 'none',
+          zIndex: 4, animation: 'redFlashBg 0.35s ease-out both' }}/>
       )}
 
       <div style={{ maxWidth: 430, margin: '0 auto', padding: '20px 20px 34px', width: '100%', minHeight: '100%',
         display: 'flex', flexDirection: 'column' }}>
 
         {!ai.ready && fase !== 'fin' ? (
-          <ModoCargando color={VIOLETA} titulo="RULETA ACADÉMICA"/>
+          <ModoCargando color={VIOLETA} titulo="RULETA · DOBLE O NADA"/>
         ) : (
         <>
-        {/* Header: pote + multiplicador acumulado */}
-        {fase !== 'fin' && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: VIOLETA }}>RULETA ACADÉMICA</div>
-                <div style={{ fontSize: 11, color: 'rgba(245,242,235,0.5)', marginTop: 2 }}>Ronda {Math.min(ronda + 1, RONDAS)}/{RONDAS}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                  <PkIc n="empanada" s={16} c="#E8B84B"/>
-                  <span style={{ fontSize: 26, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
-                    textShadow: '0 0 18px rgba(232,184,75,0.5)' }}>{pot}</span>
+        {/* Banner de contexto */}
+        {(fase === 'pregunta' || fase === 'decision' || fase === 'giro') && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14,
+            padding: '10px 15px', borderRadius: 14, background: 'rgba(139,92,246,0.10)', border: `1px solid ${VIOLETA}35` }}>
+            <span style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: 1.5, color: VIOLETA }}>
+              RONDA {Math.min(ronda + 1, RONDAS)}/{RONDAS}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13.5, fontWeight: 900, color: '#E8B84B' }}>
+              En juego: {total} <PkIc n="empanada" s={13} c="#E8B84B"/>
+            </span>
+          </div>
+        )}
+
+        {/* ══ INICIO DE SESIÓN ══ */}
+        {fase === 'inicio' && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 3, color: VIOLETA, marginBottom: 18 }}>
+              RULETA · DOBLE O NADA
+            </div>
+            <Rueda quieta/>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 20 }}>
+              <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.5, color: 'rgba(245,242,235,0.5)' }}>EMPANADAS EN JUEGO:</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: '#E8B84B' }}>0</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(245,242,235,0.6)', marginTop: 8, textAlign: 'center', lineHeight: 1.6 }}>
+              Responde bien · Acumula · Decide si arriesgas
+            </div>
+            <button onClick={empezar} style={{
+              marginTop: 24, width: '100%', maxWidth: 300, padding: '16px', borderRadius: 16, border: 'none',
+              background: `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`, color: '#fff', fontSize: 15, fontWeight: 900,
+              cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 8px 26px ${VIOLETA}44`,
+              animation: 'ctaPulse 3.5s ease-in-out infinite 1s' }}>
+              Comenzar sesión (5 rondas)
+            </button>
+          </div>
+        )}
+
+        {/* ══ FASE 1: LA PREGUNTA ══ */}
+        {fase === 'pregunta' && q && (
+          <PreguntaRapida C={C} q={q} sel={sel} reveal={reveal} onPick={responder}/>
+        )}
+
+        {/* ══ FASE 2: LA DECISIÓN ══ */}
+        {fase === 'decision' && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 6, background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex', flexDirection: 'column', animation: 'decisionIn 0.35s ease both' }}>
+            <div style={{ maxWidth: 430, margin: '0 auto', width: '100%', flex: 1, display: 'flex', flexDirection: 'column', padding: '30px 22px' }}>
+
+              {/* MITAD SUPERIOR — COBRAR */}
+              <button onClick={() => cobrar(false)} style={{
+                flex: 1, border: 'none', borderRadius: '22px 22px 0 0', cursor: 'pointer', fontFamily: 'inherit',
+                background: 'linear-gradient(180deg, rgba(34,197,94,0.15), transparent)',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <PkIc n="empanada" s={18} c="#22C55E"/>
+                  <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: 2, color: '#22C55E' }}>COBRAR SEGURO</span>
                 </div>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(245,242,235,0.45)' }}>ACUMULADO</div>
+                <div style={{ fontSize: 13, color: 'rgba(245,242,235,0.75)' }}>+{BASE} empanadas garantizadas</div>
+                <div style={{ marginTop: 8, padding: '11px 26px', borderRadius: 13,
+                  background: 'linear-gradient(135deg, #22C55E, #15803D)', color: '#fff',
+                  fontSize: 13.5, fontWeight: 900, boxShadow: '0 6px 18px rgba(34,197,94,0.35)' }}>
+                  Cobrar y seguir →
+                </div>
+              </button>
+
+              {/* Timer de decisión: barra que se vacía de izquierda a derecha */}
+              <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.14)' }}/>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: C.textMuted }}>— O —</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.14)' }}/>
+                </div>
+                <div style={{ width: '100%', height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${decPct}%`, borderRadius: 99,
+                    background: decPct > 40 ? 'linear-gradient(90deg, #22C55E, #4ADE80)' : 'linear-gradient(90deg, #EF4444, #F97316)',
+                    transition: 'width 0.1s linear' }}/>
+                </div>
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: C.textMuted }}>
+                  {Math.ceil((decPct / 100) * 10)}s para decidir · si no, cobras automático
+                </span>
               </div>
-            </div>
-            {/* Barra de multiplicador acumulado */}
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 9 }}>
-              <span style={{ fontSize: 11, fontWeight: 900, color: VIOLETA, whiteSpace: 'nowrap' }}>MULT x{mult}</span>
-              <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(100, (mult / 10) * 100)}%`, borderRadius: 99,
-                  background: `linear-gradient(90deg, ${VIOLETA}, #C084FC)`, boxShadow: `0 0 10px ${VIOLETA}88`,
-                  transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)' }}/>
-              </div>
-            </div>
-            {/* Progreso de rondas */}
-            <div style={{ display: 'flex', gap: 5, marginTop: 8 }}>
-              {Array.from({ length: RONDAS }, (_, i) => (
-                <div key={i} style={{ flex: 1, height: 4, borderRadius: 99,
-                  background: i < ronda ? VIOLETA : 'rgba(255,255,255,0.1)',
-                  boxShadow: i < ronda ? `0 0 6px ${VIOLETA}88` : 'none' }}/>
-              ))}
+
+              {/* MITAD INFERIOR — APOSTAR */}
+              <button onClick={apostar} style={{
+                flex: 1, border: 'none', borderRadius: '0 0 22px 22px', cursor: 'pointer', fontFamily: 'inherit',
+                background: 'linear-gradient(180deg, transparent, rgba(139,92,246,0.15))',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%',
+                    background: conic, animation: 'raysSpin 6s linear infinite' }}/>
+                  <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: 2, color: VIOLETA }}>APOSTAR AL DOBLE</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(245,242,235,0.7)', lineHeight: 1.6, textAlign: 'center' }}>
+                  Si sale <b style={{ color: '#FBBF24' }}>x2</b>: +{BASE * 2} · si sale <b style={{ color: '#F97316' }}>x3</b>: +{BASE * 3}<br/>
+                  Si sale <b style={{ color: '#EF4444' }}>PIERDE</b>: −{BASE}
+                </div>
+                <div style={{ marginTop: 8, padding: '11px 26px', borderRadius: 13, position: 'relative', overflow: 'hidden',
+                  background: `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`, color: '#fff',
+                  fontSize: 13.5, fontWeight: 900, boxShadow: `0 6px 18px ${VIOLETA}44` }}>
+                  <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 40, pointerEvents: 'none',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                    animation: 'shimmerSlide 2.2s ease-in-out infinite' }}/>
+                  Girar la Ruleta ↻
+                </div>
+              </button>
             </div>
           </div>
         )}
 
-        {(fase === 'girar' || fase === 'cargando' || fase === 'girando' || fase === 'dorado') && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Puntero (parpadea al frenar) */}
+        {/* ══ FASE 3: EL GIRO ══ */}
+        {fase === 'giro' && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            {/* Indicador: parpadea cuando frena */}
             <div style={{ width: 0, height: 0, borderLeft: '13px solid transparent', borderRight: '13px solid transparent',
-              borderTop: `20px solid ${VIOLETA}`, marginBottom: -6, zIndex: 2,
+              borderTop: '20px solid #fff', marginBottom: -6, zIndex: 2,
               filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.5))',
-              animation: fase === 'girando' ? 'indicatorBlink 0.5s ease-in-out infinite' : 'none' }}/>
-            {/* La ruleta */}
-            <div style={{ position: 'relative', width: 280, height: 280 }}>
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%',
-                border: `5px solid ${VIOLETA}`, boxShadow: `0 0 38px ${VIOLETA}55, inset 0 0 24px rgba(0,0,0,0.45)`,
-                background: conic,
-                transform: `rotate(${deg}deg)`,
-                transition: fase === 'girando' ? 'transform 3.6s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
-                {stops.map((w, i) => {
-                  const mid = (w.from + w.to) / 2;
-                  return (
-                    <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 44, marginLeft: -22,
-                      textAlign: 'center', fontSize: w.t === 'materia' ? 13 : 11, fontWeight: 900,
-                      color: w.t === 'negra' ? '#EF4444' : '#0F0A04',
-                      transform: `rotate(${mid}deg) translateY(-108px)` }}>
-                      {w.t === 'materia' ? (SUBJECT_META[w.s] || {}).short : w.label}
-                    </div>
-                  );
-                })}
+              animation: resGiro ? 'indBlink3 0.9s ease both' : 'none' }}/>
+            <Rueda size={280}/>
+
+            {/* Partículas doradas al ganar (máx 10) */}
+            {winKey > 0 && resGiro && resGiro.t !== 'pierde' && (
+              <div key={winKey} style={{ position: 'absolute', top: '46%', left: '50%', pointerEvents: 'none' }}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div key={i} style={{ position: 'absolute', width: 6, height: 6, borderRadius: '50%',
+                    background: '#FFD75E', boxShadow: '0 0 8px #FBBF24',
+                    '--gx': `${Math.round(Math.cos((i / 10) * Math.PI * 2) * 90)}px`,
+                    '--gy': `${Math.round(Math.sin((i / 10) * Math.PI * 2) * 80)}px`,
+                    animation: `goldBurst 1s ease-out ${i * 0.04}s both` }}/>
+                ))}
               </div>
-              {/* Borde de la pregunta negra */}
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none',
-                border: '1px solid rgba(239,68,68,0.0)' }}/>
-              {/* Medallón central: la rana contra-rota */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', width: 72, height: 72, marginTop: -36, marginLeft: -36,
-                borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #2A1548, #140A24)',
-                border: `3px solid ${VIOLETA}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
-                <div style={{ animation: fase === 'girando' ? 'inkSpinRev 3.6s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
-                  <PkIc n="rana" s={34} c="#C084FC"/>
+            )}
+
+            {/* Resultado del giro */}
+            {resGiro ? (
+              <div className="fi" style={{ marginTop: 22, textAlign: 'center', animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+                <div style={{ fontSize: 30, fontWeight: 900, color: resGiro.color,
+                  textShadow: `0 0 30px ${resGiro.color}88` }}>
+                  {resGiro.t === 'pierde' ? '¡PERDISTE LA RONDA!' : `¡${resGiro.label}!`}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'rgba(245,242,235,0.75)', marginTop: 6 }}>
+                  {resGiro.t === 'pierde' ? `Los +${BASE} se esfumaron` : `+${Math.round(BASE * resGiro.v)} empanadas`}
                 </div>
               </div>
-            </div>
-
-            {/* Botón GIRAR con carga de 0.5s */}
-            <button onClick={cargarYGirar} disabled={fase !== 'girar'} style={{
-              marginTop: 26, width: '100%', maxWidth: 300, padding: '16px', borderRadius: 16, border: 'none',
-              position: 'relative', overflow: 'hidden',
-              background: fase === 'girando' ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`,
-              color: '#fff', fontSize: 15, fontWeight: 900, cursor: fase === 'girar' ? 'pointer' : 'default',
-              fontFamily: 'inherit', boxShadow: `0 8px 26px ${VIOLETA}44`,
-              animation: fase === 'girar' ? 'ctaPulse 3.5s ease-in-out infinite 1s' : 'none' }}>
-              {fase === 'cargando' && (
-                <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0,
-                  background: 'rgba(255,255,255,0.28)', animation: 'holdChargeFill 0.52s linear both' }}/>
-              )}
-              {fase === 'girando' ? 'El destino gira…' : fase === 'cargando' ? 'Cargando…' : 'GIRAR'}
-            </button>
-            {ronda === 0 && fase === 'girar' && (
-              <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.5)', marginTop: 12, textAlign: 'center', lineHeight: 1.6, maxWidth: 300 }}>
-                5 rondas. Materias suman empanadas, los x2/x3/x5 acumulan multiplicador,
-                EL DORADO regala 200 y la cuña NEGRA paga x5 si sobrevives.
-              </div>
+            ) : (
+              <button onClick={girar} disabled={girando} style={{
+                marginTop: 24, width: '100%', maxWidth: 300, padding: '16px', borderRadius: 16, border: 'none',
+                background: girando ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`,
+                color: '#fff', fontSize: 15, fontWeight: 900, cursor: girando ? 'default' : 'pointer',
+                fontFamily: 'inherit', boxShadow: `0 8px 26px ${VIOLETA}44` }}>
+                {girando ? 'El destino gira…' : '¡GIRAR!'}
+              </button>
             )}
           </div>
         )}
 
-        {fase === 'pregunta' && q && wedge && (
-          <>
-            <div style={{ textAlign: 'center', marginBottom: 12 }}>
-              <span style={{ display: 'inline-block', padding: '5px 16px', borderRadius: 99,
-                background: wedge.t === 'negra' ? 'rgba(239,68,68,0.15)' : `${wedge.t === 'materia' ? meta.color : wedge.color}22`,
-                border: `1.5px solid ${wedge.t === 'negra' ? '#EF4444' : wedge.t === 'materia' ? meta.color : wedge.color}`,
-                fontSize: 12, fontWeight: 900,
-                color: wedge.t === 'negra' ? '#EF4444' : wedge.t === 'materia' ? meta.color : wedge.color,
-                animation: 'popIn 0.4s ease both' }}>
-                {wedge.t === 'materia' ? `El destino eligió: ${q.subject}`
-                  : wedge.t === 'mult' ? `¡Acierta y multiplicas x${wedge.v}!`
-                  : 'PREGUNTA NEGRA: doble o nada (x5)'}
-              </span>
-            </div>
-            <PreguntaRapida C={C} q={q} sel={sel} reveal={reveal} onPick={responder}/>
-          </>
-        )}
-
+        {/* ══ FIN DE SESIÓN ══ */}
         {fase === 'fin' && (
           <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-            {esRecord && (
+            {esRecord && total > 0 && (
               <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color: '#FFD75E', marginBottom: 10,
                 animation: 'comboPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-                ¡NUEVO RÉCORD DE MULTIPLICADOR!
+                ¡TU MEJOR SESIÓN!
               </div>
             )}
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 2, color: `${VIOLETA}CC`, marginBottom: 6 }}>RULETA ACADÉMICA</div>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 2, color: `${VIOLETA}CC`, marginBottom: 6 }}>
+              SESIÓN DE RULETA COMPLETADA
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 60, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
-                textShadow: '0 0 34px rgba(232,184,75,0.5)', fontVariantNumeric: 'tabular-nums',
+              <span style={{ fontSize: 60, fontWeight: 900, color: total > 0 ? '#E8B84B' : '#EF4444', lineHeight: 1,
+                textShadow: total > 0 ? '0 0 34px rgba(232,184,75,0.5)' : 'none', fontVariantNumeric: 'tabular-nums',
                 animation: 'popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>+{totalContado}</span>
               <PkIc n="empanada" s={24} c="#E8B84B"/>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(245,242,235,0.65)', marginTop: 6 }}>
-              multiplicador final x{mult}
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'rgba(245,242,235,0.6)', marginTop: 6 }}>
+              +{paresRef.current.filter(p => p.ok).length * 10} XP
             </div>
 
             {/* Resumen de las 5 rondas */}
             <div style={{ width: '100%', maxWidth: 320, margin: '18px 0 4px', textAlign: 'left' }}>
-              {rondasLog.current.map((r, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+              {logRef.current.map((r, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px',
                   borderRadius: 10, background: 'rgba(255,255,255,0.04)', marginBottom: 5,
                   animation: `slideUpIn 0.4s ease ${i * 0.08}s both` }}>
-                  <span style={{ fontSize: 11, fontWeight: 900, color: 'rgba(245,242,235,0.4)', width: 16 }}>{i + 1}</span>
                   <PkIc n={r.icono} s={14} c={r.color}/>
-                  <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: '#F5F2EB' }}>{r.texto}</span>
-                  <span style={{ fontSize: 12, fontWeight: 900, color: r.color }}>{r.ganancia}</span>
+                  <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#F5F2EB' }}>{r.texto}</span>
+                  <span style={{ fontSize: 12, fontWeight: 900, color: r.color }}>{r.delta}</span>
                 </div>
               ))}
             </div>
@@ -5927,16 +6113,16 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
               <button onClick={onOtra} style={{ flex: 1.3, padding: '15px', borderRadius: 15, border: 'none',
                 background: `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`, color: '#fff', fontSize: 14, fontWeight: 900,
                 cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 6px 20px ${VIOLETA}40` }}>
-                Otra vez
+                Jugar otra sesión
               </button>
               <button onClick={onClose} style={{ flex: 1, padding: '15px', borderRadius: 15,
                 border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)',
                 color: '#F5F2EB', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Salir
+                Volver
               </button>
             </div>
             <button onClick={() => { FX.play('tap'); shareWhatsApp(
-              `PANKEY 🎰 Ruleta Académica\nGané ${pot} empanadas con multiplicador x${mult}${esRecord ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n→ pankey.vercel.app`
+              `PANKEY 🎰 Ruleta: Doble o Nada\nGané ${total} empanadas en una sesión${esRecord && total > 0 ? ' — ¡MI MEJOR MARCA!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Te atreves a apostar? → pankey.vercel.app`
             ); }} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               width: '100%', maxWidth: 320, marginTop: 10, padding: '12px', borderRadius: 15,
@@ -5947,10 +6133,11 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
           </div>
         )}
 
-        {(fase === 'girar' || fase === 'cargando' || fase === 'girando' || fase === 'pregunta') && (
-          <button onClick={() => { if (rondaRef.current > 0) finalizar(); else onClose(); }} style={{ marginTop: 'auto', paddingTop: 14, background: 'none', border: 'none',
+        {(fase === 'inicio' || fase === 'pregunta' || fase === 'giro') && (
+          <button onClick={() => { if (rondaRef.current > 0 || totalRef.current > 0) finalizar(); else onClose(); }}
+            style={{ marginTop: 'auto', paddingTop: 14, background: 'none', border: 'none',
             color: 'rgba(245,242,235,0.3)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            {rondaRef.current > 0 ? 'Cobrar y salir' : 'Salir de la ruleta'}
+            {rondaRef.current > 0 || totalRef.current > 0 ? 'Terminar y cobrar' : 'Salir de la ruleta'}
           </button>
         )}
         </>
@@ -5963,6 +6150,12 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
 
 function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoOracle, onMissionReward, onGoShop, onModo, onFlash, onPracticeWeak }) {
   const [expandiendo, setExpandiendo] = useState(null); // tarjeta de modo expandiéndose full-screen
+  const [modoIdx, setModoIdx]         = useState(0);    // slide activo del carrusel de modos
+  const [estrellaOpen, setEstrellaOpen] = useState(false); // Estrella del Saber colapsada por defecto
+  const [rachaModal, setRachaModal]   = useState(false);   // historia de la racha ICFES
+  const [expandedExp, setExpandedExp] = useState(null);    // expedición expandida (acordeón)
+  const [chestOpen, setChestOpen]     = useState(false);
+
   const history    = appState.icfesHistory || [];
   const hasHistory = history.length > 0;
   const best       = hasHistory ? Math.max(...history.map(r => r.score)) : 0;
@@ -5973,18 +6166,392 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
   const dominio    = dominioPorMateria(appState);
   const pred       = prediccionSabio(history);
   const debilidad  = detectarDebilidad(appState);
-
-  const cafeOscuro = '#2C1810';
-  const oroMacuquina = '#C9963A';
-
-  const [chestOpen, setChestOpen] = useState(false);
   const todayMissions = generateDailyMissions(todayStr());
   const missionsReady = todayMissions.filter(m => getMissionProgress(m, appState) >= m.target && !(appState.missionsRewarded || []).includes(m.id)).length;
 
-  return (
-    <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+  // ¿Sin puntos débiles? (todas las competencias con datos van arriba del 60%)
+  const sinDebiles = !debilidad && Object.values(appState.weakStats || {}).some(v => v.t >= 4);
 
-      {/* ── COFRE DE MISIONES (botón sutil) ── */}
+  const MODE_COLORS = {
+    simulacro: '#4A9EFF',
+    contrarreloj: '#F97316',
+    supervivencia: '#EF4444',
+    ruleta: '#8B5CF6',
+    duelo: '#DC2626',
+  };
+
+  // ── Los 5 modos con su identidad visual (brief) ──
+  const MODOS = [
+    { id: 'simulacro', nombre: 'Simulacro Oficial', desc: 'El simulacro completo. Como el día del examen.',
+      color: MODE_COLORS.simulacro,
+      grad: 'linear-gradient(145deg, #0D1B2A 0%, #1A3A5C 60%, #0A1525 100%)',
+      glow: 'radial-gradient(circle at 80% 20%, rgba(74,158,255,0.25), transparent 55%)',
+      dif: 4, rec: '40–250 emp',
+      record: best > 0 ? `Mejor: ${best}/500` : 'Sin jugar',
+      icono: (
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 8, padding: 2 }}>
+          <PkIc n="pergamino" s={20} c="#4A9EFF"/>
+          <div style={{ position: 'absolute', top: 0, bottom: 0, width: 12, pointerEvents: 'none',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)',
+            animation: 'iconSweep 3s ease-in-out infinite' }}/>
+        </div>
+      ),
+      accion: () => onStartSetup?.() },
+    { id: 'contrarreloj', nombre: 'Contrarreloj', desc: '10 preguntas. 90 segundos. Sin piedad.',
+      color: MODE_COLORS.contrarreloj,
+      grad: 'linear-gradient(145deg, #1A0800 0%, #3D1500 60%, #200A00 100%)',
+      glow: 'radial-gradient(circle at 80% 20%, rgba(249,115,22,0.3), transparent 55%)',
+      dif: 3, rec: 'x1.5 emp',
+      record: (appState.contrarrelojRecord || 0) > 0 ? `Mejor: ${appState.contrarrelojRecord}` : 'Sin jugar',
+      icono: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="13" r="8"/><path d="M12 13V9" style={{ transformOrigin: '12px 13px', animation: 'secondHand 2.4s linear infinite' }}/>
+          <path d="M9 2h6"/>
+        </svg>
+      ),
+      extra: (
+        /* mini-arco "90s" que se vacía en loop */
+        <div style={{ position: 'absolute', right: 14, bottom: 58, width: 30, height: 30, opacity: 0.9 }}>
+          <svg width="30" height="30" viewBox="0 0 30 30" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="15" cy="15" r="10" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3"/>
+            <circle cx="15" cy="15" r="10" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round"
+              strokeDasharray="63" style={{ animation: 'miniArcDrain 4s linear infinite' }}/>
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 7.5, fontWeight: 900, color: '#F97316' }}>90s</div>
+        </div>
+      ),
+      accion: () => onModo?.('contrarreloj') },
+    { id: 'supervivencia', nombre: 'Supervivencia', desc: '3 vidas. Preguntas infinitas. ¿Cuánto aguantas?',
+      color: MODE_COLORS.supervivencia,
+      grad: 'linear-gradient(145deg, #1A0000 0%, #3D0000 60%, #200000 100%)',
+      glow: 'radial-gradient(circle at 80% 20%, rgba(239,68,68,0.3), transparent 55%)',
+      dif: 5, rec: 'emp × ola/2',
+      record: (appState.supervivenciaRecord || 0) > 0 ? `Mejor: Ola ${appState.supervivenciaRecord}` : 'Sin jugar',
+      icono: (
+        <div style={{ animation: 'heartBeat 1.2s ease-in-out infinite', filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.6))' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.5 4 8.5C4 5.5 6.5 3 9.5 3C11 3 12 4 12 4C12 4 13 3 14.5 3C17.5 3 20 5.5 20 8.5C20 13.5 12 21 12 21Z" fill="#EF4444" stroke="#FCA5A5" strokeWidth="1"/></svg>
+        </div>
+      ),
+      extra: (
+        /* 3 corazones pequeños visibles en la tarjeta */
+        <div style={{ position: 'absolute', right: 16, bottom: 62, display: 'flex', gap: 4 }}>
+          {[0, 1, 2].map(i => (
+            <svg key={i} width="13" height="13" viewBox="0 0 24 24" style={{ animation: `heartBeat 1.2s ease-in-out infinite ${i * 0.18}s` }}>
+              <path d="M12 21C12 21 4 13.5 4 8.5C4 5.5 6.5 3 9.5 3C11 3 12 4 12 4C12 4 13 3 14.5 3C17.5 3 20 5.5 20 8.5C20 13.5 12 21 12 21Z" fill="#EF4444"/>
+            </svg>
+          ))}
+        </div>
+      ),
+      accion: () => onModo?.('supervivencia') },
+    { id: 'ruleta', nombre: 'Ruleta: Doble o Nada', desc: 'Responde, acumula y decide: ¿cobras o apuestas?',
+      color: MODE_COLORS.ruleta,
+      grad: 'linear-gradient(145deg, #0A0514 0%, #1E0A3D 60%, #0F0520 100%)',
+      glow: 'radial-gradient(circle at 80% 20%, rgba(139,92,246,0.3), transparent 55%)',
+      dif: 2, rec: 'hasta x3',
+      record: (appState.ruletaMaxMult || 0) > 0 ? `Mejor: ${appState.ruletaMaxMult} emp` : 'Sin jugar',
+      icono: (
+        <div style={{ width: 22, height: 22, borderRadius: '50%', animation: 'raysSpin 30s linear infinite',
+          background: 'conic-gradient(#FBBF24 0deg 60deg, #EF4444 60deg 120deg, #FBBF24 120deg 180deg, #22C55E 180deg 240deg, #EF4444 240deg 300deg, #F97316 300deg 360deg)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0A0514' }}/>
+        </div>
+      ),
+      accion: () => onModo?.('ruleta') },
+    { id: 'duelo', nombre: 'Duelo Flash', desc: '5 preguntas contra un rival en vivo. 3 minutos.',
+      color: MODE_COLORS.duelo,
+      grad: 'linear-gradient(145deg, #1A0A00 0%, #2D1500 40%, #1A0000 100%)',
+      glow: 'radial-gradient(circle at 80% 20%, rgba(220,38,38,0.25), transparent 55%)',
+      dif: 3, rec: '30 emp + 60 XP',
+      record: 'Rival en vivo',
+      icono: (
+        <div style={{ animation: 'swordsClash 2s ease-in-out infinite' }}>
+          <PkIc n="swords" s={20} c="#FF7B4D"/>
+        </div>
+      ),
+      accion: () => onFlash?.() },
+  ];
+
+  // Días con simulacro en las últimas 2 semanas (para la historia de la racha)
+  const dias14 = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (13 - i));
+    const ds = d.toDateString();
+    return { dia: d.getDate(), hecho: history.some(r => r.ts && new Date(r.ts).toDateString() === ds) };
+  });
+
+  return (
+    <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* ══ 1. HEADER COMPACTO DE STATS (sticky) ══ */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 30, margin: '0 -4px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'stretch',
+          maxHeight: 64, borderRadius: 18, padding: '9px 4px',
+          background: 'rgba(8,12,20,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          border: `1px solid ${C.border}` }}>
+          <button onClick={() => { FX.play('tap'); setRachaModal(true); }} style={{
+            background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+            borderRight: '1px solid rgba(255,255,255,0.08)', padding: '2px 0' }}>
+            <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5, marginBottom: 3,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <PkIc n="flame" s={10} c="#F97316"/> RACHA
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: '#F97316', lineHeight: 1 }}>
+              {streak}<span style={{ fontSize: 10, fontWeight: 700, opacity: 0.7 }}> días</span>
+            </div>
+          </button>
+          <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.08)', padding: '2px 0' }}>
+            <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5, marginBottom: 3,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <PkIc n="star" s={10} c={hasHistory ? bestLevel.color : C.textMuted}/> MEJOR
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: hasHistory ? bestLevel.color : C.textMuted, lineHeight: 1 }}>
+              {hasHistory ? best : '—'}<span style={{ fontSize: 10, fontWeight: 700, opacity: 0.7 }}>{hasHistory ? ' pts' : ''}</span>
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '2px 0' }}>
+            <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5, marginBottom: 3,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <PkIc n="icfes" s={10} c={C.accent}/> PRUEBAS
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: C.accent, lineHeight: 1 }}>
+              {total}<span style={{ fontSize: 10, fontWeight: 700, opacity: 0.7 }}> total</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ 2. ¿CÓMO ENTRENAS HOY? — el héroe ══ */}
+      <div style={{ marginTop: -6 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, padding: '0 2px' }}>
+          <div className="serif" style={{ fontSize: 18, fontWeight: 700, color: C.text }}>¿Cómo entrenas hoy?</div>
+          {streak > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#F97316' }}>{streak} día{streak !== 1 ? 's' : ''} de racha</span>
+          )}
+        </div>
+
+        {/* Carrusel horizontal con snap */}
+        <div className="modos-carousel" onScroll={e => {
+          const w = e.currentTarget.clientWidth * 0.88 + 12;
+          const idx = Math.min(MODOS.length - 1, Math.round(e.currentTarget.scrollLeft / w));
+          if (idx !== modoIdx) setModoIdx(idx);
+        }}>
+          {MODOS.map((m, idx) => (
+            <button key={m.id} className="modos-slide" onClick={() => {
+              FX.play('duel'); FX.vibrate('medium');
+              setExpandiendo(m);
+              setTimeout(() => { m.accion(); setTimeout(() => setExpandiendo(null), 500); }, 430);
+            }} style={{
+              position: 'relative', height: 180, border: 'none', borderRadius: 24, overflow: 'hidden',
+              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', padding: 0,
+              background: m.grad, boxShadow: '0 12px 32px rgba(0,0,0,0.4)' }}>
+              {/* Capa 2: textura sutil a 45° */}
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5,
+                background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 9px)' }}/>
+              {/* Capa 3: glow radial */}
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: m.glow }}/>
+              {/* Línea de acento a la izquierda */}
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+                background: m.color, borderRadius: '24px 0 0 24px', boxShadow: `0 0 10px ${m.color}` }}/>
+
+              {/* Ícono superior izquierda */}
+              <div style={{ position: 'absolute', top: 16, left: 18, width: 48, height: 48, borderRadius: 14,
+                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {m.icono}
+              </div>
+              {/* Badge de récord superior derecha */}
+              <div style={{ position: 'absolute', top: 20, right: 16, padding: '4px 10px', borderRadius: 20,
+                background: 'rgba(0,0,0,0.4)', fontSize: 10, fontWeight: 900, color: m.color, whiteSpace: 'nowrap' }}>
+                {m.record}
+              </div>
+              {/* Detalle especial del modo */}
+              {m.extra || null}
+
+              {/* Contenido inferior */}
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 18px 18px' }}>
+                <div className="serif" style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.15 }}>{m.nombre}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 3,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.desc}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 900,
+                    color: '#E8B84B', background: 'rgba(60,35,5,0.65)', border: '1px solid rgba(232,184,75,0.35)',
+                    borderRadius: 99, padding: '3.5px 10px' }}>
+                    <PkIc n="empanada" s={10} c="#E8B84B"/>{m.rec}
+                  </span>
+                  <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+                    {[0, 1, 2, 3, 4].map(i => (
+                      <span key={i} style={{ width: 6, height: 6, borderRadius: '50%',
+                        background: i < m.dif ? '#fff' : 'rgba(255,255,255,0.22)' }}/>
+                    ))}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {/* Dots de navegación */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 2 }}>
+          {MODOS.map((m, i) => (
+            <div key={m.id} style={{ width: modoIdx === i ? 20 : 6, height: 6, borderRadius: 99,
+              background: modoIdx === i ? '#fff' : 'rgba(255,255,255,0.25)',
+              boxShadow: modoIdx === i ? '0 0 8px rgba(255,255,255,0.5)' : 'none',
+              transition: 'width 0.3s ease, background 0.3s ease' }}/>
+          ))}
+        </div>
+      </div>
+
+      {/* ══ 3. TU ESTRELLA DEL SABER (colapsable) ══ */}
+      <div style={{ background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 22, overflow: 'hidden' }}>
+        <button onClick={() => { FX.play('tap'); setEstrellaOpen(o => !o); }} style={{
+          width: '100%', padding: '15px 18px', background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <PkIc n="star" s={15} c={C.accent}/>
+          <span style={{ flex: 1, textAlign: 'left', fontSize: 11, color: C.textMid, fontWeight: 800, letterSpacing: 1.8 }}>
+            TU ESTRELLA DEL SABER
+          </span>
+          {pred && !estrellaOpen && (
+            <span style={{ fontSize: 10.5, fontWeight: 900, color: getPerfLevel(Math.round((pred.lo + pred.hi) / 2)).color }}>
+              {pred.lo}–{pred.hi}
+            </span>
+          )}
+          <span style={{ display: 'flex', transform: estrellaOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.35s ease' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2.5" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </span>
+        </button>
+        <div style={{ maxHeight: estrellaOpen ? 560 : 0, overflow: 'hidden', transition: 'max-height 0.4s ease' }}>
+          <div style={{ padding: '0 16px 16px' }}>
+            <EstrellaSaber C={C} dominio={dominio} pred={pred}/>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ 4. DEBILIDAD DEL DÍA ══ */}
+      {debilidad ? (
+        <div style={{ borderRadius: 18, padding: '16px 17px',
+          background: 'linear-gradient(135deg, rgba(239,68,68,0.08), transparent)',
+          border: '1px solid rgba(239,68,68,0.3)', borderLeft: '4px solid #EF4444' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <PkIc n="target" s={14} c="#EF4444"/>
+            <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: '#EF4444' }}>PUNTO DÉBIL DETECTADO</span>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 4 }}>
+            {debilidad.subject} · {debilidad.nivel}
+          </div>
+          <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginBottom: 12 }}>
+            Solo {debilidad.pct}% de aciertos en tus últimas sesiones. El Sabio recomienda practicarlo ya.
+          </div>
+          <button onClick={() => { FX.play('duel'); onPracticeWeak?.([debilidad.subject]); }} style={{
+            width: '100%', padding: '13px', borderRadius: 13, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            background: 'linear-gradient(135deg, #EF4444, #B91C1C)', color: '#fff', fontSize: 13, fontWeight: 900,
+            boxShadow: '0 6px 18px rgba(239,68,68,0.35)' }}>
+            Practicar este punto ahora →
+          </button>
+        </div>
+      ) : sinDebiles ? (
+        <div style={{ borderRadius: 18, padding: '14px 17px', display: 'flex', alignItems: 'center', gap: 11,
+          background: 'linear-gradient(135deg, rgba(61,168,115,0.08), transparent)',
+          border: '1px solid rgba(61,168,115,0.3)', borderLeft: '4px solid #3DA873' }}>
+          <PkIc n="check" s={18} c="#3DA873"/>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3DA873' }}>
+            ¡Sin puntos débiles detectados! Eres consistente.
+          </div>
+        </div>
+      ) : null}
+
+      {/* ══ 5. EVOLUCIÓN ══ */}
+      <EvolucionChart C={C} history={history}/>
+
+      {/* ══ 6. ÚLTIMAS EXPEDICIONES ══ */}
+      <div>
+        <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 1.8, marginBottom: 10 }}>
+          ÚLTIMAS EXPEDICIONES
+        </div>
+        {hasHistory ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {recentFive.slice(0, 3).map((r, i) => {
+              const lv = getPerfLevel(r.score);
+              const pct = Math.round((r.score / 500) * 100);
+              const abierta = expandedExp === i;
+              return (
+                <div key={i} className="su" style={{ animationDelay: `${i * .06}s`,
+                  background: `rgba(255,255,255,${C.glassOpacity || '0.045'})`, border: `1px solid ${abierta ? lv.color + '45' : C.border}`,
+                  borderRadius: 18, overflow: 'hidden', transition: 'border 0.3s ease' }}>
+                  <button onClick={() => { FX.play('tap'); setExpandedExp(abierta ? null : i); }} style={{
+                    width: '100%', padding: '13px 16px', background: 'none', border: 'none',
+                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                      <div style={{ width: 46, height: 46, borderRadius: '50%', flexShrink: 0, position: 'relative',
+                        background: `conic-gradient(${lv.color} ${pct}%, rgba(255,255,255,0.06) ${pct}%)`,
+                        boxShadow: `0 0 14px ${lv.color}25` }}>
+                        <div style={{ position: 'absolute', inset: 4.5, borderRadius: '50%', background: C.bgAlt,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, fontWeight: 900, color: lv.color }}>
+                          {r.score}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4A9EFF', flexShrink: 0 }}/>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: '#4A9EFF' }}>Simulacro</span>
+                          <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 800, color: C.textMid }}>{r.date}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.text }}>{lv.label}</span>
+                          <span style={{ fontSize: 10.5, color: C.textMuted }}>{r.correct}/{r.total}</span>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99,
+                            background: `linear-gradient(90deg,${lv.color}88,${lv.color})`,
+                            boxShadow: `0 0 6px ${lv.color}60`, transition: 'width 1s' }}/>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                  {/* Acordeón: desglose por materia */}
+                  <div style={{ maxHeight: abierta ? 260 : 0, overflow: 'hidden', transition: 'max-height 0.35s ease' }}>
+                    <div style={{ padding: '2px 16px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {Object.entries(r.subjectScores || {}).map(([s, v]) => {
+                        const meta = SUBJECT_META[s] || {};
+                        const sp = v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0;
+                        return (
+                          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                            <span style={{ fontSize: 10, fontWeight: 900, color: meta.color || C.text, width: 22 }}>{meta.short || s.slice(0, 2)}</span>
+                            <div style={{ flex: 1, height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.07)' }}>
+                              <div style={{ height: '100%', width: `${sp}%`, borderRadius: 99, background: meta.color || C.accent }}/>
+                            </div>
+                            <span style={{ fontSize: 10.5, fontWeight: 800, color: meta.color || C.textMid, width: 52, textAlign: 'right' }}>
+                              {v.correct}/{v.total} · {sp}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Estado vacío */
+          <div style={{ borderRadius: 18, padding: '26px 20px', textAlign: 'center',
+            background: 'rgba(255,255,255,0.03)', border: `1px dashed ${C.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12, opacity: 0.6 }}>
+              <PkIc n="pergamino" s={38} c={C.textMuted}/>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.textMid, marginBottom: 4 }}>
+              Aún no has completado ningún simulacro
+            </div>
+            <div style={{ fontSize: 11.5, color: C.textMuted, marginBottom: 16 }}>Tu historia empieza con el primero.</div>
+            <button onClick={onStartSetup} style={{ padding: '12px 26px', borderRadius: 13, border: 'none',
+              cursor: 'pointer', fontFamily: 'inherit', background: `linear-gradient(135deg, ${C.accent}, ${C.accentMid || C.accent})`,
+              color: '#fff', fontSize: 13, fontWeight: 900, boxShadow: `0 6px 18px ${C.accent}40` }}>
+              Hacer el primero →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Morral de Misiones + protección de racha (secundarios) ── */}
       <button onClick={() => setChestOpen(true)} style={{
         display: 'flex', alignItems: 'center', gap: 12, width: '100%', cursor: 'pointer', fontFamily: 'inherit',
         background: `linear-gradient(135deg, ${C.accent}12, transparent)`, border: `1px solid ${C.accent}30`,
@@ -6005,12 +6572,11 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
         <PkIc n="right" s={15} c={C.accent} />
       </button>
 
-      {/* Aviso de racha sin protección (estilo Duolingo) */}
       {(appState.streakDays || 0) >= 2 && (appState.streakFreezes || 0) === 0 && (
         <button onClick={onGoShop} style={{
           display: 'flex', alignItems: 'center', gap: 12, width: '100%', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
           background: 'linear-gradient(135deg, #38BDF815, transparent)', border: '1px solid #38BDF835',
-          borderRadius: 16, padding: '12px 16px',
+          borderRadius: 16, padding: '12px 16px', marginTop: -12,
         }}>
           <div style={{ width: 38, height: 38, borderRadius: 11, background: '#38BDF81A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <PkIc n="snowflake" s={20} c="#38BDF8" />
@@ -6023,6 +6589,68 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
             Conseguir
           </div>
         </button>
+      )}
+
+      {/* ══ 7. ORÁCULO ══ */}
+      <button onClick={onGoOracle} style={{
+        width: '100%', padding: '15px 20px', borderRadius: 16, cursor: 'pointer',
+        background: 'linear-gradient(135deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%)',
+        border: `1px solid ${C.accent}50`, color: C.accent,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+        boxShadow: '0 8px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)', fontFamily: 'inherit' }}>
+        <PkIc n="eye" s={19} c={C.accent} />
+        <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: 1.5 }}>CONSULTAR AL ORÁCULO · TU VOCACIÓN</span>
+      </button>
+
+      {/* ── MODAL: Historia de la racha ICFES ── */}
+      {rachaModal && (
+        <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99996, background: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={() => setRachaModal(false)}>
+          <div onClick={e => e.stopPropagation()} className="fu" style={{ width: '100%', maxWidth: 340,
+            background: C.bgAlt, border: '1px solid rgba(249,115,22,0.35)', borderRadius: 24, padding: '24px 22px',
+            boxShadow: '0 24px 70px rgba(0,0,0,0.7), 0 0 40px rgba(249,115,22,0.12)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                <PkIc n="flame" s={38} c="#F97316"/>
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: '#F97316', marginBottom: 6 }}>RACHA ICFES</div>
+              <div style={{ fontSize: 44, fontWeight: 900, color: C.text, lineHeight: 1 }}>{streak}</div>
+              <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 4 }}>
+                día{streak !== 1 ? 's' : ''} seguido{streak !== 1 ? 's' : ''} practicando el ICFES
+              </div>
+            </div>
+            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, marginBottom: 8 }}>ÚLTIMAS 2 SEMANAS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 16 }}>
+              {dias14.map((d, i) => (
+                <div key={i} style={{ aspectRatio: '1', borderRadius: 9, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 9.5, fontWeight: 800,
+                  background: d.hecho ? 'rgba(249,115,22,0.22)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${d.hecho ? 'rgba(249,115,22,0.55)' : C.border}`,
+                  color: d.hecho ? '#F97316' : C.textMuted }}>
+                  {d.hecho ? <PkIc n="flame" s={11} c="#F97316"/> : d.dia}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <div style={{ flex: 1, textAlign: 'center', padding: '10px 6px', borderRadius: 12,
+                background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.textMuted, marginBottom: 3 }}>PRUEBAS TOTALES</div>
+                <div style={{ fontSize: 17, fontWeight: 900, color: C.accent }}>{total}</div>
+              </div>
+              <div style={{ flex: 1, textAlign: 'center', padding: '10px 6px', borderRadius: 12,
+                background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.textMuted, marginBottom: 3 }}>MEJOR PUNTAJE</div>
+                <div style={{ fontSize: 17, fontWeight: 900, color: hasHistory ? bestLevel.color : C.textMuted }}>{hasHistory ? best : '—'}</div>
+              </div>
+            </div>
+            <button onClick={() => setRachaModal(false)} style={{ width: '100%', padding: '13px', borderRadius: 13,
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              background: 'linear-gradient(135deg, #F97316, #C2410C)', color: '#fff', fontSize: 13.5, fontWeight: 900 }}>
+              ¡A seguir la racha!
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Modal del Morral */}
@@ -6047,248 +6675,24 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
         </div>
       )}
 
-      {/* ── HERO compacto: Territorio del Saber ── */}
-      <div style={{
-        borderRadius: 24, overflow: 'hidden', position: 'relative',
-        background: `linear-gradient(155deg, ${cafeOscuro} 0%, #3D1F0F 40%, #1A0E06 100%)`,
-        padding: '20px 20px 18px',
-        border: `1px solid ${oroMacuquina}22`,
-        boxShadow: `0 18px 44px rgba(0,0,0,0.5), inset 0 1px 0 ${oroMacuquina}25`,
-      }}>
-        <div style={{ position:'absolute', top:-60, left:'50%', transform:'translateX(-50%)', width:280, height:180, pointerEvents:'none',
-          background:`radial-gradient(ellipse, ${oroMacuquina}20 0%, transparent 70%)` }} />
-        <div style={{ position:'relative', zIndex:1 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-            <div style={{
-              width:46, height:46, borderRadius:14, flexShrink:0,
-              background:`linear-gradient(135deg, ${oroMacuquina}, #8B5E1A)`,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              boxShadow:`0 6px 20px rgba(201,150,58,0.45), inset 0 1px 0 rgba(255,255,255,0.2)`,
-            }}>
-              <PkIc n="rana" s={26} c="#fff" />
-            </div>
-            <div>
-              <div style={{ fontFamily:"'Fraunces',serif", fontSize:20, fontWeight:800, color:'#fff', lineHeight:1.1 }}>
-                Territorio del Saber
-              </div>
-              <div style={{ fontSize:10.5, color:`${oroMacuquina}BB`, marginTop:3, letterSpacing:1.5, fontWeight:600 }}>
-                SIMULADOR SABER 11 · PANKEY
-              </div>
+      {/* Expansión full-screen al elegir un modo */}
+      {expandiendo && (
+        <Portal>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99993, background: expandiendo.grad,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'modeExpand 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
+            <div style={{ textAlign: 'center', animation: 'popIn 0.4s ease 0.1s both' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14, transform: 'scale(1.9)' }}>{expandiendo.icono}</div>
+              <div className="serif" style={{ fontSize: 26, fontWeight: 800, color: '#F5F2EB',
+                textShadow: `0 0 30px ${expandiendo.color}` }}>{expandiendo.nombre}</div>
             </div>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:9 }}>
-            <div style={{ background:'rgba(0,0,0,0.35)', borderRadius:14, padding:'11px 8px', textAlign:'center', border:`1px solid ${oroMacuquina}20` }}>
-              <div style={{ fontSize:8.5, color:'rgba(255,255,255,0.45)', fontWeight:800, letterSpacing:1.5, marginBottom:5 }}>RACHA</div>
-              <div style={{ fontSize:24, fontWeight:900, color:oroMacuquina, lineHeight:1, textShadow:`0 0 20px ${oroMacuquina}60` }}>{streak}</div>
-            </div>
-            <div style={{ background:'rgba(0,0,0,0.35)', borderRadius:14, padding:'11px 8px', textAlign:'center', border:`1px solid ${bestLevel.color}25` }}>
-              <div style={{ fontSize:8.5, color:'rgba(255,255,255,0.45)', fontWeight:800, letterSpacing:1.5, marginBottom:5 }}>MEJOR</div>
-              <div style={{ fontSize:22, fontWeight:900, color:hasHistory?bestLevel.color:'rgba(255,255,255,0.2)', lineHeight:1 }}>{hasHistory?best:'—'}</div>
-            </div>
-            <div style={{ background:'rgba(0,0,0,0.35)', borderRadius:14, padding:'11px 8px', textAlign:'center', border:'1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ fontSize:8.5, color:'rgba(255,255,255,0.45)', fontWeight:800, letterSpacing:1.5, marginBottom:5 }}>PRUEBAS</div>
-              <div style={{ fontSize:24, fontWeight:900, color:'#fff', lineHeight:1 }}>{total}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── TU ESTRELLA DEL SABER ── */}
-      <EstrellaSaber C={C} dominio={dominio} pred={pred}/>
-
-      {/* ══ LA SALA DE ENTRENAMIENTO ══ */}
-      <div>
-        <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:12 }}>
-          <div className="serif" style={{ fontSize:20, fontWeight:800, color:C.text }}>¿Cómo entrenas hoy?</div>
-          {streak > 0 && (
-            <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:900, color:'#FBBF24' }}>
-              <PkIc n="flame" s={13} c="#FBBF24"/> {streak} día{streak !== 1 ? 's' : ''}
-            </div>
-          )}
-        </div>
-
-        <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
-          {[
-            { id:'simulacro', nombre:'Simulacro Oficial', desc:'El simulacro completo. Como el día del examen.',
-              color:'#4A7EB8', grad:'linear-gradient(135deg, #0C1B30 0%, #14304F 55%, #0C1B30 100%)',
-              icono:(<div style={{ animation:'kanjiGlow 3s ease-in-out infinite', color:'#7BB3FF' }}><PkIc n="pergamino" s={30} c="#7BB3FF"/></div>),
-              dif:4, rec:'40–250 emp · sella tu racha',
-              estado: best > 0 ? `Mejor: ${best}/500` : 'Sin jugar', accion:() => onStartSetup?.() },
-            { id:'contrarreloj', nombre:'Contrarreloj', desc:'10 preguntas. 90 segundos. Sin piedad.',
-              color:'#F97316', grad:'linear-gradient(135deg, #1A0D02 0%, #33190A 55%, #1A0D02 100%)',
-              icono:(<div style={{ animation:'clockHands 3.2s linear infinite' }}><PkIc n="timer" s={30} c="#FB923C"/></div>),
-              dif:3, rec:'x1.5 empanadas',
-              estado: (appState.contrarrelojRecord || 0) > 0 ? `Mejor: ${appState.contrarrelojRecord}${appState.contrarrelojRecord <= 500 ? '/500' : ''}` : 'Sin jugar',
-              accion:() => onModo?.('contrarreloj') },
-            { id:'supervivencia', nombre:'Supervivencia', desc:'3 vidas. Preguntas infinitas. ¿Cuánto aguantas?',
-              color:'#DC2626', grad:'linear-gradient(135deg, #1A0404 0%, #330A0A 55%, #1A0404 100%)',
-              icono:(<div style={{ animation:'heartBeat 1.3s ease-in-out infinite', filter:'drop-shadow(0 0 8px rgba(239,68,68,0.6))' }}>
-                <svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.5 4 8.5C4 5.5 6.5 3 9.5 3C11 3 12 4 12 4C12 4 13 3 14.5 3C17.5 3 20 5.5 20 8.5C20 13.5 12 21 12 21Z" fill="#EF4444" stroke="#FCA5A5" strokeWidth="1"/></svg>
-              </div>),
-              dif:5, rec:'emp × (ola / 2) · tope 500',
-              estado: (appState.supervivenciaRecord || 0) > 0 ? `Mejor: Ola ${appState.supervivenciaRecord}` : 'Sin jugar',
-              accion:() => onModo?.('supervivencia') },
-            { id:'ruleta', nombre:'Ruleta Académica', desc:'El azar decide tu destino. ¿Eres valiente?',
-              color:'#8B5CF6', grad:'linear-gradient(135deg, #120A24 0%, #241448 55%, #120A24 100%)',
-              icono:(<div style={{ width:30, height:30, borderRadius:'50%', animation:'raysSpin 9s linear infinite',
-                background:`conic-gradient(${Object.values(SUBJECT_META).map((m, i) => `${m.color} ${i * 72}deg ${(i + 1) * 72}deg`).join(', ')})`,
-                display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 12px rgba(139,92,246,0.5)' }}>
-                <div style={{ width:11, height:11, borderRadius:'50%', background:'#120A24' }}/>
-              </div>),
-              dif:2, rec:'entre x1 y x5',
-              estado: (appState.ruletaMaxMult || 0) > 0 ? `Mejor: x${appState.ruletaMaxMult}` : 'Sin jugar',
-              accion:() => onModo?.('ruleta') },
-            { id:'duelo', nombre:'Duelo Flash', desc:'5 preguntas contra un rival en vivo. 3 minutos.',
-              color:'#E8743A', grad:'linear-gradient(135deg, #1C0B04 0%, #38160A 55%, #1C0B04 100%)',
-              icono:(<div style={{ animation:'iconFloatWiggle 2.6s ease-in-out infinite' }}><PkIc n="swords" s={30} c="#FF9D5C"/></div>),
-              dif:3, rec:'30 emp + 60 XP al ganar',
-              estado:'Rival en vivo', accion:() => onFlash?.() },
-          ].map((m, idx) => (
-            <button key={m.id} onClick={() => {
-              FX.play('duel'); FX.vibrate('medium');
-              setExpandiendo(m);
-              setTimeout(() => { m.accion(); setTimeout(() => setExpandiendo(null), 500); }, 430);
-            }} className="fu" style={{
-              animationDelay:`${idx * 0.06}s`,
-              position:'relative', width:'100%', padding:'16px 17px', border:`1px solid ${m.color}40`,
-              borderRadius:20, cursor:'pointer', fontFamily:'inherit', textAlign:'left', overflow:'hidden',
-              background:m.grad, boxShadow:`0 6px 22px ${m.color}22` }}>
-              {/* Glow decorativo */}
-              <div style={{ position:'absolute', top:-30, right:-30, width:110, height:110, borderRadius:'50%',
-                background:`radial-gradient(circle, ${m.color}2E, transparent 70%)`, pointerEvents:'none' }}/>
-              <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                {/* Ícono grande animado */}
-                <div style={{ width:56, height:56, borderRadius:16, flexShrink:0,
-                  background:`${m.color}18`, border:`1px solid ${m.color}35`,
-                  display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {m.icono}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div className="serif" style={{ fontSize:17.5, fontWeight:800, color:'#F5F2EB', lineHeight:1.15 }}>{m.nombre}</div>
-                  <div style={{ fontSize:11.5, color:'rgba(245,242,235,0.62)', marginTop:3, lineHeight:1.4 }}>{m.desc}</div>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:7, flexWrap:'wrap' }}>
-                    {/* Badge de recompensa */}
-                    <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:9.5, fontWeight:900,
-                      color:'#E8B84B', background:'rgba(232,184,75,0.10)', border:'1px solid rgba(232,184,75,0.3)',
-                      borderRadius:99, padding:'3px 9px' }}>
-                      <PkIc n="empanada" s={10} c="#E8B84B"/>{m.rec}
-                    </span>
-                    {/* Dificultad en puntos */}
-                    <span style={{ display:'inline-flex', gap:3, alignItems:'center' }}>
-                      {[0,1,2,3,4].map(i => (
-                        <span key={i} style={{ width:6, height:6, borderRadius:'50%',
-                          background: i < m.dif ? m.color : 'transparent',
-                          border:`1px solid ${i < m.dif ? m.color : 'rgba(255,255,255,0.25)'}`,
-                          boxShadow: i < m.dif ? `0 0 4px ${m.color}` : 'none' }}/>
-                      ))}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ flexShrink:0, textAlign:'right' }}>
-                  <div style={{ fontSize:10.5, fontWeight:900, color:m.color, whiteSpace:'nowrap' }}>{m.estado}</div>
-                  <div style={{ marginTop:6, display:'flex', justifyContent:'flex-end' }}>
-                    <PkIc n="right" s={14} c={`${m.color}AA`}/>
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Expansión full-screen al elegir un modo */}
-        {expandiendo && (
-          <Portal>
-            <div style={{ position:'fixed', inset:0, zIndex:99993, background:expandiendo.grad,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              animation:'modeExpand 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
-              <div style={{ textAlign:'center', animation:'popIn 0.4s ease 0.1s both' }}>
-                <div style={{ display:'flex', justifyContent:'center', marginBottom:14, transform:'scale(1.7)' }}>{expandiendo.icono}</div>
-                <div className="serif" style={{ fontSize:26, fontWeight:800, color:'#F5F2EB',
-                  textShadow:`0 0 30px ${expandiendo.color}` }}>{expandiendo.nombre}</div>
-              </div>
-            </div>
-          </Portal>
-        )}
-      </div>
-
-      {/* ── Debilidad detectada ── */}
-      {debilidad && (
-        <button onClick={() => onPracticeWeak?.([debilidad.subject])} style={{
-          display:'flex', alignItems:'center', gap:12, width:'100%', cursor:'pointer', fontFamily:'inherit', textAlign:'left',
-          background:'linear-gradient(135deg, rgba(239,68,68,0.10), transparent)', border:'1px solid rgba(239,68,68,0.3)',
-          borderRadius:16, padding:'12px 15px' }}>
-          <div style={{ width:38, height:38, borderRadius:11, background:'rgba(239,68,68,0.14)',
-            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <PkIc n="target" s={19} c="#EF4444"/>
-          </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:12.5, fontWeight:800, color:C.text }}>
-              Debilidad: {debilidad.nivel} en {SUBJECT_META[debilidad.subject]?.short || debilidad.subject}
-            </div>
-            <div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>
-              Solo {debilidad.pct}% de aciertos · Practicar mis puntos débiles →
-            </div>
-          </div>
-        </button>
+        </Portal>
       )}
-
-      {/* ── EVOLUCIÓN ── */}
-      <EvolucionChart C={C} history={history}/>
-
-      {/* ── HISTORIAL RECIENTE ── */}
-      {hasHistory && (
-        <div>
-          <div style={{ fontSize:10, color:C.textMuted, fontWeight:800, letterSpacing:1.8, marginBottom:10 }}>
-            ÚLTIMAS EXPEDICIONES
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {recentFive.slice(0, 3).map((r,i)=>{
-              const lv=getPerfLevel(r.score);
-              const pct=Math.round((r.score/500)*100);
-              return(
-                <Card key={i} C={C} isLight={isLight} className="su" style={{ padding:'12px 16px', animationDelay:`${i*.06}s` }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:13 }}>
-                    <div style={{ width:44, height:44, borderRadius:'50%', flexShrink:0, position:'relative',
-                      background:`conic-gradient(${lv.color} ${pct}%, rgba(255,255,255,0.06) ${pct}%)`,
-                      boxShadow:`0 0 14px ${lv.color}25` }}>
-                      <div style={{ position:'absolute', inset:4.5, borderRadius:'50%', background:C.bgAlt,
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        fontSize:11.5, fontWeight:900, color:lv.color }}>
-                        {r.score}
-                      </div>
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
-                        <span style={{ fontSize:12.5, fontWeight:700, color:C.text }}>{lv.label}</span>
-                        <span style={{ fontSize:10, color:C.textMuted }}>{r.correct}/{r.total} · {r.date}</span>
-                      </div>
-                      <div style={{ height:3, borderRadius:99, background:isLight?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.07)', overflow:'hidden' }}>
-                        <div style={{ height:'100%', width:`${pct}%`, borderRadius:99,
-                          background:`linear-gradient(90deg,${lv.color}88,${lv.color})`,
-                          boxShadow:`0 0 6px ${lv.color}60`, transition:'width 1s' }} />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── ORÁCULO ── */}
-      <button onClick={onGoOracle} style={{
-        width: '100%', padding: '15px 20px', borderRadius: 16, cursor: 'pointer',
-        background: 'linear-gradient(135deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%)',
-        border: `1px solid ${C.accent}50`, color: C.accent,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-        boxShadow: '0 8px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05)', fontFamily: 'inherit' }}>
-        <PkIc n="eye" s={19} c={C.accent} />
-        <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: 1.5 }}>CONSULTAR AL ORÁCULO · TU VOCACIÓN</span>
-      </button>
     </div>
   );
 }
+
 // ─────────────────────────────────────────────
 //  ICFES — Setup
 // ─────────────────────────────────────────────
