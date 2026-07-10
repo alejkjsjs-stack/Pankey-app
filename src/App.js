@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { THEMES as T } from './config/theme';
 import { Ic } from './components/Icon';
 import { BookCover } from './components/BookCover';
@@ -371,6 +372,41 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes supernovaPulse { 0%,100%{box-shadow:0 0 12px #F472B6,0 0 30px #C084FC66;transform:scale(1);} 50%{box-shadow:0 0 26px #fff,0 0 60px #F472B6AA,0 0 90px #C084FC66;transform:scale(1.04);} }
 .card-mythic-shimmer { position:relative; overflow:hidden; }
 .card-mythic-shimmer::after { content:''; position:absolute; top:0; bottom:0; left:0; width:60px; background:linear-gradient(90deg,transparent,rgba(232,121,249,0.22),transparent); animation:shimmerSlide 2.8s ease-in-out infinite; pointer-events:none; }
+
+/* ── SUPERVIVENCIA v2: corazones y olas ── */
+@keyframes heartBeat { 0%,100%{transform:scale(1);} 12%{transform:scale(1.07);} 24%{transform:scale(1);} }
+@keyframes heartBeatFast { 0%,100%{transform:scale(1);} 20%{transform:scale(1.12);} 40%{transform:scale(1);} }
+@keyframes heartPop { 0%{transform:scale(1);opacity:1;} 45%{transform:scale(1.5);opacity:1;} 100%{transform:scale(0);opacity:0;} }
+@keyframes screenShakeX { 0%,100%{transform:translateX(0);} 12%{transform:translateX(-4px);} 25%{transform:translateX(4px);} 37%{transform:translateX(-4px);} 50%{transform:translateX(4px);} 62%{transform:translateX(-3px);} 75%{transform:translateX(3px);} 87%{transform:translateX(-2px);} }
+@keyframes redFlashBg { 0%{opacity:0;} 40%{opacity:0.3;} 100%{opacity:0;} }
+@keyframes dangerBorder { 0%,100%{box-shadow:inset 0 0 0 2px rgba(239,68,68,0.15);} 50%{box-shadow:inset 0 0 0 3px rgba(239,68,68,0.75), inset 0 0 40px rgba(239,68,68,0.15);} }
+@keyframes waveSweep { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
+@keyframes waveClearTxt { 0%{transform:scale(2.6);opacity:0;} 25%{transform:scale(1);opacity:1;} 78%{transform:scale(1);opacity:1;} 100%{transform:scale(0.9);opacity:0;} }
+@keyframes heartFall { 0%{transform:translateY(-120px) scale(0.5);opacity:0;} 55%{transform:translateY(8px) scale(1.15);opacity:1;} 75%{transform:translateY(-5px) scale(0.95);} 100%{transform:translateY(0) scale(1);opacity:1;} }
+
+/* ── CONTRARRELOJ v2: arco y bonus ── */
+@keyframes countScale { 0%{transform:scale(1);} 50%{transform:scale(0.9);} 100%{transform:scale(1);} }
+@keyframes bonusFloat { 0%{transform:translateY(0) scale(0.7);opacity:0;} 20%{transform:translateY(-14px) scale(1.1);opacity:1;} 100%{transform:translateY(-70px) scale(1);opacity:0;} }
+@keyframes arcPanic { 0%,100%{filter:drop-shadow(0 0 6px rgba(239,68,68,0.5));} 50%{filter:drop-shadow(0 0 20px rgba(239,68,68,0.9));} }
+@keyframes clockHands { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+
+/* ── RULETA v2 ── */
+@keyframes indicatorBlink { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+@keyframes holdChargeFill { from{width:0%;} to{width:100%;} }
+@keyframes doradoFlash { 0%{opacity:0.7;} 100%{opacity:0;} }
+
+/* ── SALA DE ENTRENAMIENTO ── */
+@keyframes modeExpand { 0%{transform:scale(0.4);opacity:0.4;border-radius:24px;} 100%{transform:scale(1);opacity:1;border-radius:0px;} }
+@keyframes iconFloatWiggle { 0%,100%{transform:translateY(0) rotate(0deg);} 30%{transform:translateY(-3px) rotate(-4deg);} 65%{transform:translateY(1px) rotate(3deg);} }
+
+/* ── BAZAR ── */
+@keyframes ofertaPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.55;transform:scale(0.96);} }
+@keyframes bazarHeroIn { 0%{opacity:0;transform:scale(1.06);} 100%{opacity:1;transform:scale(1);} }
+.bazar-carousel { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.bazar-carousel::-webkit-scrollbar { display:none; }
+.bazar-slide { flex:0 0 100%; scroll-snap-align:center; }
+.bazar-tabs { display:flex; overflow-x:auto; scrollbar-width:none; gap:6px; }
+.bazar-tabs::-webkit-scrollbar { display:none; }
 `;
 
 
@@ -856,6 +892,11 @@ const FX = {
 // ─────────────────────────────────────────────
 // El fuego del Inicio crece momentáneamente cuando completas algo (misión, simulacro, cofre…)
 const fireBoost = () => { try { window.dispatchEvent(new CustomEvent('pkFireBoost')); } catch (e) {} };
+// Portal: saca los overlays de modos de juego al body para que tapen header y nav
+function Portal({ children }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(children, document.body);
+}
 const FB    = () => window.__FB;
 const fbOK  = () => !!window.__FB_READY && !!window.__FB;
 const SK    = 'leemos_v9';
@@ -1043,6 +1084,13 @@ const freshState = () => ({
   equipped: { title: null, frame: null, banner: null },
   inventory: ['t_iniciado'],
   streakFreezes: 0, // ✅ NEW: streak freeze item count
+  // Poderes del Bazar (se consumen al usarse)
+  xpBoostActive: false,   // Tinto Doble: x2 XP próxima lectura
+  duelShieldActive: false,// Escudo de Arepa: no pierdes apuesta
+  repasoActive: false,    // El Repaso: cambia 1 respuesta fallida
+  comodinActive: false,   // Comodín: 1 pregunta correcta automática
+  simXpBoost: false,      // Pergamino del Maestro: x2 XP próximo simulacro
+  ghostUntil: null,       // Modo Fantasma: oculto del ranking hasta esta fecha
   // Daily missions state
   missionsDate: null,       // ✅ NEW: date string of current missions
   missionsRewarded: [],     // ✅ NEW: IDs of missions already rewarded today
@@ -4017,7 +4065,8 @@ function CafetalTimer({ C, isLight, appState, setAppState, pushNotif, currentBoo
     if (seconds < 10) { reset(); return; }
     const mins = Math.max(1, Math.round(seconds / 60));
     const earnedRyo = mins;          // 1 Ryō per minute
-    const earnedXp  = mins * 3;     // 3 XP per minute
+    const tintoDoble = !!appState.xpBoostActive;  // ☕ Tinto Doble: duplica el XP de esta sesión
+    const earnedXp  = mins * 3 * (tintoDoble ? 2 : 1);     // 3 XP per minute
     const isLongSession = mins >= 60;
     const isMadrugador = new Date().getHours() < 7;
 
@@ -4045,12 +4094,14 @@ function CafetalTimer({ C, isLight, appState, setAppState, pushNotif, currentBoo
         ...s,
         ryo: (s.ryo || 0) + earnedRyo + achRyo,
         xp:  (s.xp  || 0) + earnedXp  + achXp,
+        xpBoostActive: tintoDoble ? false : s.xpBoostActive,  // el Tinto Doble se gasta
         readingMinutesToday: s.readingMinutesToday + mins,
         totalMinutesRead: newTotal,
         totalSessions: newSessions,
         achievements: newAchievements,
       };
     });
+    if (tintoDoble) pushNotif?.('☕ Tinto Doble aplicado: ¡XP duplicado en esta sesión!');
 
     if (currentBook) {
       setBooks(p => p.map(b => b.id === currentBook.id ? { ...b, timeRead: (b.timeRead || 0) + mins } : b));
@@ -4761,20 +4812,79 @@ function richLite(text) {
   });
 }
 
-// ── Cola de preguntas del Sabio (Gemini) para los modos ──
-// Se pide en segundo plano; si llega, las preguntas AI entran a la fila sin frenar el juego.
-function useGeminiPool() {
-  const aiRef = useRef([]);
+// ── Preguntas del Sabio (Gemini) para los modos de juego ──
+// Cada partida pide preguntas NUEVAS a la IA (con banco local de emergencia si falla).
+function useAIQuestions({ count = 10, compact = false, dificultad = null } = {}) {
+  const [ready, setReady] = useState(false);
+  const poolRef = useRef([]);                 // preguntas frescas de la IA
+  const fallbackRef = useRef(seededShuffle(ICFES_QUESTIONS, hashStr('modo' + Date.now())));
+  const fbIdxRef = useRef(0);
+  const fetchingRef = useRef(false);
+
+  const pedir = (n, opts2 = {}) => {
+    if (fetchingRef.current) return Promise.resolve();
+    fetchingRef.current = true;
+    return fetchGeminiQuestions(Object.keys(SUBJECT_META), n, { compact, dificultad, ...opts2 })
+      .then(qs => {
+        if (Array.isArray(qs)) {
+          poolRef.current.push(...qs.filter(q => q && q.text && Array.isArray(q.options) && typeof q.correct === 'number'));
+        }
+      })
+      .catch(() => {})
+      .finally(() => { fetchingRef.current = false; });
+  };
+
   useEffect(() => {
     let alive = true;
-    try {
-      fetchGeminiQuestions(Object.keys(SUBJECT_META), 10)
-        .then(qs => { if (alive && Array.isArray(qs)) aiRef.current = qs.filter(q => q && q.text && Array.isArray(q.options)); })
-        .catch(() => {});
-    } catch (e) {}
-    return () => { alive = false; };
+    const done = () => { if (alive) setReady(true); };
+    // Máximo 14s de espera: si la IA no responde, arranca con el banco local
+    const timeout = setTimeout(done, 14000);
+    pedir(count).then(() => { clearTimeout(timeout); done(); });
+    return () => { alive = false; clearTimeout(timeout); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Siguiente pregunta: primero IA fresca (filtrando por materia si se pide), luego banco local
+  const next = (subject = null) => {
+    const pool = poolRef.current;
+    let idx = -1;
+    if (subject) idx = pool.findIndex(q => q.subject === subject);
+    if (idx < 0 && !subject && pool.length > 0) idx = 0;
+    if (idx >= 0) return pool.splice(idx, 1)[0];
+    // banco local de emergencia
+    const fb = fallbackRef.current;
+    if (subject) {
+      const delSubj = fb.filter(q => q.subject === subject);
+      if (delSubj.length) return delSubj[Math.floor(Math.random() * delSubj.length)];
+    }
+    fbIdxRef.current += 1;
+    return fb[fbIdxRef.current % fb.length];
+  };
+
+  const quedan = () => poolRef.current.length;
+  return { ready, next, pedirMas: pedir, quedan };
+}
+
+// Pantalla de carga de un modo mientras el Sabio teje preguntas nuevas
+function ModoCargando({ color, titulo }) {
+  const FRASES = ['El Sabio teje preguntas nuevas…', 'Nada de recicladas: todo fresco…', 'Afinando el nivel de dificultad…', 'Ya casi, no se me desespere…'];
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setI(x => (x + 1) % FRASES.length), 2600);
+    return () => clearInterval(iv);
   }, []);
-  return aiRef;
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+      <div style={{ position: 'relative', width: 84, height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `3px dashed ${color}55`, animation: 'spin 4s linear infinite' }}/>
+        <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', border: `2px solid transparent`, borderTopColor: color, animation: 'spin 1.2s linear infinite' }}/>
+        <PkIc n="rana" s={34} c={color}/>
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color }}>{titulo}</div>
+      <div key={i} style={{ fontSize: 13, color: 'rgba(245,242,235,0.65)', fontStyle: 'italic', animation: 'fadeUp 0.4s ease both' }}>
+        {FRASES[i]}
+      </div>
+    </div>
+  );
 }
 
 // ── Contador animado: el número sube contando ──
@@ -4903,136 +5013,316 @@ function FinDeModo({ color, titulo, valor, unidad, esRecord, emp, xp, onOtra, on
 //  MODO CONTRARRELOJ — 60s, +5 por acierto, -3 por error
 // ─────────────────────────────────────────────
 function ModoContrarreloj({ C, appState, onTerminar, onOtra, onClose }) {
-  const [pool] = useState(() => seededShuffle(ICFES_QUESTIONS, hashStr('cr' + Date.now())));
-  const aiRef = useGeminiPool();       // preguntas del Sabio (Gemini) que llegan en segundo plano
-  const idxRef = useRef(0);
-  const [q, setQ] = useState(pool[0]);
-  const [tLeft, setTLeft] = useState(600);   // décimas: 60 segundos
-  const [hits, setHits] = useState(0);
-  const [sel, setSel] = useState(null);
-  const [reveal, setReveal] = useState(false);
-  const [fin, setFin] = useState(false);
-  const [delta, setDelta] = useState(null);  // { v, ok, key } → flash + animación del timer
-  const [esRecord, setEsRecord] = useState(false);
-  const paresRef = useRef([]);
+  const TOTAL = 10;              // 10 preguntas
+  const T0 = 900;                // 90 segundos (en décimas)
+  const NARANJA = '#F97316';
+  const ai = useAIQuestions({ count: TOTAL + 2, compact: true, dificultad: 'Alta' });
+  const [q, setQ] = useState(null);
+  const [qi, setQi] = useState(0);
+  const [tLeft, setTLeft] = useState(T0);
+  const [fin, setFin] = useState(null);        // { score, rec }
+  const [bonus, setBonus] = useState(null);    // { txt, key } bonus de cadena flotando
+  const [revisar, setRevisar] = useState(false);
+  const [abierta, setAbierta] = useState(null);
   const hitsRef = useRef(0);
+  const chainRef = useRef(0);
+  const answersRef = useRef([]);               // { q, sel, ok } para la revisión final
+  const paresRef = useRef([]);
   const finRef = useRef(false);
+  const usedRef = useRef(0);
 
-  const avanzar = () => {
-    const ai = aiRef.current;
-    if (ai && ai.length > 0) { setQ(ai.shift()); return; }
-    idxRef.current += 1;
-    setQ(pool[idxRef.current % pool.length]);
-  };
+  // Arranca cuando el Sabio entrega las preguntas nuevas
+  useEffect(() => { if (ai.ready && !q && !finRef.current) setQ(ai.next()); }, [ai.ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (fin) return undefined;
+    if (fin || !q) return undefined;
     const iv = setInterval(() => setTLeft(t => (t <= 1 ? 0 : t - 1)), 100);
     return () => clearInterval(iv);
-  }, [fin]);
+  }, [fin, q]);
 
   useEffect(() => {
-    if (tLeft === 0 && !fin) terminar();
+    if (tLeft === 0 && !fin && q) terminar();
     const secs = Math.ceil(tLeft / 10);
-    // tick-tock que acelera cuando queda poco
-    if (tLeft > 0 && tLeft % 10 === 0 && secs <= 10) { FX.play('tick'); }
-    if (tLeft > 0 && tLeft % 10 === 5 && secs <= 5) { FX.play('tick'); }
+    if (tLeft > 0 && tLeft % 10 === 0 && secs <= 20) FX.play('tick');
+    if (tLeft > 0 && tLeft % 10 === 5 && secs <= 10) FX.play('tick');
   }, [tLeft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const responder = (i) => {
-    if (reveal || fin) return;
+    if (fin || !q) return;
     const ok = i === q.correct;
-    setSel(i); setReveal(true);
+    answersRef.current.push({ q, sel: i, ok });
     paresRef.current.push({ subject: q.subject, nivel: q.nivel, ok });
     if (ok) {
-      hitsRef.current += 1; setHits(hitsRef.current);
-      setTLeft(t => Math.min(t + 50, 999));
-      setDelta({ v: '+5s', ok: true, key: Date.now() });
-      FX.play('success'); FX.vibrate('light');
+      hitsRef.current += 1;
+      chainRef.current += 1;
+      // CADENA DE ACIERTOS: 3 seguidas +5s · 5 seguidas +10s
+      if (chainRef.current === 3)      { setTLeft(t => Math.min(t + 50, 999));  setBonus({ txt: '+5s',  key: Date.now() }); FX.play('coin'); FX.vibrate('success'); }
+      else if (chainRef.current === 5) { setTLeft(t => Math.min(t + 100, 999)); setBonus({ txt: '+10s', key: Date.now() }); FX.play('levelUp'); FX.vibrate('success'); }
+      else { FX.play('success'); FX.vibrate('light'); }
     } else {
-      setTLeft(t => Math.max(1, t - 30));
-      setDelta({ v: '−3s', ok: false, key: Date.now() });
+      chainRef.current = 0;
       FX.play('error'); FX.vibrate('error');
     }
-    setTimeout(() => { setSel(null); setReveal(false); avanzar(); }, 520);
+    // Transición inmediata — la explicación se guarda para el final
+    if (qi + 1 >= TOTAL) { usedRef.current = T0 - tLeft; terminar(); }
+    else { setQi(n => n + 1); setQ(ai.next()); }
   };
 
   const terminar = () => {
     if (finRef.current) return; finRef.current = true;
+    if (!usedRef.current) usedRef.current = T0 - tLeft;
     const h = hitsRef.current;
-    const rec = h > (appState.contrarrelojRecord || 0);
-    setEsRecord(rec); setFin(true);
+    const score = Math.round((h / TOTAL) * 500);
+    const rec = score > (appState.contrarrelojRecord || 0);
+    setFin({ score, rec });
     if (rec) { FX.play('levelUp'); FX.vibrate('heavy'); } else { FX.play('duel'); }
-    onTerminar({ tipo: 'contrarreloj', valor: h, pares: paresRef.current, emp: h * 4, xp: h * 8 });
+    // Recompensa x1.5 por velocidad
+    onTerminar({ tipo: 'contrarreloj', valor: score, pares: paresRef.current, emp: h * 6, xp: h * 12 });
   };
 
   const secs = Math.ceil(tLeft / 10);
-  const urgente = secs < 15 && !fin;
-  const timerColor = secs > 30 ? '#2D8A5E' : secs >= 15 ? '#FBBF24' : '#EF4444';
-  // El fondo se pone más rojo a medida que muere el tiempo
-  const rojez = fin ? 0 : Math.max(0, Math.min(0.55, (60 - secs) / 60 * 0.55));
+  const arcColor = secs > 45 ? '#22C55E' : secs > 20 ? NARANJA : '#EF4444';
+  const R = 94, CIRC = 2 * Math.PI * R;
+  const pctT = tLeft / T0;
+  const respondidas = answersRef.current.length;
 
   return (
+    <Portal>
     <div style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-      background: 'linear-gradient(180deg, #12141E 0%, #1A1024 45%, #100A14 100%)', display: 'flex', flexDirection: 'column' }}>
-      {/* Capa roja que crece con la urgencia */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none',
-        background: 'linear-gradient(180deg, #2A0808 0%, #3A0C0C 45%, #1E0505 100%)',
-        opacity: rojez, transition: 'opacity 1s linear' }}/>
-      {/* Flash de pantalla al acertar / fallar */}
-      {delta && (
-        <div key={`fl${delta.key}`} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 3,
-          background: delta.ok
-            ? 'radial-gradient(ellipse at center, rgba(74,222,128,0.35), transparent 70%)'
-            : 'radial-gradient(ellipse at center, rgba(239,68,68,0.4), transparent 70%)',
-          animation: `${delta.ok ? 'screenFlashGreen' : 'screenFlashRed'} 0.55s ease-out both` }}/>
-      )}
-      <div style={{ maxWidth: 430, margin: '0 auto', padding: '72px 20px 34px', width: '100%', minHeight: '100%',
-        display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        {fin ? (
-          <FinDeModo color="#FF7B7B" titulo="CONTRARRELOJ" valor={hits} unidad={`acierto${hits !== 1 ? 's' : ''} antes de que el tiempo muriera`}
-            esRecord={esRecord} emp={hits * 4} xp={hits * 8} onOtra={onOtra} onSalir={onClose}
-            extra={`Récord: ${Math.max(hits, appState.contrarrelojRecord || 0)}`}
-            shareText={`PANKEY ⚡ Contrarreloj\n${hits} acierto${hits !== 1 ? 's' : ''} en 60 segundos${esRecord ? ' — ¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Podrás superarme? → pankey.vercel.app`}/>
-        ) : (
+      background: 'linear-gradient(180deg, #0A0600 0%, #140A02 50%, #0A0600 100%)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ maxWidth: 430, margin: '0 auto', padding: '20px 20px 34px', width: '100%', minHeight: '100%',
+        display: 'flex', flexDirection: 'column' }}>
+
+        {!ai.ready && !fin ? (
+          <ModoCargando color={NARANJA} titulo="CONTRARRELOJ"/>
+        ) : fin ? (
+          <FinContrarreloj C={C} fin={fin} hits={hitsRef.current} total={TOTAL}
+            secsLeft={secs} usedTenths={usedRef.current} respondidas={respondidas}
+            record={Math.max(fin.score, appState.contrarrelojRecord || 0)}
+            prevRecord={appState.contrarrelojRecord || 0}
+            answers={answersRef.current}
+            revisar={revisar} setRevisar={setRevisar} abierta={abierta} setAbierta={setAbierta}
+            streakDays={appState.streakDays || 0}
+            onOtra={onOtra} onClose={onClose}/>
+        ) : q ? (
           <>
-            {/* TIMER GIGANTE arriba */}
-            <div style={{ textAlign: 'center', marginBottom: 4 }}>
-              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 3, color: '#FF7B7B', marginBottom: 2 }}>CONTRARRELOJ</div>
-              <div key={delta?.key || 'timer'} style={{ position: 'relative', display: 'inline-block' }}>
-                <div style={{ fontSize: 56, fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-                  color: timerColor,
-                  textShadow: `0 0 ${urgente ? 30 : 18}px ${timerColor}77`,
-                  animation: delta
-                    ? (delta.ok ? 'timerGain 0.5s ease both' : 'timerLoss 0.5s ease both')
-                    : urgente ? 'urgentPulse 0.55s ease-in-out infinite' : 'none',
-                  transition: 'color 0.4s ease' }}>
-                  {secs}
+            {/* ── EL ARCO DEL TIEMPO ── */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 3, color: NARANJA, marginBottom: 8 }}>CONTRARRELOJ</div>
+              <div style={{ position: 'relative', width: 220, height: 220 }}>
+                <svg width="220" height="220" style={{ transform: 'rotate(-90deg)',
+                  animation: secs <= 20 ? 'arcPanic 0.8s ease-in-out infinite' : 'none' }}>
+                  <circle cx="110" cy="110" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="16"/>
+                  <circle cx="110" cy="110" r={R} fill="none" stroke={arcColor} strokeWidth="16"
+                    strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - pctT)}
+                    style={{ transition: 'stroke-dashoffset 0.12s linear, stroke 0.6s ease' }}/>
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center' }}>
+                  <div key={secs <= 10 ? secs : 'norm'} style={{ fontSize: 62, fontWeight: 900, lineHeight: 1,
+                    color: arcColor, fontVariantNumeric: 'tabular-nums',
+                    textShadow: `0 0 24px ${arcColor}66`, transition: 'color 0.6s ease',
+                    animation: secs <= 10 ? 'countScale 0.5s ease both' : 'none' }}>
+                    {secs}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(245,242,235,0.4)', letterSpacing: 2 }}>SEGUNDOS</div>
                 </div>
-                {delta && (
-                  <div key={delta.key} style={{ position: 'absolute', top: -8, right: -38, fontSize: 16, fontWeight: 900,
-                    color: delta.ok ? '#4ADE80' : '#EF4444', animation: 'comboPop 0.5s ease both' }}>
-                    {delta.v}
+                {/* Bonus de cadena flotando desde el arco */}
+                {bonus && (
+                  <div key={bonus.key} style={{ position: 'absolute', top: 18, left: '50%', marginLeft: -20,
+                    fontSize: 22, fontWeight: 900, color: '#4ADE80', textShadow: '0 0 14px rgba(74,222,128,0.7)',
+                    animation: 'bonusFloat 1.2s ease-out both', pointerEvents: 'none' }}>
+                    {bonus.txt}
                   </div>
                 )}
               </div>
+              {/* Contador de preguntas y puntos */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: 'rgba(245,242,235,0.7)' }}>{qi + 1}/{TOTAL}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 15, fontWeight: 900, color: '#4ADE80' }}>
+                  {hitsRef.current} <PkIc n="check" s={14} c="#4ADE80"/>
+                </span>
+                {chainRef.current >= 2 && (
+                  <span style={{ fontSize: 12, fontWeight: 900, color: NARANJA }}>
+                    Cadena: {chainRef.current}
+                  </span>
+                )}
+              </div>
             </div>
-            {/* Contador de aciertos */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 11, color: 'rgba(245,242,235,0.5)' }}>+5s acierto · −3s error</span>
-              <span key={hits} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 17, fontWeight: 900,
-                color: '#4ADE80', animation: hits > 0 ? 'comboPop 0.4s ease both' : 'none' }}>
-                {hits} <PkIc n="check" s={15} c="#4ADE80"/>
-              </span>
+
+            {/* ── PREGUNTA COMPACTA ── */}
+            <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+              borderRadius: 15, padding: '13px 14px', marginBottom: 11 }}>
+              <div style={{ display: 'inline-block', padding: '2.5px 9px', borderRadius: 99, marginBottom: 8,
+                background: `${(SUBJECT_META[q.subject] || {}).color || '#888'}20`, fontSize: 10, fontWeight: 800,
+                color: (SUBJECT_META[q.subject] || {}).color || '#aaa' }}>
+                {q.subject}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#F5F2EB', lineHeight: 1.5 }}>
+                {richLite(q.text)}
+              </div>
             </div>
-            <PreguntaRapida C={C} q={q} sel={sel} reveal={reveal} onPick={responder}/>
+            {/* Opciones en grid 2×2 para responder rápido */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {q.options.map((op, i) => (
+                <button key={i} onClick={() => responder(i)} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8, padding: '12px 11px', minHeight: 58,
+                  background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.11)',
+                  borderRadius: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <span style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 900,
+                    background: 'rgba(249,115,22,0.18)', color: NARANJA }}>
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#F5F2EB', lineHeight: 1.35 }}>{richLite(op)}</span>
+                </button>
+              ))}
+            </div>
+
             <button onClick={onClose} style={{ marginTop: 'auto', paddingTop: 16, background: 'none', border: 'none',
               color: 'rgba(245,242,235,0.3)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               Abandonar
             </button>
           </>
-        )}
+        ) : null}
       </div>
+    </div>
+    </Portal>
+  );
+}
+
+// ── Resultado del Contrarreloj: puntaje /500, velocidad y revisión rápida ──
+function FinContrarreloj({ C, fin, hits, total, secsLeft, usedTenths, respondidas, record, prevRecord,
+  answers, revisar, setRevisar, abierta, setAbierta, streakDays, onOtra, onClose }) {
+  const NARANJA = '#F97316';
+  const contado = useCountUp(fin.score, 1100);
+  const velocidad = respondidas > 0 ? ((usedTenths / 10) / respondidas).toFixed(1) : '—';
+  const maxBar = Math.max(record, fin.score, 1);
+  return (
+    <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '10px 0' }}>
+      <div style={{ textAlign: 'center' }}>
+        {fin.rec && (
+          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color: '#FFD75E', marginBottom: 10,
+            animation: 'comboPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+            ¡NUEVO RÉCORD!
+          </div>
+        )}
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 2, color: `${NARANJA}CC`, marginBottom: 6 }}>CONTRARRELOJ</div>
+        <div style={{ fontSize: 64, fontWeight: 900, color: NARANJA, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+          textShadow: `0 0 34px ${NARANJA}66`, animation: 'popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+          {contado}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(245,242,235,0.65)', marginTop: 4 }}>/ 500 puntos</div>
+
+        {/* Stats de velocidad */}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '16px 0 4px' }}>
+          {[
+            { k: 'ACIERTOS', v: `${hits}/${total}` },
+            { k: 'SOBRARON', v: secsLeft > 0 ? `${secsLeft}s` : '0s' },
+            { k: 'VELOCIDAD', v: `${velocidad}s/preg` },
+          ].map(({ k, v }) => (
+            <div key={k} style={{ padding: '9px 13px', borderRadius: 12, background: 'rgba(249,115,22,0.09)',
+              border: '1px solid rgba(249,115,22,0.28)' }}>
+              <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: 'rgba(245,242,235,0.45)' }}>{k}</div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: '#F5F2EB', marginTop: 2 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Comparativa: tu mejor vs este intento */}
+        <div style={{ maxWidth: 320, margin: '14px auto 0', textAlign: 'left' }}>
+          {[
+            { label: 'Este intento', val: fin.score, color: NARANJA },
+            { label: 'Tu mejor', val: record, color: '#FFD75E' },
+          ].map(({ label, val, color }) => (
+            <div key={label} style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, fontWeight: 800,
+                color: 'rgba(245,242,235,0.6)', marginBottom: 3 }}>
+                <span>{label}</span><span style={{ color }}>{val}</span>
+              </div>
+              <div style={{ height: 7, borderRadius: 99, background: 'rgba(255,255,255,0.07)' }}>
+                <div style={{ height: '100%', width: `${(val / maxBar) * 100}%`, borderRadius: 99,
+                  background: `linear-gradient(90deg, ${color}88, ${color})`, boxShadow: `0 0 8px ${color}55`,
+                  transition: 'width 1s cubic-bezier(0.22,1,0.36,1)' }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 320, margin: '18px auto 0' }}>
+          <button onClick={onOtra} style={{ flex: 1.3, padding: '15px', borderRadius: 15, border: 'none',
+            background: `linear-gradient(135deg, ${NARANJA}, #C2410C)`, color: '#fff', fontSize: 14, fontWeight: 900,
+            cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 6px 20px ${NARANJA}40` }}>
+            Otra vez
+          </button>
+          <button onClick={onClose} style={{ flex: 1, padding: '15px', borderRadius: 15,
+            border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)',
+            color: '#F5F2EB', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Salir
+          </button>
+        </div>
+        <button onClick={() => { FX.play('tap'); shareWhatsApp(
+          `PANKEY ⚡ Contrarreloj\n${fin.score}/500 puntos · ${hits}/${total} aciertos en 90 segundos${fin.rec ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${streakDays} día${streakDays !== 1 ? 's' : ''}\n¿Podrás superarme? → pankey.vercel.app`
+        ); }} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          width: '100%', maxWidth: 320, margin: '10px auto 0', padding: '12px', borderRadius: 15,
+          border: '1px solid rgba(37,211,102,0.45)', background: 'rgba(37,211,102,0.12)',
+          color: '#4ADE80', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <PkIc n="msg" s={15} c="#4ADE80"/> Compartir por WhatsApp
+        </button>
+
+        {/* Revisión rápida (acordeón) — aquí sí aparecen las explicaciones */}
+        <button onClick={() => { FX.play('tap'); setRevisar(!revisar); }} style={{
+          width: '100%', maxWidth: 320, margin: '12px auto 0', padding: '12px', borderRadius: 15,
+          border: '1px dashed rgba(255,255,255,0.22)', background: 'transparent',
+          color: 'rgba(245,242,235,0.7)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+          {revisar ? 'Ocultar revisión' : `Revisión rápida (${answers.length})`}
+        </button>
+      </div>
+
+      {revisar && (
+        <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+          {answers.map((a, i) => {
+            const open = abierta === i;
+            return (
+              <div key={i} style={{ borderRadius: 13, overflow: 'hidden',
+                border: `1px solid ${a.ok ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                background: a.ok ? 'rgba(74,222,128,0.05)' : 'rgba(239,68,68,0.05)' }}>
+                <button onClick={() => setAbierta(open ? null : i)} style={{
+                  width: '100%', padding: '11px 13px', background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 9, textAlign: 'left' }}>
+                  <PkIc n={a.ok ? 'check' : 'x'} s={14} c={a.ok ? '#4ADE80' : '#EF4444'}/>
+                  <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#F5F2EB',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {i + 1}. {String(a.q.text).slice(0, 60)}
+                  </span>
+                  <span style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', display: 'flex' }}>
+                    <PkIc n="right" s={11} c="rgba(245,242,235,0.4)"/>
+                  </span>
+                </button>
+                {open && (
+                  <div className="fi" style={{ padding: '0 13px 12px', fontSize: 12, lineHeight: 1.55, color: 'rgba(245,242,235,0.8)' }}>
+                    <div style={{ marginBottom: 6 }}>{richLite(a.q.text)}</div>
+                    <div style={{ fontSize: 11.5, marginBottom: 3 }}>
+                      <b style={{ color: a.ok ? '#4ADE80' : '#EF4444' }}>Tu respuesta:</b> {a.sel !== null && a.q.options[a.sel] !== undefined ? richLite(a.q.options[a.sel]) : '—'}
+                    </div>
+                    {!a.ok && (
+                      <div style={{ fontSize: 11.5, marginBottom: 5 }}>
+                        <b style={{ color: '#4ADE80' }}>Correcta:</b> {richLite(a.q.options[a.q.correct])}
+                      </div>
+                    )}
+                    {a.q.explanation && (
+                      <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.6)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 6 }}>
+                        {richLite(a.q.explanation)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -5040,206 +5330,283 @@ function ModoContrarreloj({ C, appState, onTerminar, onOtra, onClose }) {
 // ─────────────────────────────────────────────
 //  MODO SUPERVIVENCIA — un error y chao
 // ─────────────────────────────────────────────
-function ModoSupervivencia({ C, appState, onTerminar, onOtra, onClose }) {
-  const [pool] = useState(() => seededShuffle(ICFES_QUESTIONS, hashStr('sv' + Date.now())));
-  const aiRef = useGeminiPool();
-  const idxRef = useRef(0);
-  const [q, setQ] = useState(pool[0]);
-  const [chain, setChain] = useState(0);
-  const [sel, setSel] = useState(null);
-  const [reveal, setReveal] = useState(false);
-  const [fin, setFin] = useState(false);
-  const [rompiendo, setRompiendo] = useState(false); // efecto de vidrio roto antes de stats
-  const [tLeft, setTLeft] = useState(250);
-  const [esRecord, setEsRecord] = useState(false);
-  const [anuncio, setAnuncio] = useState(null); // "NIVEL MEDIO", "NIVEL DIFÍCIL", "MODO BESTIA"
-  const paresRef = useRef([]);
-  const chainRef = useRef(0);
-  const finRef = useRef(false);
+function CorazonSVG({ estado, ultimo, size = 32 }) {
+  // estado: 'lleno' | 'explotando' | 'roto'
+  const path = 'M12 21C12 21 4 13.5 4 8.5C4 5.5 6.5 3 9.5 3C11 3 12 4 12 4C12 4 13 3 14.5 3C17.5 3 20 5.5 20 8.5C20 13.5 12 21 12 21Z';
+  const anim = estado === 'explotando' ? 'heartPop 0.55s ease-out both'
+    : estado === 'lleno' ? (ultimo ? 'heartBeatFast 0.7s ease-in-out infinite' : 'heartBeat 1.4s ease-in-out infinite')
+    : 'none';
+  return (
+    <div style={{ position: 'relative', width: size, height: size, animation: anim,
+      filter: estado === 'lleno' ? `drop-shadow(0 0 ${ultimo ? 14 : 7}px rgba(239,68,68,${ultimo ? 0.9 : 0.55}))` : 'none' }}>
+      <svg width={size} height={size} viewBox="0 0 24 24">
+        <path d={path} fill={estado === 'roto' ? '#3F3F46' : '#EF4444'}
+          stroke={estado === 'roto' ? '#52525B' : '#FCA5A5'} strokeWidth="1"/>
+        {estado === 'roto' && (
+          <path d="M12 4.5 L10.5 9 L13 12 L10.8 16 L12 20" fill="none" stroke="#18181B" strokeWidth="1.6" strokeLinecap="round"/>
+        )}
+      </svg>
+    </div>
+  );
+}
 
-  const tiempoPara = (n) => (n < 5 ? 250 : n < 10 ? 180 : n < 15 ? 120 : 90);
+function ModoSupervivencia({ C, appState, onTerminar, onOtra, onClose, onRevive }) {
+  const ROJO = '#DC2626';
+  const QS_POR_OLA = 5;
+  const ai = useAIQuestions({ count: 10, compact: true, dificultad: 'Media' });
+  const [q, setQ] = useState(null);
+  const [vidas, setVidas] = useState(3);
+  const [explotando, setExplotando] = useState(null);  // índice del corazón que explota
+  const [ola, setOla] = useState(1);
+  const [waveClear, setWaveClear] = useState(null);    // { ola, key, xp }
+  const [shakeKey, setShakeKey] = useState(0);
+  const [flashKey, setFlashKey] = useState(0);
+  const [muerto, setMuerto] = useState(false);         // pantalla de Game Over con revivir
+  const [revivido, setRevivido] = useState(false);
+  const [reviviendo, setReviviendo] = useState(false); // animación del corazón que cae
+  const [fin, setFin] = useState(null);                // { rec }
+  const [lb, setLb] = useState(null);                  // mejores de los amigos (Firebase)
+  const correctRef = useRef(0);
+  const answeredRef = useRef(0);
+  const enOlaRef = useRef(0);
+  const olaRef = useRef(1);
+  const vidasRef = useRef(3);
+  const paresRef = useRef([]);
+  const finRef = useRef(false);
+  const dificultadPedida = useRef({ 3: false, 5: false });
+
+  useEffect(() => { if (ai.ready && !q && !finRef.current) setQ(ai.next()); }, [ai.ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const avanzar = () => {
-    const ai = aiRef.current;
-    if (ai && ai.length > 0) { setQ(ai.shift()); return; }
-    idxRef.current += 1;
-    setQ(pool[idxRef.current % pool.length]);
+    // Pedir más preguntas (más difíciles) según la ola
+    const o = olaRef.current;
+    if (o >= 5 && !dificultadPedida.current[5]) { dificultadPedida.current[5] = true; ai.pedirMas(8, { dificultad: 'EXTREMA: preguntas de máxima dificultad ICFES, nivel olímpico' }); }
+    else if (o >= 3 && !dificultadPedida.current[3]) { dificultadPedida.current[3] = true; ai.pedirMas(8, { dificultad: 'Muy alta, retadora' }); }
+    else if (ai.quedan() < 3) ai.pedirMas(8, { dificultad: o >= 5 ? 'EXTREMA' : o >= 3 ? 'Muy alta' : 'Media' });
+    setQ(ai.next());
   };
 
-  useEffect(() => {
-    if (fin || reveal || rompiendo) return undefined;
-    const iv = setInterval(() => setTLeft(t => (t <= 1 ? 0 : t - 1)), 100);
-    return () => clearInterval(iv);
-  }, [fin, reveal, rompiendo, q]);
-
-  useEffect(() => { if (tLeft === 0 && !fin && !reveal && !rompiendo) responder(null); }, [tLeft]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const responder = (i) => {
-    if (reveal || fin || rompiendo) return;
-    const ok = i !== null && i === q.correct;
-    setSel(i); setReveal(true);
-    paresRef.current.push({ subject: q.subject, nivel: q.nivel, ok });
-    if (ok) {
-      chainRef.current += 1; setChain(chainRef.current);
-      const n = chainRef.current;
-      // Anuncios de dificultad al cruzar umbrales
-      if (n === 5)  { setAnuncio({ txt: 'NIVEL MEDIO', color: '#FBBF24', key: n }); FX.play('duel'); }
-      if (n === 10) { setAnuncio({ txt: 'NIVEL DIFÍCIL', color: '#F59E0B', key: n }); FX.play('duel'); }
-      if (n === 15) { setAnuncio({ txt: 'MODO BESTIA', color: '#EF4444', key: n }); FX.play('duelStart'); FX.vibrate('heavy'); }
-      FX.play('success'); FX.vibrate('light');
-      setTimeout(() => {
-        setSel(null); setReveal(false);
-        avanzar();
-        setTLeft(tiempoPara(chainRef.current));
-      }, 620);
-    } else {
-      // GAME OVER: la pantalla se quiebra como vidrio
-      FX.play('error'); FX.vibrate('heavy');
-      setTimeout(() => { setRompiendo(true); FX.play('glass'); FX.vibrate('heavy'); }, 700);
-      setTimeout(terminar, 1800);
+  const contarPregunta = () => {
+    answeredRef.current += 1;
+    enOlaRef.current += 1;
+    if (enOlaRef.current >= QS_POR_OLA) {
+      enOlaRef.current = 0;
+      const xpOla = QS_POR_OLA * 10;
+      setWaveClear({ ola: olaRef.current, key: Date.now(), xp: xpOla });
+      olaRef.current += 1;
+      setOla(olaRef.current);
+      FX.play('levelUp'); FX.vibrate('success');
+      setTimeout(() => setWaveClear(null), 2100);
     }
   };
 
-  const terminar = () => {
-    if (finRef.current) return; finRef.current = true;
-    const n = chainRef.current;
-    const rec = n > (appState.supervivenciaRecord || 0);
-    setEsRecord(rec); setRompiendo(false); setFin(true);
-    if (rec) { FX.play('levelUp'); FX.vibrate('heavy'); }
-    onTerminar({ tipo: 'supervivencia', valor: n, pares: paresRef.current, emp: n * 6, xp: n * 12 });
+  const responder = (i) => {
+    if (fin || muerto || !q || explotando !== null) return;
+    const ok = i === q.correct;
+    paresRef.current.push({ subject: q.subject, nivel: q.nivel, ok });
+    if (ok) {
+      correctRef.current += 1;
+      FX.play('success'); FX.vibrate('light');
+      contarPregunta();
+      avanzar();
+    } else {
+      // PERDER UNA VIDA: el corazón explota, shake, flash rojo
+      const idx = vidasRef.current - 1;
+      setExplotando(idx);
+      setShakeKey(Date.now()); setFlashKey(Date.now());
+      FX.play('error'); FX.vibrate('error');
+      setTimeout(() => {
+        vidasRef.current -= 1;
+        setVidas(vidasRef.current);
+        setExplotando(null);
+        contarPregunta();
+        if (vidasRef.current <= 0) {
+          setMuerto(true);
+          FX.play('glass'); FX.vibrate('heavy');
+        } else {
+          avanzar();
+        }
+      }, 650);
+    }
   };
 
-  const secs = Math.ceil(tLeft / 10);
-  const fase = chain < 5 ? 'Calentando' : chain < 10 ? 'Nivel medio' : chain < 15 ? 'Nivel difícil' : 'MODO BESTIA';
-  const faseColor = chain < 5 ? '#4ADE80' : chain < 10 ? '#FBBF24' : chain < 15 ? '#F59E0B' : '#EF4444';
-  // El fondo se oscurece / enrojece con la dificultad
-  const bgFase = chain < 5
-    ? 'linear-gradient(180deg, #071108 0%, #0C2416 45%, #06100A 100%)'
-    : chain < 10
-    ? 'linear-gradient(180deg, #060D06 0%, #0A1D10 45%, #050C07 100%)'
-    : chain < 15
-    ? 'linear-gradient(180deg, #0A0A04 0%, #141105 45%, #080704 100%)'
-    : 'linear-gradient(180deg, #150404 0%, #200808 45%, #100303 100%)';
+  const revivir = () => {
+    if (revivido || (appState.ryo || 0) < 100) return;
+    onRevive?.(100);
+    setRevivido(true); setReviviendo(true); setMuerto(false);
+    vidasRef.current = 1; setVidas(1);
+    FX.play('chestOpen'); FX.vibrate('success');
+    setTimeout(() => { setReviviendo(false); avanzar(); }, 1300);
+  };
 
-  // Camino de progreso: marcadores cada 5 (5,10,15,20,25,30,35)
-  const marcadores = [1, 5, 10, 15, 20, 25, 30, 35];
-  const maxCamino = 35;
+  const finalizar = () => {
+    if (finRef.current) return; finRef.current = true;
+    const olaFinal = olaRef.current;
+    const correct = correctRef.current;
+    const rec = olaFinal > (appState.supervivenciaRecord || 0);
+    const emp = Math.min(500, Math.round(correct * 6 * Math.max(1, olaFinal / 2)));
+    setFin({ rec, emp, xp: correct * 10 });
+    setMuerto(false);
+    if (rec) { FX.play('levelUp'); FX.vibrate('heavy'); }
+    onTerminar({ tipo: 'supervivencia', valor: olaFinal, pares: paresRef.current, emp, xp: correct * 10 });
+    // Leaderboard: los mejores de la comunidad
+    if (fbOK()) {
+      FB().get(FB().ref(FB().db, 'users')).then(snap => {
+        if (!snap.exists()) return;
+        const top = Object.values(snap.val())
+          .map(u => ({ code: u.code, name: (u.appState?.institution ? u.code : u.code), rec: u.appState?.supervivenciaRecord || 0 }))
+          .filter(u => u.code && u.rec > 0)
+          .sort((a, b) => b.rec - a.rec).slice(0, 4);
+        setLb(top);
+      }).catch(() => {});
+    }
+  };
 
-  // Fragmentos del vidrio roto (triángulos con clip-path que vuelan)
-  const shards = Array.from({ length: 14 }, (_, i) => {
-    const col = i % 4, row = Math.floor(i / 4);
-    return {
-      left: col * 25, top: row * 25,
-      clip: `polygon(${10 + (i * 7) % 30}% 0%, 100% ${20 + (i * 11) % 50}%, ${30 + (i * 13) % 60}% 100%, 0% ${40 + (i * 17) % 40}%)`,
-      x: (col - 1.5) * 90, y: 100 + row * 60, r: (i % 2 ? 1 : -1) * (30 + i * 8), d: (i % 5) * 0.05,
-    };
-  });
+  const ultimaVida = vidas === 1 && !muerto && !fin;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-      background: bgFase, transition: 'background 1.2s ease', display: 'flex', flexDirection: 'column' }}>
+    <Portal>
+    <div key={shakeKey} style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+      background: 'linear-gradient(180deg, #0D0000 0%, #180404 50%, #0D0000 100%)', display: 'flex', flexDirection: 'column',
+      animation: shakeKey ? 'screenShakeX 0.4s ease both' : 'none' }}>
 
-      {/* Anuncio de nuevo nivel de dificultad */}
-      {anuncio && !fin && (
-        <div key={anuncio.key} style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center',
-          justifyContent: 'center', pointerEvents: 'none', zIndex: 6 }}>
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: 5, color: anuncio.color,
-            textShadow: `0 0 40px ${anuncio.color}99`, animation: 'nivelAnuncio 1.6s ease both' }}>
-            {anuncio.txt}
+      {/* Borde rojo parpadeante en la última vida */}
+      {ultimaVida && (
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 5,
+          animation: 'dangerBorder 1s ease-in-out infinite' }}/>
+      )}
+      {/* Flash rojo al perder vida */}
+      {flashKey > 0 && (
+        <div key={`f${flashKey}`} style={{ position: 'fixed', inset: 0, background: '#DC2626', pointerEvents: 'none',
+          zIndex: 4, animation: 'redFlashBg 0.35s ease-out both' }}/>
+      )}
+      {/* WAVE CLEAR */}
+      {waveClear && (
+        <div key={waveClear.key} style={{ position: 'fixed', inset: 0, zIndex: 6, pointerEvents: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0,
+            background: `linear-gradient(90deg, transparent, ${ROJO}33, transparent)`,
+            animation: 'waveSweep 0.9s ease-out both' }}/>
+          <div style={{ textAlign: 'center', animation: 'waveClearTxt 2s ease both' }}>
+            <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: 4, color: '#F5F2EB',
+              textShadow: `0 0 34px ${ROJO}` }}>
+              OLA {waveClear.ola} SUPERADA
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#A78BFA', marginTop: 6 }}>+{waveClear.xp} XP</div>
           </div>
         </div>
       )}
 
-      {/* GAME OVER: vidrio quebrándose */}
-      {rompiendo && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 8, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(239,68,68,0.12)' }}/>
-          {shards.map((sh, i) => (
-            <div key={i} style={{ position: 'absolute', left: `${sh.left}%`, top: `${sh.top}%`,
-              width: '26%', height: '26%', clipPath: sh.clip,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04))',
-              border: '1px solid rgba(255,255,255,0.25)',
-              '--shx': `${sh.x}px`, '--shy': `${sh.y}px`, '--shr': `${sh.r}deg`,
-              animation: `shardFly 1s ease-in ${sh.d}s both` }}/>
-          ))}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: 6, color: '#EF4444',
-              textShadow: '0 0 50px rgba(239,68,68,0.8)', animation: 'popIn 0.5s ease both' }}>
+      <div style={{ maxWidth: 430, margin: '0 auto', padding: '20px 20px 34px', width: '100%', minHeight: '100%',
+        display: 'flex', flexDirection: 'column' }}>
+
+        {!ai.ready && !fin ? (
+          <ModoCargando color={ROJO} titulo="SUPERVIVENCIA"/>
+        ) : fin ? (
+          <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <FinDeModo color={ROJO} titulo="SUPERVIVENCIA" valor={olaRef.current} unidad={`ola${olaRef.current !== 1 ? 's' : ''} alcanzada${olaRef.current !== 1 ? 's' : ''} · ${correctRef.current} correctas`}
+              esRecord={fin.rec} emp={fin.emp} xp={fin.xp} onOtra={onOtra} onSalir={onClose}
+              extra={`Tu mejor: Ola ${Math.max(olaRef.current, appState.supervivenciaRecord || 0)}`}
+              shareText={`PANKEY 💀 Supervivencia\nLlegué a la Ola ${olaRef.current} con ${correctRef.current} correctas${fin.rec ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n→ pankey.vercel.app`}/>
+            {/* Leaderboard de la comunidad */}
+            {lb && lb.length > 0 && (
+              <div className="fi" style={{ width: '100%', maxWidth: 320, marginTop: 18, textAlign: 'left' }}>
+                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: 'rgba(245,242,235,0.5)', marginBottom: 8 }}>
+                  LOS MÁS AGUANTADORES
+                </div>
+                {lb.map((u, i) => (
+                  <div key={u.code} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+                    borderRadius: 10, background: 'rgba(255,255,255,0.04)', marginBottom: 5 }}>
+                    <span style={{ fontSize: 12, fontWeight: 900, color: i === 0 ? '#FFD75E' : 'rgba(245,242,235,0.5)', width: 18 }}>#{i + 1}</span>
+                    <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: '#F5F2EB' }}>@{u.code}</span>
+                    <span style={{ fontSize: 12, fontWeight: 900, color: ROJO }}>Ola {u.rec}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : muerto ? (
+          /* ── GAME OVER: ¿revivir? ── */
+          <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: 6, color: ROJO,
+              textShadow: `0 0 50px ${ROJO}CC`, animation: 'popIn 0.5s ease both', marginBottom: 8 }}>
               GAME OVER
             </div>
+            <div style={{ fontSize: 13, color: 'rgba(245,242,235,0.6)', marginBottom: 26 }}>
+              Caíste en la Ola {olaRef.current} con {correctRef.current} correctas
+            </div>
+            {!revivido && (appState.ryo || 0) >= 100 && (
+              <button onClick={revivir} style={{ width: '100%', maxWidth: 300, padding: '16px', borderRadius: 16,
+                border: 'none', background: 'linear-gradient(135deg, #FFD75E, #D4AF37)', color: '#1A1206',
+                fontSize: 14.5, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit',
+                boxShadow: '0 8px 26px rgba(212,175,55,0.4)', marginBottom: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <PkIc n="empanada" s={16} c="#1A1206"/> Revivir con 1 corazón · 100 emp
+              </button>
+            )}
+            <button onClick={finalizar} style={{ width: '100%', maxWidth: 300, padding: '15px', borderRadius: 16,
+              border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)',
+              color: '#F5F2EB', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Aceptar mi destino
+            </button>
           </div>
-        </div>
-      )}
-
-      <div style={{ maxWidth: 430, margin: '0 auto', padding: '72px 20px 34px', width: '100%', minHeight: '100%',
-        display: 'flex', flexDirection: 'column',
-        animation: secs <= 3 && !fin && !reveal && !rompiendo ? 'tensionPulse 0.8s ease-in-out infinite' : 'none' }}>
-        {fin ? (
-          <FinDeModo color="#4ADE80" titulo="SUPERVIVENCIA" valor={chain} unidad={`pregunta${chain !== 1 ? 's' : ''} encadenada${chain !== 1 ? 's' : ''} sin fallar`}
-            esRecord={esRecord} emp={chain * 6} xp={chain * 12} onOtra={onOtra} onSalir={onClose}
-            extra={`Tu mejor cadena: ${Math.max(chain, appState.supervivenciaRecord || 0)}`}
-            shareText={`PANKEY 💀 Supervivencia\nCadena de ${chain} sin fallar${chain >= 15 ? '\nLlegué a Modo Bestia' : ''}${esRecord ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n→ pankey.vercel.app`}/>
-        ) : (
+        ) : reviviendo ? (
+          /* ── RESURRECCIÓN: un corazón cae del cielo ── */
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'relative', animation: 'heartFall 1.1s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+              <CorazonSVG estado="lleno" ultimo size={72}/>
+              {Array.from({ length: 10 }, (_, i) => (
+                <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 5, height: 5,
+                  borderRadius: '50%', background: '#FFD75E', boxShadow: '0 0 8px #D4AF37',
+                  '--sx': `${Math.round(Math.cos((i / 10) * Math.PI * 2) * 55)}px`,
+                  '--sy': `${Math.round(Math.sin((i / 10) * Math.PI * 2) * 48)}px`,
+                  animation: `sparkRise 0.9s ease-out ${0.5 + i * 0.05}s both` }}/>
+              ))}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#FFD75E', marginTop: 20, letterSpacing: 2 }}>
+              ¡SEGUNDA OPORTUNIDAD!
+            </div>
+          </div>
+        ) : q ? (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: '#4ADE80' }}>SUPERVIVENCIA</div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: faseColor, marginTop: 2 }}>{fase}</div>
+            {/* ── CORAZONES + OLA ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[0, 1, 2].map(i => (
+                  <CorazonSVG key={i}
+                    estado={explotando === i ? 'explotando' : i < vidas ? 'lleno' : 'roto'}
+                    ultimo={ultimaVida && i === 0} size={32}/>
+                ))}
               </div>
-              <div key={chain} style={{ textAlign: 'center', animation: chain > 0 ? 'comboPop 0.4s ease both' : 'none' }}>
-                <div style={{ fontSize: 34, fontWeight: 900, color: faseColor, lineHeight: 1,
-                  textShadow: `0 0 20px ${faseColor}80`, transition: 'color 0.6s ease' }}>{chain}</div>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(245,242,235,0.45)' }}>CADENA</div>
-              </div>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 900,
-                border: `3px solid ${secs <= 3 ? '#EF4444' : 'rgba(255,255,255,0.18)'}`,
-                color: secs <= 3 ? '#EF4444' : '#F5F2EB',
-                animation: secs <= 3 ? 'urgentPulse 0.5s ease-in-out infinite' : 'none' }}>
-                {secs}
-              </div>
-            </div>
-
-            {/* Camino visual con marcadores cada 5 */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ position: 'relative', height: 22, display: 'flex', alignItems: 'center' }}>
-                <div style={{ position: 'absolute', left: 0, right: 0, height: 2.5, borderRadius: 99,
-                  background: 'rgba(255,255,255,0.12)' }}/>
-                <div style={{ position: 'absolute', left: 0, height: 2.5, borderRadius: 99,
-                  width: `${Math.min(100, (chain / maxCamino) * 100)}%`,
-                  background: `linear-gradient(90deg, #4ADE80, ${faseColor})`,
-                  boxShadow: `0 0 8px ${faseColor}88`, transition: 'width 0.5s cubic-bezier(0.22,1,0.36,1)' }}/>
-                {marcadores.map(m => {
-                  const pasado = chain >= m;
-                  const actual = chain < m && (marcadores.filter(x => x <= chain).length === marcadores.indexOf(m));
-                  return (
-                    <div key={m} style={{ position: 'absolute', left: `calc(${(m / maxCamino) * 100}% - 5px)`,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <div style={{ width: pasado ? 11 : 9, height: pasado ? 11 : 9, borderRadius: '50%',
-                        background: pasado ? faseColor : 'transparent',
-                        border: `2px solid ${pasado ? faseColor : 'rgba(255,255,255,0.25)'}`,
-                        boxShadow: pasado ? `0 0 9px ${faseColor}` : 'none',
-                        animation: actual ? 'presenceBlink 1.6s ease-in-out infinite' : 'none',
-                        transition: 'all 0.4s ease' }}/>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8.5, fontWeight: 700,
-                color: 'rgba(245,242,235,0.4)', padding: '2px 0 0 0' }}>
-                {marcadores.map(m => <span key={m}>{m}</span>)}
+              <div style={{ flex: 1 }}/>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: ROJO }}>OLA {ola}</div>
+                <div style={{ fontSize: 10.5, color: 'rgba(245,242,235,0.5)', marginTop: 1 }}>
+                  {correctRef.current} correctas · {ola < 3 ? 'nivel normal' : ola < 5 ? 'nivel difícil' : 'NIVEL EXTREMO'}
+                </div>
               </div>
             </div>
 
-            <PreguntaRapida C={C} q={q} sel={sel} reveal={reveal} onPick={responder}/>
-            <button onClick={onClose} style={{ marginTop: 'auto', paddingTop: 16, background: 'none', border: 'none',
+            {/* Progreso dentro de la ola */}
+            <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
+              {Array.from({ length: QS_POR_OLA }, (_, i) => (
+                <div key={i} style={{ flex: 1, height: 4, borderRadius: 99,
+                  background: i < enOlaRef.current ? ROJO : 'rgba(255,255,255,0.1)',
+                  boxShadow: i < enOlaRef.current ? `0 0 6px ${ROJO}88` : 'none',
+                  transition: 'background 0.3s ease' }}/>
+              ))}
+            </div>
+
+            <PreguntaRapida C={C} q={q} sel={null} reveal={false} onPick={responder}/>
+            <button onClick={() => { if (!finRef.current) finalizar(); }} style={{ marginTop: 'auto', paddingTop: 16, background: 'none', border: 'none',
               color: 'rgba(245,242,235,0.3)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-              Abandonar
+              Rendirme
             </button>
           </>
-        )}
+        ) : null}
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -5247,256 +5614,355 @@ function ModoSupervivencia({ C, appState, onTerminar, onOtra, onClose }) {
 //  LA RULETA — la suerte decide, tú arriesgas
 // ─────────────────────────────────────────────
 function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
-  const mats = Object.keys(SUBJECT_META);
-  const MULTS = [1, 2, 4, 8, 16, 32];
-  const BASE = 12;
-  const aiRef = useGeminiPool();
-  const [fase, setFase] = useState('girar'); // girar | pregunta | decidir | fin
+  const VIOLETA = '#8B5CF6';
+  const RONDAS = 5;
+  const BASE = 30;
+  // Cuñas: 5 materias + 3 multiplicadores angostos + 2 especiales (suman 360°)
+  const WEDGES = [
+    { t: 'materia', s: 'Lectura Crítica',    color: '#A78BFA', deg: 58 },
+    { t: 'mult', v: 2,  color: '#FBBF24', deg: 20, label: 'x2' },
+    { t: 'materia', s: 'Matemáticas',        color: '#60A5FA', deg: 58 },
+    { t: 'dorado',      color: '#FFD75E', deg: 15, label: '✦' },
+    { t: 'materia', s: 'Ciencias Naturales', color: '#34D399', deg: 58 },
+    { t: 'mult', v: 3,  color: '#F97316', deg: 12, label: 'x3' },
+    { t: 'materia', s: 'Ciencias Sociales',  color: '#E8B84B', deg: 58 },
+    { t: 'negra',       color: '#1A060D', deg: 12, label: '!' },
+    { t: 'materia', s: 'Inglés',             color: '#F472B6', deg: 61 },
+    { t: 'mult', v: 5,  color: '#EF4444', deg: 8,  label: 'x5' },
+  ];
+  // Ángulos acumulados para el conic-gradient y para saber dónde cayó
+  let acc = 0;
+  const stops = WEDGES.map(w => { const from = acc; acc += w.deg; return { ...w, from, to: acc }; });
+  const conic = `conic-gradient(${stops.map(w => `${w.color} ${w.from}deg ${w.to}deg`).join(', ')})`;
+
+  const ai = useAIQuestions({ count: 8, compact: true, dificultad: 'Alta' });
+  const [fase, setFase] = useState('girar');   // girar | cargando | girando | pregunta | dorado | fin
   const [deg, setDeg] = useState(0);
-  const [girando, setGirando] = useState(false);
-  const [ronda, setRonda] = useState(0);
+  const [ronda, setRonda] = useState(0);       // 0-based; se muestran 5 rondas
+  const [pot, setPot] = useState(0);
+  const [mult, setMult] = useState(1);
+  const [wedge, setWedge] = useState(null);    // cuña donde cayó
   const [q, setQ] = useState(null);
   const [sel, setSel] = useState(null);
   const [reveal, setReveal] = useState(false);
-  const [gano, setGano] = useState(null); // { emp, mult } al finalizar
   const [esRecord, setEsRecord] = useState(false);
+  const [doradoFlash, setDoradoFlash] = useState(0);
+  const rondasLog = useRef([]);                // { icono, texto, ganancia }
   const paresRef = useRef([]);
-  const usadasRef = useRef(new Set());
+  const potRef = useRef(0);
+  const multRef = useRef(1);
+  const rondaRef = useRef(0);
   const finRef = useRef(false);
-  const pot = BASE * MULTS[Math.min(ronda, 5)];
+  const tickTimers = useRef([]);
 
-  const girar = () => {
-    if (girando) return;
-    setGirando(true); FX.play('duel'); FX.vibrate('medium');
-    const i = Math.floor(Math.random() * 5);
-    const land = 360 - (i * 72 + 36);
-    setDeg(d => d - (d % 360) + 1800 + land);
-    setTimeout(() => {
-      setGirando(false);
-      const materia = mats[i];
-      // Primero intenta con una pregunta del Sabio (Gemini) de esa materia
-      let elegida = null;
-      const ai = aiRef.current || [];
-      const aiIdx = ai.findIndex(x => x.subject === materia);
-      if (aiIdx >= 0) elegida = ai.splice(aiIdx, 1)[0];
-      if (!elegida) {
-        const delSubj = ICFES_QUESTIONS.filter(x => x.subject === materia && !usadasRef.current.has(x.id));
-        const poolQ = delSubj.length ? delSubj : ICFES_QUESTIONS.filter(x => x.subject === materia);
-        elegida = poolQ[Math.floor(Math.random() * poolQ.length)];
-        usadasRef.current.add(elegida.id);
-      }
-      setQ(elegida); setSel(null); setReveal(false);
-      setFase('pregunta');
-      FX.play('conjure');
-    }, 3400);
-  };
+  useEffect(() => () => tickTimers.current.forEach(clearTimeout), []);
 
-  const responder = (i) => {
-    if (reveal || !q) return;
-    const ok = i === q.correct;
-    setSel(i); setReveal(true);
-    paresRef.current.push({ subject: q.subject, nivel: q.nivel, ok });
-    if (ok) {
-      FX.play('coin'); FX.vibrate('success');
-      setTimeout(() => {
-        if (ronda >= 5) cobrar(MULTS[5]); // tope x32: cobra automático
-        else setFase('decidir');
-      }, 1300);
-    } else {
-      FX.play('error'); FX.vibrate('heavy');
-      setTimeout(() => finalizar(0, MULTS[Math.min(ronda, 5)]), 1300);
+  // Ticks que se van frenando mientras la ruleta gira
+  const sonarTicks = () => {
+    tickTimers.current.forEach(clearTimeout);
+    tickTimers.current = [];
+    let t = 0, gap = 90;
+    for (let i = 0; i < 22; i++) {
+      t += gap; gap = Math.min(gap * 1.16, 420);
+      tickTimers.current.push(setTimeout(() => FX.play('tick'), t));
     }
   };
 
-  const cobrar = (multActual) => finalizar(BASE * multActual, multActual);
-  const arriesgar = () => { FX.play('duel'); FX.vibrate('medium'); setRonda(r => r + 1); setFase('girar'); };
+  // Hold de carga (0.5s) antes de lanzar
+  const cargarYGirar = () => {
+    if (fase !== 'girar') return;
+    setFase('cargando');
+    FX.play('tap'); FX.vibrate('light');
+    setTimeout(girar, 520);
+  };
 
-  const finalizar = (empGanadas, multAlcanzado) => {
+  const girar = () => {
+    setFase('girando');
+    FX.play('duel'); FX.vibrate('medium');
+    sonarTicks();
+    const target = Math.random() * 360;
+    const vueltas = 1440 + Math.round(target);
+    setDeg(d => d - (d % 360) + vueltas);
+    setTimeout(() => {
+      // ¿Qué cuña quedó bajo el puntero (arriba)?
+      const land = (360 - (vueltas % 360)) % 360;
+      const w = stops.find(s => land >= s.from && land < s.to) || stops[0];
+      setWedge(w);
+      FX.vibrate('medium');
+      if (w.t === 'dorado') {
+        // EL DORADO: 200 emp directas, sin pregunta
+        potRef.current += 200; setPot(potRef.current);
+        rondasLog.current.push({ icono: 'star', color: '#FFD75E', texto: 'EL DORADO', ganancia: '+200 emp' });
+        setDoradoFlash(Date.now());
+        FX.play('chestOpen'); FX.vibrate('heavy');
+        setTimeout(cerrarRonda, 1600);
+      } else {
+        const materia = w.t === 'materia' ? w.s : null;
+        const pregunta = ai.next(materia);
+        setQ(pregunta); setSel(null); setReveal(false);
+        setFase('pregunta');
+        FX.play('conjure');
+      }
+    }, 3700);
+  };
+
+  const responder = (i) => {
+    if (reveal || !q || !wedge) return;
+    const ok = i === q.correct;
+    setSel(i); setReveal(true);
+    paresRef.current.push({ subject: q.subject, nivel: q.nivel, ok });
+    if (ok) { FX.play('coin'); FX.vibrate('success'); } else { FX.play('error'); FX.vibrate('error'); }
+    setTimeout(() => {
+      if (wedge.t === 'materia') {
+        const g = ok ? BASE * multRef.current : 0;
+        potRef.current += g; setPot(potRef.current);
+        rondasLog.current.push({ icono: ok ? 'check' : 'x', color: ok ? '#4ADE80' : '#EF4444',
+          texto: (SUBJECT_META[wedge.s] || {}).short || wedge.s, ganancia: ok ? `+${g} emp` : '0' });
+      } else if (wedge.t === 'mult') {
+        if (ok) { multRef.current *= wedge.v; setMult(multRef.current); }
+        rondasLog.current.push({ icono: ok ? 'star' : 'x', color: ok ? wedge.color : '#EF4444',
+          texto: `Multiplicador x${wedge.v}`, ganancia: ok ? `mult → x${multRef.current}` : 'falló' });
+      } else if (wedge.t === 'negra') {
+        const g = ok ? BASE * multRef.current * 5 : 0;
+        potRef.current += g; setPot(potRef.current);
+        rondasLog.current.push({ icono: ok ? 'flame' : 'x', color: ok ? '#EF4444' : '#EF4444',
+          texto: 'PREGUNTA NEGRA', ganancia: ok ? `+${g} emp` : '0' });
+      }
+      cerrarRonda();
+    }, 1200);
+  };
+
+  const cerrarRonda = () => {
+    rondaRef.current += 1;
+    setRonda(rondaRef.current);
+    setDoradoFlash(0);
+    if (rondaRef.current >= RONDAS) finalizar();
+    else setFase('girar');
+  };
+
+  const finalizar = () => {
     if (finRef.current) return; finRef.current = true;
-    const rec = multAlcanzado > (appState.ruletaMaxMult || 0) && empGanadas > 0;
-    setEsRecord(rec);
     const aciertos = paresRef.current.filter(p => p.ok).length;
-    setGano({ emp: empGanadas, mult: multAlcanzado });
+    const rec = multRef.current > (appState.ruletaMaxMult || 0);
+    setEsRecord(rec);
     setFase('fin');
-    if (empGanadas > 0) { FX.play('levelUp'); FX.vibrate('heavy'); }
-    onTerminar({ tipo: 'ruleta', valor: empGanadas > 0 ? multAlcanzado : 0, pares: paresRef.current, emp: empGanadas, xp: aciertos * 10 });
+    if (potRef.current > 0) { FX.play('levelUp'); FX.vibrate('heavy'); }
+    onTerminar({ tipo: 'ruleta', valor: multRef.current, pares: paresRef.current, emp: potRef.current, xp: aciertos * 10 });
   };
 
   const meta = q ? (SUBJECT_META[q.subject] || {}) : {};
+  const totalContado = useCountUp(fase === 'fin' ? pot : 0, 1200);
 
   return (
+    <Portal>
     <div style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-      background: 'linear-gradient(180deg, #120D04 0%, #241A08 45%, #100B04 100%)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ maxWidth: 430, margin: '0 auto', padding: '72px 20px 34px', width: '100%', minHeight: '100%',
+      background: 'linear-gradient(180deg, #0A0514 0%, #140A24 50%, #0A0514 100%)', display: 'flex', flexDirection: 'column' }}>
+
+      {/* Flash dorado de EL DORADO */}
+      {doradoFlash > 0 && (
+        <div key={doradoFlash} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 4,
+          background: 'radial-gradient(circle at 50% 40%, rgba(255,215,94,0.55), transparent 70%)',
+          animation: 'doradoFlash 1.4s ease-out both' }}/>
+      )}
+
+      <div style={{ maxWidth: 430, margin: '0 auto', padding: '20px 20px 34px', width: '100%', minHeight: '100%',
         display: 'flex', flexDirection: 'column' }}>
 
-        {/* Header con el pote */}
+        {!ai.ready && fase !== 'fin' ? (
+          <ModoCargando color={VIOLETA} titulo="RULETA ACADÉMICA"/>
+        ) : (
+        <>
+        {/* Header: pote + multiplicador acumulado */}
         {fase !== 'fin' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: '#E8B84B' }}>LA RULETA</div>
-              <div style={{ fontSize: 11, color: 'rgba(245,242,235,0.5)', marginTop: 2 }}>Ronda {Math.min(ronda + 1, 6)}/6</div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: VIOLETA }}>RULETA ACADÉMICA</div>
+                <div style={{ fontSize: 11, color: 'rgba(245,242,235,0.5)', marginTop: 2 }}>Ronda {Math.min(ronda + 1, RONDAS)}/{RONDAS}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                  <PkIc n="empanada" s={16} c="#E8B84B"/>
+                  <span style={{ fontSize: 26, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
+                    textShadow: '0 0 18px rgba(232,184,75,0.5)' }}>{pot}</span>
+                </div>
+                <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(245,242,235,0.45)' }}>ACUMULADO</div>
+              </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                <PkIc n="empanada" s={16} c="#E8B84B"/>
-                <span style={{ fontSize: 26, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
-                  textShadow: '0 0 18px rgba(232,184,75,0.5)' }}>{pot}</span>
+            {/* Barra de multiplicador acumulado */}
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 9 }}>
+              <span style={{ fontSize: 11, fontWeight: 900, color: VIOLETA, whiteSpace: 'nowrap' }}>MULT x{mult}</span>
+              <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (mult / 10) * 100)}%`, borderRadius: 99,
+                  background: `linear-gradient(90deg, ${VIOLETA}, #C084FC)`, boxShadow: `0 0 10px ${VIOLETA}88`,
+                  transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)' }}/>
               </div>
-              <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(245,242,235,0.45)' }}>
-                EN JUEGO · x{MULTS[Math.min(ronda, 5)]}
-              </div>
+            </div>
+            {/* Progreso de rondas */}
+            <div style={{ display: 'flex', gap: 5, marginTop: 8 }}>
+              {Array.from({ length: RONDAS }, (_, i) => (
+                <div key={i} style={{ flex: 1, height: 4, borderRadius: 99,
+                  background: i < ronda ? VIOLETA : 'rgba(255,255,255,0.1)',
+                  boxShadow: i < ronda ? `0 0 6px ${VIOLETA}88` : 'none' }}/>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Escalera de multiplicadores */}
-        {fase !== 'fin' && (
-          <div style={{ display: 'flex', gap: 5, marginBottom: 16 }}>
-            {MULTS.map((m, i) => (
-              <div key={m} style={{ flex: 1, textAlign: 'center', padding: '4px 0', borderRadius: 8,
-                fontSize: 10.5, fontWeight: 900,
-                background: i === ronda ? 'rgba(232,184,75,0.22)' : i < ronda ? 'rgba(232,184,75,0.10)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${i === ronda ? '#E8B84B' : i < ronda ? 'rgba(232,184,75,0.35)' : 'rgba(255,255,255,0.08)'}`,
-                color: i <= ronda ? '#E8B84B' : 'rgba(245,242,235,0.35)' }}>
-                x{m}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {fase === 'girar' && (
+        {(fase === 'girar' || fase === 'cargando' || fase === 'girando' || fase === 'dorado') && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Puntero */}
+            {/* Puntero (parpadea al frenar) */}
             <div style={{ width: 0, height: 0, borderLeft: '13px solid transparent', borderRight: '13px solid transparent',
-              borderTop: '20px solid #E8B84B', marginBottom: -6, zIndex: 2,
-              filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.5))' }}/>
-            {/* Rueda */}
-            <div style={{ position: 'relative', width: 240, height: 240 }}>
+              borderTop: `20px solid ${VIOLETA}`, marginBottom: -6, zIndex: 2,
+              filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.5))',
+              animation: fase === 'girando' ? 'indicatorBlink 0.5s ease-in-out infinite' : 'none' }}/>
+            {/* La ruleta */}
+            <div style={{ position: 'relative', width: 280, height: 280 }}>
               <div style={{ position: 'absolute', inset: 0, borderRadius: '50%',
-                border: '5px solid #E8B84B', boxShadow: '0 0 34px rgba(232,184,75,0.35), inset 0 0 24px rgba(0,0,0,0.4)',
-                background: `conic-gradient(from -36deg, ${mats.map((s, i) => `${SUBJECT_META[s].color} ${i * 72}deg ${(i + 1) * 72}deg`).join(', ')})`,
+                border: `5px solid ${VIOLETA}`, boxShadow: `0 0 38px ${VIOLETA}55, inset 0 0 24px rgba(0,0,0,0.45)`,
+                background: conic,
                 transform: `rotate(${deg}deg)`,
-                transition: girando ? 'transform 3.3s cubic-bezier(0.15,0.75,0.1,1)' : 'none' }}>
-                {mats.map((s, i) => (
-                  <div key={s} style={{ position: 'absolute', top: '50%', left: '50%', width: 40, marginLeft: -20,
-                    textAlign: 'center', fontSize: 13, fontWeight: 900, color: '#0F0A04',
-                    transform: `rotate(${i * 72}deg) translateY(-86px)` }}>
-                    {SUBJECT_META[s].short}
-                  </div>
-                ))}
+                transition: fase === 'girando' ? 'transform 3.6s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
+                {stops.map((w, i) => {
+                  const mid = (w.from + w.to) / 2;
+                  return (
+                    <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 44, marginLeft: -22,
+                      textAlign: 'center', fontSize: w.t === 'materia' ? 13 : 11, fontWeight: 900,
+                      color: w.t === 'negra' ? '#EF4444' : '#0F0A04',
+                      transform: `rotate(${mid}deg) translateY(-108px)` }}>
+                      {w.t === 'materia' ? (SUBJECT_META[w.s] || {}).short : w.label}
+                    </div>
+                  );
+                })}
               </div>
-              {/* Medallón central */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', width: 66, height: 66, marginTop: -33, marginLeft: -33,
-                borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #3A2E10, #1A1206)',
-                border: '3px solid #E8B84B', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              {/* Borde de la pregunta negra */}
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none',
+                border: '1px solid rgba(239,68,68,0.0)' }}/>
+              {/* Medallón central: la rana contra-rota */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', width: 72, height: 72, marginTop: -36, marginLeft: -36,
+                borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #2A1548, #140A24)',
+                border: `3px solid ${VIOLETA}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
-                <PkIc n="solandino" s={30} c="#E8B84B"/>
+                <div style={{ animation: fase === 'girando' ? 'inkSpinRev 3.6s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
+                  <PkIc n="rana" s={34} c="#C084FC"/>
+                </div>
               </div>
             </div>
-            <button onClick={girar} disabled={girando} style={{
+
+            {/* Botón GIRAR con carga de 0.5s */}
+            <button onClick={cargarYGirar} disabled={fase !== 'girar'} style={{
               marginTop: 26, width: '100%', maxWidth: 300, padding: '16px', borderRadius: 16, border: 'none',
-              background: girando ? 'rgba(232,184,75,0.35)' : 'linear-gradient(135deg, #E8B84B, #B8860B)',
-              color: '#1A1206', fontSize: 15, fontWeight: 900, cursor: girando ? 'default' : 'pointer',
-              fontFamily: 'inherit', boxShadow: '0 8px 26px rgba(232,184,75,0.35)',
-              animation: girando ? 'none' : 'ctaPulse 3.5s ease-in-out infinite 1s' }}>
-              {girando ? 'El destino decide…' : ronda === 0 ? '¡Girar la ruleta!' : `Girar por x${MULTS[Math.min(ronda, 5)]}`}
+              position: 'relative', overflow: 'hidden',
+              background: fase === 'girando' ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`,
+              color: '#fff', fontSize: 15, fontWeight: 900, cursor: fase === 'girar' ? 'pointer' : 'default',
+              fontFamily: 'inherit', boxShadow: `0 8px 26px ${VIOLETA}44`,
+              animation: fase === 'girar' ? 'ctaPulse 3.5s ease-in-out infinite 1s' : 'none' }}>
+              {fase === 'cargando' && (
+                <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0,
+                  background: 'rgba(255,255,255,0.28)', animation: 'holdChargeFill 0.52s linear both' }}/>
+              )}
+              {fase === 'girando' ? 'El destino gira…' : fase === 'cargando' ? 'Cargando…' : 'GIRAR'}
             </button>
-            {ronda === 0 && (
-              <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.5)', marginTop: 12, textAlign: 'center', lineHeight: 1.6, maxWidth: 280 }}>
-                La ruleta elige la materia. Acierta y multiplica. Falla y pierdes TODO lo acumulado.
+            {ronda === 0 && fase === 'girar' && (
+              <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.5)', marginTop: 12, textAlign: 'center', lineHeight: 1.6, maxWidth: 300 }}>
+                5 rondas. Materias suman empanadas, los x2/x3/x5 acumulan multiplicador,
+                EL DORADO regala 200 y la cuña NEGRA paga x5 si sobrevives.
               </div>
             )}
           </div>
         )}
 
-        {fase === 'pregunta' && q && (
+        {fase === 'pregunta' && q && wedge && (
           <>
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
               <span style={{ display: 'inline-block', padding: '5px 16px', borderRadius: 99,
-                background: `${meta.color}22`, border: `1.5px solid ${meta.color}`,
-                fontSize: 12, fontWeight: 900, color: meta.color,
+                background: wedge.t === 'negra' ? 'rgba(239,68,68,0.15)' : `${wedge.t === 'materia' ? meta.color : wedge.color}22`,
+                border: `1.5px solid ${wedge.t === 'negra' ? '#EF4444' : wedge.t === 'materia' ? meta.color : wedge.color}`,
+                fontSize: 12, fontWeight: 900,
+                color: wedge.t === 'negra' ? '#EF4444' : wedge.t === 'materia' ? meta.color : wedge.color,
                 animation: 'popIn 0.4s ease both' }}>
-                El destino eligió: {q.subject}
+                {wedge.t === 'materia' ? `El destino eligió: ${q.subject}`
+                  : wedge.t === 'mult' ? `¡Acierta y multiplicas x${wedge.v}!`
+                  : 'PREGUNTA NEGRA: doble o nada (x5)'}
               </span>
             </div>
             <PreguntaRapida C={C} q={q} sel={sel} reveal={reveal} onPick={responder}/>
           </>
         )}
 
-        {fase === 'decidir' && (
+        {fase === 'fin' && (
           <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#7EE2AE', marginBottom: 6 }}>¡CORRECTO!</div>
-            <div className="serif" style={{ fontSize: 25, fontWeight: 800, color: '#F5F2EB', marginBottom: 8 }}>
-              Tienes {pot} empanadas en juego
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(245,242,235,0.6)', lineHeight: 1.6, maxWidth: 290, marginBottom: 24 }}>
-              ¿Te retiras con lo ganado o giras por <b style={{ color: '#E8B84B' }}>x{MULTS[ronda + 1]}</b> ({BASE * MULTS[ronda + 1]} emp)?
-              Si fallas, pierdes todo.
-            </div>
-            <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 330 }}>
-              <button onClick={() => cobrar(MULTS[ronda])} style={{ flex: 1, padding: '15px', borderRadius: 15, border: 'none',
-                background: 'linear-gradient(135deg, #3DA873, #1F6B45)', color: '#fff', fontSize: 13.5, fontWeight: 900,
-                cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 18px rgba(61,168,115,0.35)' }}>
-                Retirar: {pot} emp
-              </button>
-              <button onClick={arriesgar} style={{ flex: 1.2, padding: '15px', borderRadius: 15, border: 'none',
-                position: 'relative', overflow: 'hidden',
-                background: 'linear-gradient(135deg, #E8B84B, #B8860B)', color: '#1A1206', fontSize: 13.5, fontWeight: 900,
-                cursor: 'pointer', fontFamily: 'inherit',
-                animation: MULTS[ronda + 1] >= 8 ? 'riskBlink 0.9s ease-in-out infinite' : 'none',
-                boxShadow: '0 6px 20px rgba(232,184,75,0.4)' }}>
-                <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 44, pointerEvents: 'none',
-                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)',
-                  animation: 'shimmerSlide 2.2s ease-in-out infinite' }}/>
-                ¡Otra ronda! (x{MULTS[ronda + 1]})
-              </button>
-            </div>
-            {MULTS[ronda + 1] >= 8 && (
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#EF4444', marginTop: 12,
-                animation: 'presenceBlink 1.4s ease-in-out infinite' }}>
-                Cuidado: si fallas, pierdes {pot} empanadas
+            {esRecord && (
+              <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color: '#FFD75E', marginBottom: 10,
+                animation: 'comboPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+                ¡NUEVO RÉCORD DE MULTIPLICADOR!
               </div>
             )}
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 2, color: `${VIOLETA}CC`, marginBottom: 6 }}>RULETA ACADÉMICA</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: 60, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
+                textShadow: '0 0 34px rgba(232,184,75,0.5)', fontVariantNumeric: 'tabular-nums',
+                animation: 'popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>+{totalContado}</span>
+              <PkIc n="empanada" s={24} c="#E8B84B"/>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(245,242,235,0.65)', marginTop: 6 }}>
+              multiplicador final x{mult}
+            </div>
+
+            {/* Resumen de las 5 rondas */}
+            <div style={{ width: '100%', maxWidth: 320, margin: '18px 0 4px', textAlign: 'left' }}>
+              {rondasLog.current.map((r, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+                  borderRadius: 10, background: 'rgba(255,255,255,0.04)', marginBottom: 5,
+                  animation: `slideUpIn 0.4s ease ${i * 0.08}s both` }}>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: 'rgba(245,242,235,0.4)', width: 16 }}>{i + 1}</span>
+                  <PkIc n={r.icono} s={14} c={r.color}/>
+                  <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: '#F5F2EB' }}>{r.texto}</span>
+                  <span style={{ fontSize: 12, fontWeight: 900, color: r.color }}>{r.ganancia}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 320, marginTop: 14 }}>
+              <button onClick={onOtra} style={{ flex: 1.3, padding: '15px', borderRadius: 15, border: 'none',
+                background: `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`, color: '#fff', fontSize: 14, fontWeight: 900,
+                cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 6px 20px ${VIOLETA}40` }}>
+                Otra vez
+              </button>
+              <button onClick={onClose} style={{ flex: 1, padding: '15px', borderRadius: 15,
+                border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)',
+                color: '#F5F2EB', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Salir
+              </button>
+            </div>
+            <button onClick={() => { FX.play('tap'); shareWhatsApp(
+              `PANKEY 🎰 Ruleta Académica\nGané ${pot} empanadas con multiplicador x${mult}${esRecord ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n→ pankey.vercel.app`
+            ); }} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', maxWidth: 320, marginTop: 10, padding: '12px', borderRadius: 15,
+              border: '1px solid rgba(37,211,102,0.45)', background: 'rgba(37,211,102,0.12)',
+              color: '#4ADE80', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <PkIc n="msg" s={15} c="#4ADE80"/> Compartir por WhatsApp
+            </button>
           </div>
         )}
 
-        {fase === 'fin' && gano && (
-          <>
-            {/* Lluvia de empanadas perdidas */}
-            {gano.emp === 0 && (
-              <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 4, overflow: 'hidden' }}>
-                {Array.from({ length: 16 }, (_, i) => (
-                  <div key={i} style={{ position: 'absolute', top: 0, left: `${5 + (i * 6.2) % 90}%`,
-                    '--er': `${(i % 2 ? 1 : -1) * (200 + i * 30)}deg`,
-                    animation: `empanadaRain ${1.6 + (i % 5) * 0.35}s ease-in ${i * 0.09}s both` }}>
-                    <PkIc n="empanada" s={16 + (i % 3) * 5} c="#E8B84B"/>
-                  </div>
-                ))}
-              </div>
-            )}
-            <FinDeModo color={gano.emp > 0 ? '#E8B84B' : '#EF4444'}
-              titulo="LA RULETA"
-              valor={gano.emp > 0 ? `+${gano.emp}` : '0'}
-              unidad={gano.emp > 0 ? `empanadas cobradas en x${gano.mult}` : `El destino te quitó todo en x${gano.mult}`}
-              esRecord={esRecord} emp={0} xp={0} onOtra={onOtra} onSalir={onClose}
-              extra={`Tu mejor: x${Math.max(gano.emp > 0 ? gano.mult : 0, appState.ruletaMaxMult || 0)}`}
-              shareText={`PANKEY 🎡 Ruleta\nLlegué a multiplicador x${gano.mult}${gano.emp > 0 ? `\nAcumulé ${gano.emp} empanadas` : '\nEl destino me quitó todo'}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n→ pankey.vercel.app`}/>
-          </>
-        )}
-
-        {(fase === 'girar' || fase === 'pregunta') && (
-          <button onClick={onClose} style={{ marginTop: 'auto', paddingTop: 14, background: 'none', border: 'none',
+        {(fase === 'girar' || fase === 'cargando' || fase === 'girando' || fase === 'pregunta') && (
+          <button onClick={() => { if (rondaRef.current > 0) finalizar(); else onClose(); }} style={{ marginTop: 'auto', paddingTop: 14, background: 'none', border: 'none',
             color: 'rgba(245,242,235,0.3)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Salir de la ruleta
+            {rondaRef.current > 0 ? 'Cobrar y salir' : 'Salir de la ruleta'}
           </button>
+        )}
+        </>
         )}
       </div>
     </div>
+    </Portal>
   );
 }
 
 function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoOracle, onMissionReward, onGoShop, onModo, onFlash, onPracticeWeak }) {
+  const [expandiendo, setExpandiendo] = useState(null); // tarjeta de modo expandiéndose full-screen
   const history    = appState.icfesHistory || [];
   const hasHistory = history.length > 0;
   const best       = hasHistory ? Math.max(...history.map(r => r.score)) : 0;
@@ -5630,83 +6096,120 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
       {/* ── TU ESTRELLA DEL SABER ── */}
       <EstrellaSaber C={C} dominio={dominio} pred={pred}/>
 
-      {/* ── MODOS DE JUEGO ── */}
+      {/* ══ LA SALA DE ENTRENAMIENTO ══ */}
       <div>
-        <div style={{ fontSize:10, color:C.textMuted, fontWeight:800, letterSpacing:1.8, marginBottom:10 }}>
-          MODOS DE JUEGO
+        <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:12 }}>
+          <div className="serif" style={{ fontSize:20, fontWeight:800, color:C.text }}>¿Cómo entrenas hoy?</div>
+          {streak > 0 && (
+            <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:900, color:'#FBBF24' }}>
+              <PkIc n="flame" s={13} c="#FBBF24"/> {streak} día{streak !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-          {/* Contrarreloj */}
-          <button onClick={() => onModo?.('contrarreloj')} style={{
-            padding:'14px 13px', borderRadius:18, border:'1px solid rgba(224,82,82,0.35)',
-            background:'linear-gradient(150deg, #3A0E0E, #200808)', cursor:'pointer', fontFamily:'inherit',
-            textAlign:'left', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:-24, right:-24, width:80, height:80, borderRadius:'50%',
-              background:'radial-gradient(circle, rgba(239,68,68,0.22), transparent 70%)',
-              animation:'groundFlicker 1.6s ease-in-out infinite', pointerEvents:'none' }}/>
-            <PkIc n="timer" s={21} c="#FF7B7B"/>
-            <div style={{ fontSize:13.5, fontWeight:900, color:'#fff', marginTop:7 }}>Contrarreloj</div>
-            <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.55)', marginTop:2 }}>60s · cada acierto suma</div>
-            <div style={{ fontSize:10.5, fontWeight:900, color:'#FF7B7B', marginTop:6 }}>
-              {appState.contrarrelojRecord > 0 ? `Récord: ${appState.contrarrelojRecord}` : 'Sin récord aún'}
-            </div>
-          </button>
-          {/* Supervivencia */}
-          <button onClick={() => onModo?.('supervivencia')} style={{
-            padding:'14px 13px', borderRadius:18, border:'1px solid rgba(74,222,128,0.3)',
-            background:'linear-gradient(150deg, #0C2416, #081108)', cursor:'pointer', fontFamily:'inherit',
-            textAlign:'left', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:-24, right:-24, width:80, height:80, borderRadius:'50%',
-              background:'radial-gradient(circle, rgba(74,222,128,0.16), transparent 70%)', pointerEvents:'none' }}/>
-            <PkIc n="mountain" s={21} c="#4ADE80"/>
-            <div style={{ fontSize:13.5, fontWeight:900, color:'#fff', marginTop:7 }}>Supervivencia</div>
-            <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.55)', marginTop:2 }}>Un error y chao</div>
-            <div style={{ fontSize:10.5, fontWeight:900, color:'#4ADE80', marginTop:6 }}>
-              {appState.supervivenciaRecord > 0 ? `Récord: ${appState.supervivenciaRecord} seguidas` : 'Sin récord aún'}
-            </div>
-          </button>
-          {/* La Ruleta */}
-          <button onClick={() => onModo?.('ruleta')} style={{
-            padding:'14px 13px', borderRadius:18, border:'1px solid rgba(232,184,75,0.35)',
-            background:'linear-gradient(150deg, #241A08, #140D04)', cursor:'pointer', fontFamily:'inherit',
-            textAlign:'left', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:10, right:10, width:26, height:26, borderRadius:'50%', opacity:0.55,
-              background:`conic-gradient(${Object.values(SUBJECT_META).map((m, i) => `${m.color} ${i * 72}deg ${(i + 1) * 72}deg`).join(', ')})`,
-              animation:'raysSpin 7s linear infinite', pointerEvents:'none' }}/>
-            <PkIc n="solandino" s={21} c="#E8B84B"/>
-            <div style={{ fontSize:13.5, fontWeight:900, color:'#fff', marginTop:7 }}>La Ruleta</div>
-            <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.55)', marginTop:2 }}>La suerte decide · x32 máx</div>
-            <div style={{ fontSize:10.5, fontWeight:900, color:'#E8B84B', marginTop:6 }}>
-              {appState.ruletaMaxMult > 0 ? `Mejor: x${appState.ruletaMaxMult}` : 'Sin récord aún'}
-            </div>
-          </button>
-          {/* Duelo Flash */}
-          <button onClick={() => onFlash?.()} style={{
-            padding:'14px 13px', borderRadius:18, border:'1px solid rgba(232,116,58,0.4)',
-            background:'linear-gradient(150deg, #2A1006, #180903)', cursor:'pointer', fontFamily:'inherit',
-            textAlign:'left', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:12, right:12, width:7, height:7, borderRadius:'50%',
-              background:'#E8743A', animation:'flashLive 1.4s ease-in-out infinite', pointerEvents:'none' }}/>
-            <PkIc n="swords" s={21} c="#FF9D5C"/>
-            <div style={{ fontSize:13.5, fontWeight:900, color:'#fff', marginTop:7 }}>Duelo Flash</div>
-            <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.55)', marginTop:2 }}>5 preguntas · 3 min</div>
-            <div style={{ fontSize:10.5, fontWeight:900, color:'#FF9D5C', marginTop:6 }}>Rival en vivo</div>
-          </button>
-        </div>
-      </div>
 
-      {/* ── CTA: Simulacro completo ── */}
-      <button onClick={onStartSetup} style={{
-        borderRadius:18, padding:'17px',
-        background:`linear-gradient(135deg, ${oroMacuquina}, #8B5E1A)`,
-        border:'none', color:'#fff', fontSize:14.5, fontWeight:900,
-        cursor:'pointer', fontFamily:'inherit', letterSpacing:0.4,
-        boxShadow:`0 8px 24px rgba(201,150,58,0.4), inset 0 -2px 0 rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)`,
-        display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-        animation:'ctaPulse 5s ease-in-out infinite 2s' }}>
-        <PkIc n="pergamino" s={19} c="#fff" />
-        <span>Simulacro Completo <span style={{ fontWeight:700, opacity:0.8, fontSize:12 }}>· 10-50 preguntas · sella tu racha</span></span>
-      </button>
+        <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
+          {[
+            { id:'simulacro', nombre:'Simulacro Oficial', desc:'El simulacro completo. Como el día del examen.',
+              color:'#4A7EB8', grad:'linear-gradient(135deg, #0C1B30 0%, #14304F 55%, #0C1B30 100%)',
+              icono:(<div style={{ animation:'kanjiGlow 3s ease-in-out infinite', color:'#7BB3FF' }}><PkIc n="pergamino" s={30} c="#7BB3FF"/></div>),
+              dif:4, rec:'40–250 emp · sella tu racha',
+              estado: best > 0 ? `Mejor: ${best}/500` : 'Sin jugar', accion:() => onStartSetup?.() },
+            { id:'contrarreloj', nombre:'Contrarreloj', desc:'10 preguntas. 90 segundos. Sin piedad.',
+              color:'#F97316', grad:'linear-gradient(135deg, #1A0D02 0%, #33190A 55%, #1A0D02 100%)',
+              icono:(<div style={{ animation:'clockHands 3.2s linear infinite' }}><PkIc n="timer" s={30} c="#FB923C"/></div>),
+              dif:3, rec:'x1.5 empanadas',
+              estado: (appState.contrarrelojRecord || 0) > 0 ? `Mejor: ${appState.contrarrelojRecord}${appState.contrarrelojRecord <= 500 ? '/500' : ''}` : 'Sin jugar',
+              accion:() => onModo?.('contrarreloj') },
+            { id:'supervivencia', nombre:'Supervivencia', desc:'3 vidas. Preguntas infinitas. ¿Cuánto aguantas?',
+              color:'#DC2626', grad:'linear-gradient(135deg, #1A0404 0%, #330A0A 55%, #1A0404 100%)',
+              icono:(<div style={{ animation:'heartBeat 1.3s ease-in-out infinite', filter:'drop-shadow(0 0 8px rgba(239,68,68,0.6))' }}>
+                <svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.5 4 8.5C4 5.5 6.5 3 9.5 3C11 3 12 4 12 4C12 4 13 3 14.5 3C17.5 3 20 5.5 20 8.5C20 13.5 12 21 12 21Z" fill="#EF4444" stroke="#FCA5A5" strokeWidth="1"/></svg>
+              </div>),
+              dif:5, rec:'emp × (ola / 2) · tope 500',
+              estado: (appState.supervivenciaRecord || 0) > 0 ? `Mejor: Ola ${appState.supervivenciaRecord}` : 'Sin jugar',
+              accion:() => onModo?.('supervivencia') },
+            { id:'ruleta', nombre:'Ruleta Académica', desc:'El azar decide tu destino. ¿Eres valiente?',
+              color:'#8B5CF6', grad:'linear-gradient(135deg, #120A24 0%, #241448 55%, #120A24 100%)',
+              icono:(<div style={{ width:30, height:30, borderRadius:'50%', animation:'raysSpin 9s linear infinite',
+                background:`conic-gradient(${Object.values(SUBJECT_META).map((m, i) => `${m.color} ${i * 72}deg ${(i + 1) * 72}deg`).join(', ')})`,
+                display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 12px rgba(139,92,246,0.5)' }}>
+                <div style={{ width:11, height:11, borderRadius:'50%', background:'#120A24' }}/>
+              </div>),
+              dif:2, rec:'entre x1 y x5',
+              estado: (appState.ruletaMaxMult || 0) > 0 ? `Mejor: x${appState.ruletaMaxMult}` : 'Sin jugar',
+              accion:() => onModo?.('ruleta') },
+            { id:'duelo', nombre:'Duelo Flash', desc:'5 preguntas contra un rival en vivo. 3 minutos.',
+              color:'#E8743A', grad:'linear-gradient(135deg, #1C0B04 0%, #38160A 55%, #1C0B04 100%)',
+              icono:(<div style={{ animation:'iconFloatWiggle 2.6s ease-in-out infinite' }}><PkIc n="swords" s={30} c="#FF9D5C"/></div>),
+              dif:3, rec:'30 emp + 60 XP al ganar',
+              estado:'Rival en vivo', accion:() => onFlash?.() },
+          ].map((m, idx) => (
+            <button key={m.id} onClick={() => {
+              FX.play('duel'); FX.vibrate('medium');
+              setExpandiendo(m);
+              setTimeout(() => { m.accion(); setTimeout(() => setExpandiendo(null), 500); }, 430);
+            }} className="fu" style={{
+              animationDelay:`${idx * 0.06}s`,
+              position:'relative', width:'100%', padding:'16px 17px', border:`1px solid ${m.color}40`,
+              borderRadius:20, cursor:'pointer', fontFamily:'inherit', textAlign:'left', overflow:'hidden',
+              background:m.grad, boxShadow:`0 6px 22px ${m.color}22` }}>
+              {/* Glow decorativo */}
+              <div style={{ position:'absolute', top:-30, right:-30, width:110, height:110, borderRadius:'50%',
+                background:`radial-gradient(circle, ${m.color}2E, transparent 70%)`, pointerEvents:'none' }}/>
+              <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                {/* Ícono grande animado */}
+                <div style={{ width:56, height:56, borderRadius:16, flexShrink:0,
+                  background:`${m.color}18`, border:`1px solid ${m.color}35`,
+                  display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {m.icono}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div className="serif" style={{ fontSize:17.5, fontWeight:800, color:'#F5F2EB', lineHeight:1.15 }}>{m.nombre}</div>
+                  <div style={{ fontSize:11.5, color:'rgba(245,242,235,0.62)', marginTop:3, lineHeight:1.4 }}>{m.desc}</div>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:7, flexWrap:'wrap' }}>
+                    {/* Badge de recompensa */}
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:9.5, fontWeight:900,
+                      color:'#E8B84B', background:'rgba(232,184,75,0.10)', border:'1px solid rgba(232,184,75,0.3)',
+                      borderRadius:99, padding:'3px 9px' }}>
+                      <PkIc n="empanada" s={10} c="#E8B84B"/>{m.rec}
+                    </span>
+                    {/* Dificultad en puntos */}
+                    <span style={{ display:'inline-flex', gap:3, alignItems:'center' }}>
+                      {[0,1,2,3,4].map(i => (
+                        <span key={i} style={{ width:6, height:6, borderRadius:'50%',
+                          background: i < m.dif ? m.color : 'transparent',
+                          border:`1px solid ${i < m.dif ? m.color : 'rgba(255,255,255,0.25)'}`,
+                          boxShadow: i < m.dif ? `0 0 4px ${m.color}` : 'none' }}/>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ flexShrink:0, textAlign:'right' }}>
+                  <div style={{ fontSize:10.5, fontWeight:900, color:m.color, whiteSpace:'nowrap' }}>{m.estado}</div>
+                  <div style={{ marginTop:6, display:'flex', justifyContent:'flex-end' }}>
+                    <PkIc n="right" s={14} c={`${m.color}AA`}/>
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Expansión full-screen al elegir un modo */}
+        {expandiendo && (
+          <Portal>
+            <div style={{ position:'fixed', inset:0, zIndex:99993, background:expandiendo.grad,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              animation:'modeExpand 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
+              <div style={{ textAlign:'center', animation:'popIn 0.4s ease 0.1s both' }}>
+                <div style={{ display:'flex', justifyContent:'center', marginBottom:14, transform:'scale(1.7)' }}>{expandiendo.icono}</div>
+                <div className="serif" style={{ fontSize:26, fontWeight:800, color:'#F5F2EB',
+                  textShadow:`0 0 30px ${expandiendo.color}` }}>{expandiendo.nombre}</div>
+              </div>
+            </div>
+          </Portal>
+        )}
+      </div>
 
       {/* ── Debilidad detectada ── */}
       {debilidad && (
@@ -5973,7 +6476,7 @@ function IcfesVisualContext({ context }) {
 // ─────────────────────────────────────────────
 //  ICFES — Test (Interfaz Híbrida: Cuadernillo + App)
 // ─────────────────────────────────────────────
-function IcfesTest({ C, isLight, question, questionIdx, total, selected, animating, sabioComment, combo, hitsCount = 0, answeredCount = 0, onAnswer, onExit, onNext }) {
+function IcfesTest({ C, isLight, question, questionIdx, total, selected, animating, sabioComment, combo, hitsCount = 0, answeredCount = 0, onAnswer, onExit, onNext, repasoDisponible, comodinDisponible, onUsarRepaso, onUsarComodin }) {
   const meta    = SUBJECT_META[question.subject] || { color: C.accent, bg: C.bgAlt };
   const pct     = (questionIdx / total) * 100;
   const LETTERS = ['A', 'B', 'C', 'D'];
@@ -6204,10 +6707,32 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
             {renderRichText(question.explanation, true)}
           </div>
 
+          {/* 🔄 EL REPASO: cambia esta respuesta fallida (una vez por test) */}
+          {repasoDisponible && selected !== question.correct && (
+            <button onClick={onUsarRepaso} style={{
+              width: '100%', marginTop: 14, padding: '13px', borderRadius: 14, position: 'relative', zIndex: 1,
+              border: '1.5px dashed rgba(96,165,250,0.55)', background: 'rgba(96,165,250,0.10)',
+              color: '#60A5FA', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              animation: 'chestBeat 2.4s ease-in-out infinite' }}>
+              <PkIc n="refresh" s={15} c="#60A5FA"/> Usar El Repaso: cambiar mi respuesta
+            </button>
+          )}
           <div style={{ marginTop: 20, position: 'relative', zIndex: 1 }}>
             <PrimaryBtn C={C} onClick={onNext}>{questionIdx < total - 1 ? 'Siguiente Desafío →' : 'Ver Resultados de la Expedición'}</PrimaryBtn>
           </div>
         </div>
+      )}
+
+      {/* 🐸 LA PREGUNTA DE COMODÍN: marca esta pregunta como correcta */}
+      {comodinDisponible && !animating && (
+        <button onClick={onUsarComodin} style={{
+          width: '100%', padding: '12px', borderRadius: 14, marginTop: 4,
+          border: '1.5px dashed rgba(212,175,55,0.55)', background: 'rgba(212,175,55,0.10)',
+          color: '#D4AF37', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <PkIc n="rana" s={15} c="#D4AF37"/> Usar Comodín: esta pregunta cuenta como correcta
+        </button>
       )}
       </div>
     </div>
@@ -6407,18 +6932,28 @@ function SenseiModal({ C, isLight, question, userAnsText, correctAnsText, onClos
 // La llave ahora está escondida y segura
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
-async function fetchGeminiQuestions(subjects, count) {
+async function fetchGeminiQuestions(subjects, count, opts = {}) {
   if (!GEMINI_API_KEY) throw new Error("Falta la Llave Maestra de IA.");
   const subjectList = subjects.join(', ');
-  
+  const dificultad = opts.dificultad || 'Alta';
+
+  // Instrucción visual: los modos rápidos piden preguntas compactas sin contextos largos
+  const reglaVisual = opts.compact
+    ? `🚨 MODO RÁPIDO 🚨
+Estas preguntas son para un modo CONTRARRELOJ: deben ser CORTAS y directas.
+- "context" SIEMPRE debe ser null. PROHIBIDO incluir textos largos, tablas o gráficas.
+- El enunciado ("text") máximo 35 palabras. Las opciones máximo 10 palabras cada una.
+- Deben poder responderse en menos de 10 segundos por alguien preparado.`
+    : `🚨 REGLA VISUAL DE VIDA O MUERTE 🚨
+ES OBLIGATORIO que AL MENOS LA MITAD de las preguntas tengan el campo "context" con datos visuales. NUNCA devuelvas todas las preguntas con "context": null. ¡Invéntate tablas, gráficas, textos o avisos!`;
+
   // ¡El nuevo cerebro ESTRICTO del examinador!
   const prompt = `Eres un examinador experto del ICFES Saber 11 de Colombia.
-Tu ÚNICA tarea es generar exactamente ${count} preguntas de examen.
+Tu ÚNICA tarea es generar exactamente ${count} preguntas de examen NUEVAS y ORIGINALES (nunca repitas preguntas típicas de banco).
 Distribución de materias: ${subjectList}
-Dificultad: Alta. Formato ICFES real, análisis crítico y pensamiento profundo.
+Dificultad: ${dificultad}. Formato ICFES real, análisis crítico y pensamiento profundo.
 
-🚨 REGLA VISUAL DE VIDA O MUERTE 🚨
-ES OBLIGATORIO que AL MENOS LA MITAD de las preguntas tengan el campo "context" con datos visuales. NUNCA devuelvas todas las preguntas con "context": null. ¡Invéntate tablas, gráficas, textos o avisos!
+${reglaVisual}
 
 FORMATOS DE CONTEXTO PERMITIDOS (Usa estrictamente esta estructura y NO dejes campos vacíos):
 1. Tabla: {"type": "table", "data": {"headers": ["Col1", "Col2"], "rows": [["V1", "V2"], ["V3", "V4"]]}}
@@ -7307,7 +7842,7 @@ function ChestShopShow({ chest, premio, onClose }) {
   );
 }
 
-function CofreRacha({ C, isLight, appState, setAppState, onMissionReward }) {
+function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoShop }) {
   const dk = dateKeyISO();
   const today = todayStr();
   const streak = appState.streakDays || 0;
@@ -7370,6 +7905,50 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward }) {
   return (
     <>
       {/* ── Tarjeta premium en el Inicio ── */}
+      {openedToday ? (
+        /* Ya cayó el cofre del día → invitación animada al Bazar */
+        <button onClick={() => { FX.play('coin'); FX.vibrate('light'); onGoShop?.(); }} style={{
+          position: 'relative', width: '100%', padding: '15px 16px', border: 'none', borderRadius: 20,
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', overflow: 'hidden',
+          background: 'linear-gradient(120deg, #2A0A44, #4C1D95, #7A3B12, #2A0A44)',
+          backgroundSize: '300% 300%', animation: 'gradientShift 7s ease infinite',
+          boxShadow: '0 8px 26px rgba(139,92,246,0.3)',
+          display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Shimmer que cruza la tarjeta */}
+          <div style={{ position: 'absolute', top: 0, bottom: 0, width: 64, pointerEvents: 'none',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)',
+            animation: 'shimmerSlide 2.6s ease-in-out infinite' }}/>
+          {/* Cofre mítico flotando con partículas orbitando */}
+          <div style={{ position: 'relative', flexShrink: 0, '--cglow': 'rgba(192,132,252,0.7)',
+            animation: 'chestFloat 2s ease-in-out infinite, chestGlowPulse 2.4s ease-in-out infinite' }}>
+            <CofreSVG lv={CHEST_SHOP_COLORS['mítico']} open={false} size={54}/>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ position: 'absolute', top: '46%', left: '50%', width: 4, height: 4,
+                borderRadius: '50%', background: '#F5D0FE', boxShadow: '0 0 6px #C084FC', pointerEvents: 'none',
+                '--orb': `${30 + i * 6}px`, animation: `chestOrbit ${3.6 + i * 1.3}s linear infinite ${i * 0.8}s` }}/>
+            ))}
+          </div>
+          <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+            <div style={{ fontSize: 13.5, fontWeight: 900, color: '#F5F2EB' }}>
+              ¿Quieres más tesoros hoy?
+            </div>
+            <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.72)', marginTop: 2.5, lineHeight: 1.4 }}>
+              El Bazar tiene cofres esperándote: Madera, Oro, Tumbaga… hasta el Ancestral.
+            </div>
+            {premio && (
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#FFD75E', marginTop: 3 }}>
+                Del cofre de racha salieron +{premio.emp} emp
+              </div>
+            )}
+          </div>
+          <div style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 99, position: 'relative',
+            background: 'linear-gradient(135deg, #F5D0FE, #C084FC)', color: '#2A0A44',
+            fontSize: 11, fontWeight: 900, boxShadow: '0 3px 14px rgba(192,132,252,0.55)',
+            animation: 'chestBeat 2.4s ease-in-out infinite' }}>
+            IR AL BAZAR
+          </div>
+        </button>
+      ) : (
       <div style={{ position: 'relative', borderRadius: 20, padding: 2, overflow: 'hidden' }}>
         {/* Anillo dorado giratorio cuando está listo */}
         {canOpen ? (
@@ -7447,6 +8026,7 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward }) {
           )}
         </button>
       </div>
+      )}
 
       {/* ── Overlay de apertura ── */}
       {modal && (
@@ -8270,6 +8850,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   // ══ BUSCANDO ══
   if (phase === 'search') {
     return (
+      <Portal>
       <div className="fi" style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', padding: 24 }}>
           {/* Dos siluetas girando/acercándose con las espadas al centro */}
@@ -8312,12 +8893,14 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
           </button>
         </div>
       </div>
+      </Portal>
     );
   }
 
   // ══ ¡RIVAL ENCONTRADO! ══
   if (phase === 'found') {
     return (
+      <Portal>
       <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ position: 'fixed', inset: 0, background: '#E8743A', pointerEvents: 'none',
           animation: 'foundFlash 0.9s ease-out both' }}/>
@@ -8331,12 +8914,14 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
           </div>
         </div>
       </div>
+      </Portal>
     );
   }
 
   // ══ VS ══
   if (phase === 'vs') {
     return (
+      <Portal>
       <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 22, padding: 24 }}>
           <div style={{ textAlign: 'center', animation: 'slideUpIn 0.5s ease both' }}>
@@ -8361,6 +8946,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
           </div>
         </div>
       </div>
+      </Portal>
     );
   }
 
@@ -8372,6 +8958,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     const mm = Math.floor(tGlobal / 60), ss = String(tGlobal % 60).padStart(2, '0');
 
     return (
+      <Portal>
       <div style={fondo}>
         <div style={{ maxWidth: 430, margin: '0 auto', padding: '72px 20px 40px', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Marcador en vivo */}
@@ -8480,6 +9067,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
           </button>
         </div>
       </div>
+      </Portal>
     );
   }
 
@@ -8521,6 +9109,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     </div>
   );
   return (
+    <Portal>
     <div className="fi" style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', padding: 24, maxWidth: 340, width: '100%' }}>
         <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 4, marginBottom: 14,
@@ -8585,6 +9174,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
         </button>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -8612,8 +9202,10 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       const ranked = Object.values(snap.val())
         .map(u => ({
           code: u.code,
+          ghost: (u.appState?.ghostUntil || 0) > Date.now(),
           correctas: (u.appState?.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0),
         }))
+        .filter(u => u.code === user?.code || !u.ghost)  // 👻 Modo Fantasma
         .sort((a, b) => b.correctas - a.correctas);
       const myIdx = ranked.findIndex(u => u.code === user.code);
       if (myIdx === -1) return;
@@ -8838,7 +9430,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       <PresenciaViva C={C} user={user}/>
 
       {/* ══ CAPA 3 — COFRE DE LA RACHA ══ */}
-      <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward}/>
+      <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
 
       {/* ── Misión más cercana (cobrable) ── */}
       {nearestMission && (
@@ -9044,8 +9636,10 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
 
       {/* ══ OVERLAYS ══ */}
       {retoOpen && (
-        <RetoDelDia C={C} appState={appState} setAppState={setAppState}
-          onClose={() => setRetoOpen(false)} onMissionReward={onMissionReward} unlockSecret={unlockSecret}/>
+        <Portal>
+          <RetoDelDia C={C} appState={appState} setAppState={setAppState}
+            onClose={() => setRetoOpen(false)} onMissionReward={onMissionReward} unlockSecret={unlockSecret}/>
+        </Portal>
       )}
       {flashOpen && (
         <DueloFlash key={flashKey} C={C} user={user} appState={appState} setAppState={setAppState}
@@ -9340,6 +9934,8 @@ function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, o
   const [flashKey, setFlashKey]   = useState(0);
   const [verDetalle, setVerDetalle] = useState(false);
   const [combo, setCombo]         = useState(null);        // { n, mult }
+  const [usedRepaso, setUsedRepaso]   = useState(false);   // El Repaso: 1 por test
+  const [usedComodin, setUsedComodin] = useState(false);   // Comodín: 1 por test
   const [logroShow, setLogroShow] = useState(null);
   const logrosRef = useRef([]);
   logrosRef.current = appState.logrosSecretos || [];
@@ -9407,6 +10003,7 @@ const SABIO_HYPE = [
       setCurrentQ(0); setSelected(null); setAnimating(false);
       streakRef.current = { hits: 0, misses: 0 };
       setSabioComment(null); setCombo(null);
+      setUsedRepaso(false); setUsedComodin(false);
       setIcfesScreen('countdown');
     } catch(e) {
       console.error(e);
@@ -9448,6 +10045,28 @@ const SABIO_HYPE = [
     } else {
       finishTest(answers);
     }
+  };
+
+  // 🔄 EL REPASO: deshace tu respuesta fallida y te deja elegir de nuevo (1 vez por test)
+  const usarRepaso = () => {
+    if (!appState.repasoActive || usedRepaso || !animating) return;
+    if (selected === activeQuestions[currentQ]?.correct) return;
+    setUsedRepaso(true);
+    setAppState(s => ({ ...s, repasoActive: false }));
+    const na = [...answers]; na[currentQ] = -1; setAnswers(na);
+    setSelected(null); setAnimating(false);
+    FX.play('conjure'); FX.vibrate('medium');
+    pushNotif?.('El Repaso activado: elige de nuevo, esta vez con calma.');
+  };
+
+  // 🐸 COMODÍN: la pregunta actual se marca correcta automáticamente (1 vez por test)
+  const usarComodin = () => {
+    if (!appState.comodinActive || usedComodin || animating) return;
+    setUsedComodin(true);
+    setAppState(s => ({ ...s, comodinActive: false }));
+    FX.play('chestOpen'); FX.vibrate('success');
+    handleAnswer(activeQuestions[currentQ].correct);
+    pushNotif?.('La rana Pankey susurró la respuesta. Comodín gastado.');
   };
 
   const finishTest = (finalAnswers) => {
@@ -9520,13 +10139,18 @@ const SABIO_HYPE = [
       const achXp  = newlyUnlocked.reduce((sum, a) => sum + (a.xp  || 0), 0);
       newlyUnlocked.forEach(a => onAchievement?.(a));
 
+      // 📜 Pergamino del Maestro: duplica el XP ganado en este simulacro
+      const bonoPergamino = s.simXpBoost ? correct * 10 : 0;
+      if (s.simXpBoost) setTimeout(() => pushNotif?.(`Pergamino del Maestro: +${bonoPergamino} XP extra en este simulacro.`), 900);
+
       return {
         ...s,
         icfesHistory: [...(s.icfesHistory || []).slice(-49), resultData],
         icfesStreak:  newStreak,
         lastIcfesDate: today,
-        xp:  (s.xp  || 0) + achXp,
+        xp:  (s.xp  || 0) + achXp + bonoPergamino,
         ryo: (s.ryo || 0) + achRyo,
+        simXpBoost: s.simXpBoost ? false : s.simXpBoost,
         achievements: newAch,
       };
     });
@@ -9543,7 +10167,8 @@ const SABIO_HYPE = [
       )}
       {modo === 'supervivencia' && (
         <ModoSupervivencia key={`sv${modoKey}`} C={C} appState={appState}
-          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}/>
+          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}
+          onRevive={(costo) => setAppState(s => ({ ...s, ryo: Math.max(0, (s.ryo || 0) - costo) }))}/>
       )}
       {modo === 'ruleta' && (
         <ModoRuleta key={`rl${modoKey}`} C={C} appState={appState}
@@ -9591,6 +10216,10 @@ const SABIO_HYPE = [
       answeredCount={answers.filter(a => a !== -1).length}
       onAnswer={handleAnswer}
       onNext={handleNext}
+      repasoDisponible={!!appState.repasoActive && !usedRepaso}
+      comodinDisponible={!!appState.comodinActive && !usedComodin}
+      onUsarRepaso={usarRepaso}
+      onUsarComodin={usarComodin}
       onExit={() => { if (window.confirm('¿Salir del simulacro?')) { setIcfesScreen('dashboard'); setAnswers([]); setSelected(null); setAnimating(false); setCurrentQ(0); streakRef.current = { hits: 0, misses: 0 }; setSabioComment(null); setCombo(null); } }}
     />
   );
@@ -9751,10 +10380,63 @@ const SHOP_ITEMS = [
          radial-gradient(1px 1px at 80% 20%, white 50%, transparent 50%),
          radial-gradient(2px 2px at 40% 90%, white 50%, transparent 50%),
          linear-gradient(180deg, #020010 0%, #0a0030 50%, #020010 100%)` },
-  // ── OBJETOS ESPECIALES ────────────────────────────────────────
-  { id:'i_freeze',     type:'item',   name:'Kodachi de Hielo',       desc:'Protege tu racha un día. Úsalo cuando no puedas practicar.', rarity:'raro',  price:300 },
-  { id:'i_boost',      type:'item',   name:'Pergamino del Maestro',  desc:'Duplica los XP de tu próximo simulacro ICFES.',      rarity:'épico',      price:1000  },
+  // ── PODERES (OBJETOS ESPECIALES) ─────────────────────────────
+  { id:'i_freeze',     type:'item',   name:'Kodachi de Hielo',       desc:'Protege tu racha un día. Se gasta solo si faltas.',            rarity:'raro',       price:300 },
+  { id:'i_boost',      type:'item',   name:'Pergamino del Maestro',  desc:'Duplica los XP de tu próximo simulacro ICFES.',                rarity:'épico',      price:1000 },
+  { id:'i_tinto',      type:'item',   name:'Tinto Doble',            desc:'Duplica el XP de tu próxima sesión de lectura.',               rarity:'poco común', price:400 },
+  { id:'i_repaso',     type:'item',   name:'El Repaso',              desc:'Cambia UNA respuesta fallida en tu próximo simulacro.',        rarity:'poco común', price:350 },
+  { id:'i_arepa',      type:'item',   name:'Escudo de Arepa',        desc:'Si pierdes un duelo, no pierdes tus empanadas apostadas.',     rarity:'raro',       price:600 },
+  { id:'i_comodin',    type:'item',   name:'La Pregunta de Comodín', desc:'Una pregunta de tu próximo simulacro se marca correcta.',      rarity:'raro',       price:800 },
+  { id:'i_ghost',      type:'item',   name:'Modo Fantasma',          desc:'Desapareces del ranking general por 48 horas.',                rarity:'épico',      price:1200 },
 ];
+
+// Ícono de cada poder (PkIc, cero emojis)
+const PODER_ICONS = {
+  i_freeze: 'snowflake', i_boost: 'pergamino', i_tinto: 'coffee', i_repaso: 'refresh',
+  i_arepa: 'empanada', i_comodin: 'rana', i_ghost: 'eye',
+};
+
+// Efecto que aplica cada poder al comprarse (se consume al usarse)
+const ITEM_EFFECTS = {
+  i_freeze:  s => ({ streakFreezes: (s.streakFreezes || 0) + 1 }),
+  i_boost:   () => ({ simXpBoost: true }),
+  i_tinto:   () => ({ xpBoostActive: true }),
+  i_arepa:   () => ({ duelShieldActive: true }),
+  i_repaso:  () => ({ repasoActive: true }),
+  i_ghost:   () => ({ ghostUntil: Date.now() + 48 * 3600 * 1000 }),
+  i_comodin: () => ({ comodinActive: true }),
+};
+// ¿Está activo ese poder ahora mismo? (para no vender doble)
+const PODER_ACTIVO = {
+  i_boost:   s => !!s.simXpBoost,
+  i_tinto:   s => !!s.xpBoostActive,
+  i_arepa:   s => !!s.duelShieldActive,
+  i_repaso:  s => !!s.repasoActive,
+  i_ghost:   s => (s.ghostUntil || 0) > Date.now(),
+  i_comodin: s => !!s.comodinActive,
+};
+
+// Ítems bloqueados por logro: candado visible + precio reducido al desbloquear
+const SHOP_UNLOCKS = {
+  t_leyenda:   { desc: 'Completa 25 simulacros para desbloquear', check: s => (s.icfesHistory || []).length >= 25, price: 2000 },
+  f_supernova: { desc: 'Alcanza 30 días de racha para desbloquear', check: s => (s.streakDays || 0) >= 30, price: 10000 },
+};
+
+// Bundles: packs temáticos con su propia sección en el escaparate
+const SHOP_BUNDLES = [
+  { id: 'bd_aspirante', name: 'El Kit del Aspirante',   desc: 'Cofre de Plata + Kodachi de Hielo + Tinto Doble',
+    price: 1200, rarity: 'raro', items: ['c_silver', 'i_freeze', 'i_tinto'] },
+  { id: 'bd_leyenda',   name: 'El Combo del Legendario', desc: 'Cofre de Tumbaga + Escudo de Arepa + Pergamino del Maestro',
+    price: 8000, rarity: 'legendario', items: ['c_tumbaga', 'i_arepa', 'i_boost'] },
+];
+
+// Oferta del día: 1 ítem aleatorio con 30% de descuento, cambia cada 24h
+function ofertaDelDia() {
+  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id]);
+  const idx = hashStr('oferta-' + dateKeyISO()) % pool.length;
+  const item = pool[idx];
+  return { item, precio: Math.round(item.price * 0.7) };
+}
 
 const ACCENT_COLORS = [
   { name: 'Ciruelo', value: '#9D4E7C' }, { name: 'Jade',    value: '#2D8A5E' },
@@ -9868,6 +10550,8 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
   const previewBanner = item.type === 'banner' ? item : appState.equipped?.banner;
   const previewTitle  = item.type === 'title'  ? item : appState.equipped?.title;
   const esCofre = item.type === 'chest';
+  const esPoder = item.type === 'item';
+  const poderActivo = esPoder && PODER_ACTIVO[item.id]?.(appState);
   const cc = esCofre ? (CHEST_SHOP_COLORS[item.rarity] || CHEST_SHOP_COLORS['común']) : null;
 
   return (
@@ -9881,7 +10565,7 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
         </div>
 
         {/* ── PREVIEW GRANDE: el objeto en todo su esplendor ── */}
-        {(item.type === 'frame' || item.type === 'banner' || esCofre) && (
+        {(item.type === 'frame' || item.type === 'banner' || esCofre || esPoder) && (
           <div style={{ padding: '26px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
             background: `radial-gradient(circle at 50% 45%, ${rarity.color}22 0%, transparent 68%)` }}>
             {item.type === 'frame' && (
@@ -9894,6 +10578,13 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
             {esCofre && (
               <div style={{ '--cglow': `${cc.c2}88`, animation: 'chestFloat 2s ease-in-out infinite, chestGlowPulse 2.4s ease-in-out infinite' }}>
                 <CofreSVG lv={cc} open={false} size={110}/>
+              </div>
+            )}
+            {esPoder && (
+              <div style={{ width: 104, height: 104, borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', background: `${rarity.color}14`, border: `2px solid ${rarity.color}55`,
+                boxShadow: `0 0 30px ${rarity.color}44`, animation: 'breathe 2.6s ease-in-out infinite' }}>
+                <PkIc n={PODER_ICONS[item.id] || 'star'} s={46} c={rarity.color}/>
               </div>
             )}
           </div>
@@ -9925,9 +10616,11 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
             <button onClick={() => { if (canAfford) { onBuy(item); onClose(); } }} disabled={!canAfford} style={{ width: '100%', padding: '16px', background: canAfford ? `linear-gradient(135deg, ${cc.c1}, ${cc.c2})` : C.bgAlt, color: canAfford ? '#1A1206' : C.textMuted, border: canAfford ? 'none' : `1px solid ${C.border}`, borderRadius: 14, fontSize: 15, fontWeight: 900, cursor: canAfford ? 'pointer' : 'not-allowed', boxShadow: canAfford ? `0 8px 24px ${rarity.color}40` : 'none', fontFamily: 'inherit' }}>
               {canAfford ? `¡Comprar y abrir! · ${item.price.toLocaleString()} emp.` : `Faltan ${(item.price - (appState.ryo || 0)).toLocaleString()} emp.`}
             </button>
-          ) : item.type === 'item' ? (
-            <button onClick={() => { if (canAfford && !isOwned) { onBuy(item); onClose(); } }} disabled={!canAfford} style={{ width: '100%', padding: '16px', background: canAfford ? `linear-gradient(135deg, ${rarity.color}, ${rarity.color}DD)` : C.bgAlt, color: canAfford ? '#fff' : C.textMuted, border: canAfford ? 'none' : `1px solid ${C.border}`, borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: canAfford ? 'pointer' : 'not-allowed', boxShadow: canAfford ? `0 8px 24px ${rarity.color}40` : 'none', fontFamily: 'inherit' }}>
-              {canAfford ? `Adquirir · ${item.price} emp.` : `Faltan ${item.price - (appState.ryo || 0)} emp.`}
+          ) : esPoder ? (
+            <button onClick={() => { if (canAfford && !poderActivo) { onBuy(item); onClose(); } }} disabled={!canAfford || poderActivo} style={{ width: '100%', padding: '16px', background: poderActivo ? C.bgAlt : canAfford ? `linear-gradient(135deg, ${rarity.color}, ${rarity.color}DD)` : C.bgAlt, color: poderActivo ? '#4ADE80' : canAfford ? '#fff' : C.textMuted, border: canAfford && !poderActivo ? 'none' : `1px solid ${C.border}`, borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: canAfford && !poderActivo ? 'pointer' : 'not-allowed', boxShadow: canAfford && !poderActivo ? `0 8px 24px ${rarity.color}40` : 'none', fontFamily: 'inherit' }}>
+              {poderActivo ? '✓ Poder activo' : canAfford ? (
+                item.__original ? `Activar · ${item.price.toLocaleString()} emp. (antes ${item.__original.toLocaleString()})` : `Activar poder · ${item.price.toLocaleString()} emp.`
+              ) : `Faltan ${(item.price - (appState.ryo || 0)).toLocaleString()} emp.`}
             </button>
           ) : isOwned ? (
             <button onClick={() => { onEquip(item); onClose(); }} disabled={isEquipped} style={{ width: '100%', padding: '16px', background: isEquipped ? C.bgAlt : `linear-gradient(135deg, ${C.accent}, ${C.accent}DD)`, color: isEquipped ? C.textMuted : '#fff', border: isEquipped ? `1px solid ${C.border}` : 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: isEquipped ? 'default' : 'pointer', boxShadow: isEquipped ? 'none' : `0 8px 24px ${C.accent}40`, fontFamily: 'inherit' }}>
@@ -9935,7 +10628,11 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
             </button>
           ) : (
             <button onClick={() => { if (canAfford) { onBuy(item); onClose(); } }} disabled={!canAfford} style={{ width: '100%', padding: '16px', background: canAfford ? `linear-gradient(135deg, ${rarity.color}, ${rarity.color}DD)` : C.bgAlt, color: canAfford ? '#fff' : C.textMuted, border: canAfford ? 'none' : `1px solid ${C.border}`, borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: canAfford ? 'pointer' : 'not-allowed', boxShadow: canAfford ? `0 8px 24px ${rarity.color}40` : 'none', fontFamily: 'inherit' }}>
-              {canAfford ? `Adquirir · ${item.price} emp.` : `Faltan ${item.price - (appState.ryo || 0)} emp.`}
+              {canAfford
+                ? item.__original
+                  ? `Adquirir · ${item.price.toLocaleString()} emp. (antes ${item.__original.toLocaleString()})`
+                  : `Adquirir · ${item.price.toLocaleString()} emp.`
+                : `Faltan ${(item.price - (appState.ryo || 0)).toLocaleString()} emp.`}
             </button>
           )}
         </div>
@@ -10376,6 +11073,14 @@ function DuelController({ C, isLight, user, appState, setAppState, pushNotif }) 
       if (myScore > oppScore) delta = w * 2;
       else if (myScore === oppScore) delta = w;
       if (delta > 0) setAppState(s => ({ ...s, ryo: (s.ryo || 0) + delta }));
+      else if (myScore < oppScore && w > 0) {
+        // 🛡️ Escudo de Arepa: la derrota no se lleva tus empanadas
+        setAppState(s => {
+          if (!s.duelShieldActive) return s;
+          setTimeout(() => pushNotif?.(`Tu Escudo de Arepa protegió tus ${w} empanadas apostadas.`), 500);
+          return { ...s, ryo: (s.ryo || 0) + w, duelShieldActive: false };
+        });
+      }
     }
   }, [room, duelId, user?.code]);
 
@@ -10646,7 +11351,10 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
           const lvl = computeLevel(u.appState?.xp || u.xp || 0).level;
           map[u.code] = u; 
           return { ...u, correctas, lvl };
-        }).sort((a, b) => b.correctas - a.correctas);
+        })
+        // 👻 Modo Fantasma: los perfiles ocultos no aparecen en el ranking (tú sí te ves a ti mismo)
+        .filter(u => u.code === user?.code || !((u.appState?.ghostUntil || 0) > Date.now()))
+        .sort((a, b) => b.correctas - a.correctas);
         
         setLeaderboard(ranked);
         setUsersMap(map); 
@@ -11197,7 +11905,17 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [interests, setInterests]     = useState(appState.interests || '');
   const [selectedShopItem, setSelectedShopItem] = useState(null);
   const [chestShow, setChestShow] = useState(null); // { chest, premio } → show de apertura
+  const [bazarCat, setBazarCat] = useState('chest'); // categoría activa del Bazar
+  const [heroIdx, setHeroIdx] = useState(0);         // slide activo del escaparate
+  const [, setBazarTick] = useState(0);              // tick del countdown de la oferta
   const fileInputRef = useRef(null);
+
+  // Countdown de la Oferta del Día (solo late cuando el Bazar está abierto)
+  useEffect(() => {
+    if (view !== 'shop') return undefined;
+    const iv = setInterval(() => setBazarTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [view]);
 
   // ✅ FIXED: XP desde appState.xp (no calculado de racha+minutos)
   const lvl     = computeLevel(appState.xp || 0);
@@ -11235,15 +11953,28 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
 
   const buyItem = (item) => {
     if (item.type === 'chest') { buyChest(item); return; }
-    if ((appState.inventory || []).includes(item.id)) {
-      if (item.type !== 'item') equipItem(item);
-      else {
-        // Consumable item usage
-        if (item.id === 'i_freeze') useStreakFreeze();
+
+    // Candado por logro: no se puede comprar sin cumplir la condición
+    const unlock = SHOP_UNLOCKS[item.id];
+    if (unlock && !unlock.check(appState)) { FX.play('error'); pushNotif?.(unlock.desc); return; }
+
+    // ── PODERES: se compran, aplican su efecto y se pueden recomprar al gastarse ──
+    if (item.type === 'item') {
+      if (item.id !== 'i_freeze' && PODER_ACTIVO[item.id]?.(appState)) {
+        FX.play('error'); pushNotif?.('Ese poder ya está activo. Úsalo antes de comprar otro.');
+        return;
       }
+      if ((appState.ryo || 0) < item.price) { FX.play('error'); FX.vibrate('error'); return; }
+      FX.play('coin'); FX.vibrate('heavy');
+      setAppState(s => ({ ...s, ryo: (s.ryo || 0) - item.price, ...(ITEM_EFFECTS[item.id]?.(s) || {}) }));
+      if (item.id === 'i_freeze') desbloquearLogroFreeze();
+      pushNotif?.(`¡${item.name} activado!`);
+      onCoinBurst?.(-item.price);
       return;
     }
-    
+
+    if ((appState.inventory || []).includes(item.id)) { equipItem(item); return; }
+
     if ((appState.ryo || 0) < item.price) {
       FX.play('error'); FX.vibrate('error'); // ❌ Sonido de error si no tienes plata
       return;
@@ -11255,11 +11986,16 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       ...s,
       ryo: (s.ryo || 0) - item.price,
       inventory: [...(s.inventory || []), item.id],
-      ...(item.type !== 'item' ? { equipped: { ...(s.equipped || {}), [item.type]: item } } : { streakFreezes: (s.streakFreezes || 0) + 1 }),
+      equipped: { ...(s.equipped || {}), [item.type]: item },
     }));
 
-    // Logro por comprar el primer Freeze
-    if (item.id === 'i_freeze') {
+    pushNotif?.(`¡${item.name} comprado y equipado!`);
+    onCoinBurst?.(-item.price);
+  };
+
+  // Logro por comprar el primer Kodachi de Hielo
+  const desbloquearLogroFreeze = () => {
+    {
       setAppState(s => {
         const newAch = (s.achievements || []).map(a => {
           if (a.unlocked) return a;
@@ -11274,8 +12010,6 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
         return { ...s, achievements: newAch, ryo: (s.ryo || 0) + achRyo, xp: (s.xp || 0) + achXp };
       });
     }
-    pushNotif?.(`¡${item.name} ${item.type === 'item' ? 'comprado' : 'comprado y equipado'}!`);
-    onCoinBurst?.(-item.price);
   };
 
   const equipItem = (item) => {
@@ -11464,226 +12198,390 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     </div>
   );
 
-  // ── VISTA: TIENDA (rediseño: lo más raro primero, cofres al inicio) ──
+  // ── VISTA: TIENDA — "El Bazar del Páramo" ────────────────────
   if (view === 'shop') {
     const RARITY_ORDER = ['mítico', 'legendario', 'épico', 'raro', 'poco común', 'común'];
     const rankOf = (r) => RARITY_ORDER.indexOf(r);
-    const chests = SHOP_ITEMS.filter(i => i.type === 'chest').sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity));
-    const regulares = SHOP_ITEMS.filter(i => i.type !== 'chest');
+    const oferta = ofertaDelDia();
 
-    // Tarjeta compacta (épicos hacia abajo): 2 por fila
-    const CardCompacta = (item, idx) => {
-      const isOwned    = (appState.inventory || []).includes(item.id);
-      const isEquipped = appState.equipped?.[item.type]?.id === item.id;
-      const rarity     = RARITY_META[item.rarity] || RARITY_META['común'];
-      const isConsumable = item.type === 'item';
-      const esEpico = item.rarity === 'épico';
+    // ZONA 1 — EL ESCAPARATE: oferta del día + los 3 más raros + bundles
+    const rarest = SHOP_ITEMS
+      .filter(i => !SHOP_UNLOCKS[i.id] && i.price > 0 && i.id !== oferta.item.id)
+      .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price)
+      .slice(0, 3);
+    const slides = [
+      { tipo: 'oferta', item: oferta.item, precio: oferta.precio },
+      ...rarest.map(item => ({ tipo: 'item', item })),
+      ...SHOP_BUNDLES.map(b => ({ tipo: 'bundle', bundle: b })),
+    ];
+    const slideColor = (s) => (RARITY_META[(s.item || s.bundle).rarity] || RARITY_META['común']).color;
+    const heroColor = slideColor(slides[Math.min(heroIdx, slides.length - 1)]);
+
+    // Countdown de la oferta (hasta medianoche)
+    const msFin = (() => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime() - Date.now(); })();
+    const hh = Math.floor(msFin / 3600000), mm2 = Math.floor((msFin % 3600000) / 60000), ss2 = Math.floor((msFin % 60000) / 1000);
+    const cuenta = `${String(hh).padStart(2, '0')}:${String(mm2).padStart(2, '0')}:${String(ss2).padStart(2, '0')}`;
+
+    // ZONA 2 — CATEGORÍAS
+    const CATS = [
+      { id: 'chest',  label: 'Cofres' },
+      { id: 'frame',  label: 'Marcos' },
+      { id: 'title',  label: 'Títulos' },
+      { id: 'banner', label: 'Paisajes' },
+      { id: 'item',   label: 'Poderes' },
+    ];
+    const catColor = (cid) => {
+      const its = SHOP_ITEMS.filter(i => i.type === cid);
+      const best = its.reduce((m, i) => Math.min(m, rankOf(i.rarity)), 99);
+      return (RARITY_META[RARITY_ORDER[best]] || RARITY_META['común']).color;
+    };
+
+    // ZONA 3 — LISTA de la categoría activa, mítico → común
+    const listItems = SHOP_ITEMS
+      .filter(i => i.type === bazarCat)
+      .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
+
+    // Preview 60×60 con animación activa según el tipo
+    const Preview = ({ item, size = 60 }) => {
+      const rc = (RARITY_META[item.rarity] || {}).color || '#888';
+      if (item.type === 'frame') return <Av name={user?.name || '?'} sz={size - 8} C={C} photoURL={appState.photoURL} frameData={item}/>;
+      if (item.type === 'banner') return (
+        <div className={item.animClass || ''} style={{ width: size, height: Math.round(size * 0.66), borderRadius: 9,
+          background: item.css, boxShadow: `inset 0 0 0 1px ${rc}40` }}/>
+      );
+      if (item.type === 'chest') {
+        const cc = CHEST_SHOP_COLORS[item.rarity] || CHEST_SHOP_COLORS['común'];
+        return (
+          <div style={{ '--cglow': `${cc.c2}77`, animation: 'chestFloat 2.4s ease-in-out infinite, chestGlowPulse 2.8s ease-in-out infinite' }}>
+            <CofreSVG lv={cc} open={false} size={size - 12}/>
+          </div>
+        );
+      }
+      if (item.type === 'item') return (
+        <div style={{ width: size - 8, height: size - 8, borderRadius: '50%', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', background: `${rc}16`, border: `1.5px solid ${rc}45`,
+          boxShadow: `0 0 14px ${rc}33`, animation: 'breathe 2.6s ease-in-out infinite' }}>
+          <PkIc n={PODER_ICONS[item.id] || 'star'} s={Math.round(size * 0.42)} c={rc}/>
+        </div>
+      );
+      // título
       return (
-        <button key={item.id} onClick={() => setSelectedShopItem(item)} className="fu" style={{
-          animationDelay: `${idx * 0.05}s`,
-          background: `linear-gradient(160deg, ${rarity.color}${esEpico ? '1E' : '12'}, ${C.bgAlt} 65%)`,
-          border: `1px solid ${isEquipped ? rarity.color : rarity.color + (esEpico ? '45' : '28')}`,
-          borderRadius: 16, padding: esEpico ? '16px' : '12px', display: 'flex', flexDirection: 'column', gap: 7,
-          cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.2s ease',
-          boxShadow: isEquipped ? `0 8px 24px ${rarity.color}25` : '0 4px 12px rgba(0,0,0,0.08)' }}>
-          {item.type === 'frame' && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-              <Av name={user?.name || '?'} sz={esEpico ? 50 : 44} C={C} photoURL={appState.photoURL} frameData={item} />
-            </div>
-          )}
-          {item.type === 'banner' && (
-            <div className={item.animClass || ''} style={{ height: esEpico ? 60 : 50, borderRadius: 10, background: item.css, marginBottom: 4, boxShadow: `inset 0 0 0 1px ${rarity.color}30` }} />
-          )}
-          {item.type === 'item' && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-              <PkIc n="snowflake" s={30} c={rarity.color} />
-            </div>
-          )}
-          <div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, lineHeight: 1.2, marginBottom: 3 }}>
-              {item.name}
-            </div>
-            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, color: rarity.color }}>{rarity.label}</div>
-          </div>
-          <div style={{ marginTop: 'auto', paddingTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {item.price === 0 ? (
-              <span style={{ fontSize: 12, color: '#34D399', fontWeight: 800 }}>GRATIS</span>
-            ) : isOwned && !isConsumable ? (
-              <span style={{ fontSize: 11.5, color: rarity.color, fontWeight: 700 }}>✓ Tuyo</span>
-            ) : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 800, color: C.amberMid }}>
-                <PkIc n="empanada" s={13} c={C.amberMid}/>{item.price}
-              </span>
-            )}
-            {isEquipped && <PkIc n="check" s={13} c={rarity.color} />}
-          </div>
-        </button>
+        <div className={item.rarity === 'mítico' ? 'title-mythic' : item.rarity === 'legendario' ? 'title-legendary' : ''}
+          style={{ width: size, textAlign: 'center', fontSize: 9.5, fontWeight: 900, fontStyle: 'italic',
+            fontFamily: "'Fraunces', serif", color: rc, lineHeight: 1.25 }}>
+          «{item.name}»
+        </div>
       );
     };
 
-    // Tarjeta grande full-width (míticos y legendarios): genera deseo
-    const CardGrande = (item, idx) => {
-      const isOwned    = (appState.inventory || []).includes(item.id);
-      const isEquipped = appState.equipped?.[item.type]?.id === item.id;
-      const rarity     = RARITY_META[item.rarity] || RARITY_META['común'];
-      const esMitico   = item.rarity === 'mítico';
-      return (
-        <button key={item.id} onClick={() => setSelectedShopItem(item)}
-          className={`fu ${esMitico ? 'card-mythic-shimmer' : ''}`} style={{
-          animationDelay: `${idx * 0.06}s`,
-          background: `linear-gradient(120deg, ${rarity.color}26 0%, ${C.bgAlt} 55%, ${rarity.color}10 100%)`,
-          border: `1.5px solid ${rarity.color}${isEquipped ? '' : '55'}`,
-          borderRadius: 18, padding: '16px', display: 'flex', alignItems: 'center', gap: 14,
-          cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%',
-          boxShadow: esMitico
-            ? `0 0 24px ${rarity.color}30, 0 8px 28px rgba(0,0,0,0.3)`
-            : `0 0 18px ${rarity.color}25, 0 8px 24px rgba(0,0,0,0.25)` }}>
-          {/* Preview grande a la izquierda */}
-          <div style={{ flexShrink: 0 }}>
-            {item.type === 'frame' && <Av name={user?.name || '?'} sz={64} C={C} photoURL={appState.photoURL} frameData={item} />}
-            {item.type === 'banner' && (
-              <div className={item.animClass || ''} style={{ width: 104, height: 62, borderRadius: 12, background: item.css,
-                boxShadow: `0 4px 14px ${rarity.color}40, inset 0 0 0 1px ${rarity.color}40` }} />
-            )}
-            {item.type === 'title' && (
-              <div style={{ width: 104, height: 62, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: `${rarity.color}14`, border: `1px dashed ${rarity.color}66`, padding: '0 8px' }}>
-                <span className="serif" style={{ fontSize: 11, fontWeight: 800, fontStyle: 'italic', color: rarity.color, textAlign: 'center', lineHeight: 1.3 }}>
-                  «{item.name}»
-                </span>
-              </div>
-            )}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className={item.type === 'title' ? (esMitico ? 'title-mythic' : 'title-legendary') : ''}
-              style={{ fontSize: 16.5, fontWeight: 800, color: C.text, lineHeight: 1.2, marginBottom: 3, fontFamily: "'Fraunces', serif" }}>
-              {item.name}
-            </div>
-            <div style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 1.45, marginBottom: 8 }}>{item.desc}</div>
-            {item.price === 0 ? (
-              <span style={{ fontSize: 12, color: '#34D399', fontWeight: 800 }}>GRATIS</span>
-            ) : isOwned ? (
-              <span style={{ fontSize: 12, color: rarity.color, fontWeight: 800 }}>{isEquipped ? '✓ Equipado' : '✓ En tu mochila'}</span>
-            ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 900, color: C.amberMid }}>
-                <PkIc n="empanada" s={14} c={C.amberMid}/>{item.price.toLocaleString()}
-              </span>
-            )}
-          </div>
-          <PkIc n="right" s={14} c={rarity.color} />
-        </button>
-      );
+    const abrirItem = (item, precioOverride = null) => {
+      FX.play('tap');
+      const un = SHOP_UNLOCKS[item.id];
+      if (un && !un.check(appState)) { FX.play('error'); pushNotif?.(un.desc); return; }
+      const final = un && un.check(appState) && !(appState.inventory || []).includes(item.id)
+        ? { ...item, price: un.price, __original: item.price, __desbloqueado: true }
+        : precioOverride !== null
+        ? { ...item, price: precioOverride, __original: item.price, __oferta: true }
+        : item;
+      setSelectedShopItem(final);
+    };
+
+    const comprarBundle = (b) => {
+      if ((appState.ryo || 0) < b.price) { FX.play('error'); FX.vibrate('error'); pushNotif?.('No te alcanzan las empanadas para este pack.'); return; }
+      FX.play('coin'); FX.vibrate('heavy');
+      let chestPremio = null, chestItem = null;
+      let efectos = {};
+      b.items.forEach(id => {
+        const it = SHOP_ITEMS.find(x => x.id === id);
+        if (!it) return;
+        if (it.type === 'chest') {
+          const rw = it.rewards || {};
+          const rr = (a, c) => a + Math.floor(Math.random() * (c - a + 1));
+          chestPremio = { emp: rr(rw.minRyo || 10, rw.maxRyo || 50), xp: rw.xpBonus || 0, item: null };
+          chestItem = it;
+        } else if (ITEM_EFFECTS[id]) {
+          efectos = { ...efectos, __fns: [...(efectos.__fns || []), ITEM_EFFECTS[id]] };
+        }
+      });
+      setAppState(s => {
+        let upd = { ...s, ryo: (s.ryo || 0) - b.price + (chestPremio ? chestPremio.emp : 0), xp: (s.xp || 0) + (chestPremio ? chestPremio.xp : 0) };
+        (efectos.__fns || []).forEach(fn => { upd = { ...upd, ...fn(upd) }; });
+        return upd;
+      });
+      if (chestItem && chestPremio) setChestShow({ chest: chestItem, premio: chestPremio });
+      pushNotif?.(`¡${b.name} adquirido! Poderes activados.`);
+      fireBoost();
     };
 
     return (
-      <div className="fi su" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 0, margin: '-20px -20px 0' }}>
         {chestShow && (
           <ChestShopShow chest={chestShow.chest} premio={chestShow.premio} onClose={() => setChestShow(null)} />
         )}
         {selectedShopItem && (
           <ShopItemModal C={C} isLight={isLight} item={selectedShopItem} appState={appState} user={user} onBuy={buyItem} onEquip={equipItem} onClose={() => setSelectedShopItem(null)} />
         )}
-        <NavHeader title="La Tiendita" subtitle="Invierte tus Empanadas en estética premium" onBack={() => setView(startView === 'profile' ? 'profile' : 'settings')} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `linear-gradient(135deg, ${C.amberMid}15, transparent)`, border: `1px solid ${C.amberMid}35`, borderRadius: 20, padding: '20px 24px' }}>
-          <div>
-            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 2, marginBottom: 6 }}>TUS FONDOS</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontSize: 32, fontWeight: 900, color: C.amberMid, fontFamily: "'Fraunces', serif" }}>{appState.ryo || 0}</div>
-              <PkIc n="empanada" s={28} c={C.amberMid} /></div>
+
+        {/* ══ ZONA 1 — EL ESCAPARATE ══ */}
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
+          {/* Fondo con crossfade según el ítem activo */}
+          <div style={{ position: 'absolute', inset: 0,
+            background: `radial-gradient(circle at 50% 30%, ${heroColor}30 0%, transparent 75%)`,
+            transition: 'background 0.7s ease' }}/>
+
+          {/* Header del bazar */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px 4px' }}>
+            <button onClick={() => setView(startView === 'profile' ? 'profile' : 'settings')} style={{
+              background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`, borderRadius: '50%',
+              width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+              <PkIc n="left" s={17} c={C.text}/>
+            </button>
+            <div style={{ flex: 1 }}>
+              <div className="serif" style={{ fontSize: 21, fontWeight: 800, color: C.text }}>El Bazar del Páramo</div>
+              <div style={{ fontSize: 10.5, color: C.textMuted, fontWeight: 700, letterSpacing: 0.5 }}>Tesoros, poderes y cofres del más allá</div>
             </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, marginBottom: 4 }}>NIVEL {lvl.level}</div>
-            <div style={{ fontSize: 13, color: C.accent, fontWeight: 700 }}>{(appState.xp || 0).toLocaleString()} XP</div>
-            {(appState.streakFreezes || 0) > 0 && (
-              <div style={{ fontSize: 11, color: '#38BDF8', fontWeight: 700, marginTop: 4 }}>🧊 {appState.streakFreezes} freeze</div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 99,
+              background: `${C.amberMid}14`, border: `1px solid ${C.amberMid}35`, flexShrink: 0 }}>
+              <PkIc n="empanada" s={14} c={C.amberMid}/>
+              <span style={{ fontSize: 14, fontWeight: 900, color: C.amberMid }}>{(appState.ryo || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Carrusel con snap */}
+          <div className="bazar-carousel" style={{ position: 'relative' }}
+            onScroll={e => {
+              const w = e.currentTarget.clientWidth || 1;
+              const idx = Math.round(e.currentTarget.scrollLeft / w);
+              if (idx !== heroIdx) setHeroIdx(idx);
+            }}>
+            {slides.map((s, i) => {
+              const obj = s.item || s.bundle;
+              const rc = slideColor(s);
+              const rmeta = RARITY_META[obj.rarity] || RARITY_META['común'];
+              return (
+                <div key={i} className="bazar-slide" style={{ padding: '14px 20px 10px' }}>
+                  <button onClick={() => {
+                    if (s.tipo === 'bundle') comprarBundle(s.bundle);
+                    else abrirItem(s.item, s.tipo === 'oferta' ? s.precio : null);
+                  }} style={{
+                    position: 'relative', width: '100%', height: 230, border: `1.5px solid ${rc}55`, borderRadius: 24,
+                    cursor: 'pointer', fontFamily: 'inherit', overflow: 'hidden', textAlign: 'left',
+                    background: s.item?.type === 'banner'
+                      ? s.item.css
+                      : `linear-gradient(150deg, ${rc}30 0%, #0B0F1A 55%, ${rc}14 100%)`,
+                    boxShadow: `0 12px 38px ${rc}30`,
+                    animation: heroIdx === i ? 'bazarHeroIn 0.5s ease both' : 'none' }}>
+                    {/* Overlay si el fondo es el propio banner */}
+                    {s.item?.type === 'banner' && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(4,6,12,0.25), rgba(4,6,12,0.72))' }}/>
+                    )}
+                    {/* Shimmer para míticos */}
+                    {obj.rarity === 'mítico' && (
+                      <div style={{ position: 'absolute', top: 0, bottom: 0, width: 70, pointerEvents: 'none',
+                        background: `linear-gradient(90deg, transparent, ${rc}33, transparent)`,
+                        animation: 'shimmerSlide 2.6s ease-in-out infinite' }}/>
+                    )}
+
+                    {/* Badge de OFERTA con timer */}
+                    {s.tipo === 'oferta' && (
+                      <div style={{ position: 'absolute', top: 12, left: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ padding: '4px 11px', borderRadius: 99, background: '#EF4444', color: '#fff',
+                          fontSize: 10, fontWeight: 900, letterSpacing: 1.5,
+                          animation: 'ofertaPulse 1.1s ease-in-out infinite', boxShadow: '0 0 14px rgba(239,68,68,0.6)' }}>
+                          OFERTA −30%
+                        </span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#FCA5A5', fontVariantNumeric: 'tabular-nums' }}>{cuenta}</span>
+                      </div>
+                    )}
+                    {s.tipo === 'bundle' && (
+                      <div style={{ position: 'absolute', top: 12, left: 14, padding: '4px 11px', borderRadius: 99,
+                        background: `${rc}25`, border: `1px solid ${rc}66`, color: rc,
+                        fontSize: 10, fontWeight: 900, letterSpacing: 1.5 }}>
+                        PACK TEMÁTICO
+                      </div>
+                    )}
+
+                    {/* Contenido central */}
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', paddingTop: s.tipo === 'oferta' || s.tipo === 'bundle' ? 16 : 0 }}>
+                      {s.tipo === 'bundle' ? (
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                          {s.bundle.items.map(id => {
+                            const it = SHOP_ITEMS.find(x => x.id === id);
+                            return it ? <Preview key={id} item={it} size={54}/> : null;
+                          })}
+                        </div>
+                      ) : s.item.type === 'title' ? (
+                        <div className={s.item.rarity === 'mítico' ? 'title-mythic' : s.item.rarity === 'legendario' ? 'title-legendary' : ''}
+                          style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Fraunces', serif", fontStyle: 'italic',
+                            color: rc, textAlign: 'center', padding: '0 26px', lineHeight: 1.2 }}>
+                          «{s.item.name}»
+                        </div>
+                      ) : s.item.type === 'frame' ? (
+                        <Av name={user?.name || '?'} sz={96} C={C} photoURL={appState.photoURL} frameData={s.item}/>
+                      ) : s.item.type === 'chest' ? (
+                        <div style={{ '--cglow': `${rc}88`, animation: 'chestFloat 2s ease-in-out infinite, chestGlowPulse 2.4s ease-in-out infinite' }}>
+                          <CofreSVG lv={CHEST_SHOP_COLORS[s.item.rarity] || CHEST_SHOP_COLORS['común']} open={false} size={92}/>
+                        </div>
+                      ) : s.item.type === 'item' ? (
+                        <Preview item={s.item} size={104}/>
+                      ) : (
+                        <div style={{ width: '68%', height: 86 }}/>
+                      )}
+                    </div>
+
+                    {/* Nombre + rareza + precio */}
+                    <div style={{ position: 'absolute', left: 16, right: 16, bottom: 12 }}>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: '#F5F2EB', fontFamily: "'Fraunces', serif" }}>
+                        {obj.name}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 3 }}>
+                        <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: rc,
+                          textShadow: `0 0 12px ${rc}` }}>
+                          {s.tipo === 'bundle' ? s.bundle.desc.toUpperCase().slice(0, 34) + '…' : rmeta.label}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 15, fontWeight: 900, color: C.amberMid }}>
+                          {s.tipo === 'oferta' && (
+                            <span style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.45)', textDecoration: 'line-through', fontWeight: 700 }}>
+                              {s.item.price.toLocaleString()}
+                            </span>
+                          )}
+                          <PkIc n="empanada" s={14} c={C.amberMid}/>
+                          {(s.tipo === 'oferta' ? s.precio : s.tipo === 'bundle' ? s.bundle.price : s.item.price).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Dots de navegación */}
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', gap: 6, padding: '2px 0 12px' }}>
+            {slides.map((s, i) => (
+              <div key={i} style={{ width: heroIdx === i ? 18 : 6, height: 6, borderRadius: 99,
+                background: heroIdx === i ? slideColor(s) : 'rgba(255,255,255,0.18)',
+                boxShadow: heroIdx === i ? `0 0 8px ${slideColor(s)}` : 'none',
+                transition: 'all 0.3s ease' }}/>
+            ))}
           </div>
         </div>
 
-        {/* ══ COFRES DEL DESTINO — la mecánica nueva, primero ══ */}
-        <div>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#D4AF37', fontFamily: "'Fraunces', serif",
-              textShadow: '0 0 18px rgba(212,175,55,0.45)', marginBottom: 3 }}>
-              Cofres del Destino ✦
-            </div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>Se abren al instante. Lo que salga, es tuyo.</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {chests.map((chest, idx) => {
-              const rarity = RARITY_META[chest.rarity] || RARITY_META['común'];
-              const cc = CHEST_SHOP_COLORS[chest.rarity] || CHEST_SHOP_COLORS['común'];
-              const canAfford = (appState.ryo || 0) >= chest.price;
-              const brillante = ['legendario', 'mítico'].includes(chest.rarity);
+        {/* ══ ZONA 2 — TABS DE CATEGORÍA (sticky) ══ */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 20, padding: '10px 20px 8px',
+          background: `${C.bg}F2`, backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+          borderBottom: `1px solid ${C.border}66` }}>
+          <div className="bazar-tabs">
+            {CATS.map(cat => {
+              const activo = bazarCat === cat.id;
+              const cc = catColor(cat.id);
               return (
-                <button key={chest.id} onClick={() => setSelectedShopItem(chest)}
-                  className={`fu ${chest.rarity === 'mítico' ? 'card-mythic-shimmer' : ''}`} style={{
-                  animationDelay: `${idx * 0.05}s`,
-                  background: `linear-gradient(120deg, ${rarity.color}20 0%, ${C.bgAlt} 55%)`,
-                  border: `1.5px solid ${rarity.color}50`, borderRadius: 18, padding: '13px 15px',
-                  display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left',
-                  fontFamily: 'inherit', width: '100%',
-                  boxShadow: brillante ? `0 0 20px ${rarity.color}28, 0 6px 22px rgba(0,0,0,0.3)` : '0 4px 14px rgba(0,0,0,0.15)' }}>
-                  <div style={{ flexShrink: 0, '--cglow': `${cc.c2}77`,
-                    animation: brillante ? 'chestFloat 2.2s ease-in-out infinite, chestGlowPulse 2.6s ease-in-out infinite' : 'none' }}>
-                    <CofreSVG lv={cc} open={false} size={52}/>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14.5, fontWeight: 900, color: C.text }}>{chest.name}</span>
-                      <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: 1, color: rarity.color,
-                        background: rarity.bg, border: `1px solid ${rarity.color}35`, borderRadius: 5, padding: '2px 6px' }}>
-                        {rarity.label}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2.5, lineHeight: 1.4 }}>{chest.desc}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: `${C.textMuted}CC`, marginTop: 3 }}>
-                      {chest.rewards.minRyo}–{chest.rewards.maxRyo} emp · +{chest.rewards.xpBonus} XP
-                      {chest.rewards.itemChance > 0 ? ` · ${Math.round(chest.rewards.itemChance * 100)}% de tesoro` : ''}
-                    </div>
-                  </div>
-                  <div style={{ flexShrink: 0, padding: '8px 13px', borderRadius: 12,
-                    background: canAfford ? `linear-gradient(135deg, ${cc.c1}, ${cc.c2})` : C.bgAlt,
-                    border: canAfford ? 'none' : `1px solid ${C.border}`,
-                    color: canAfford ? '#1A1206' : C.textMuted,
-                    fontSize: 12, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <PkIc n="empanada" s={12} c={canAfford ? '#1A1206' : C.textMuted}/>{chest.price.toLocaleString()}
-                  </div>
+                <button key={cat.id} onClick={() => { FX.play('tap'); setBazarCat(cat.id); }} style={{
+                  flexShrink: 0, padding: '9px 16px', borderRadius: 12, border: 'none',
+                  background: activo ? `${cc}16` : 'transparent',
+                  color: activo ? cc : C.textMuted, fontSize: 13, fontWeight: 800,
+                  cursor: 'pointer', fontFamily: 'inherit', position: 'relative' }}>
+                  {cat.label}
+                  {activo && (
+                    <div style={{ position: 'absolute', bottom: 0, left: '25%', right: '25%', height: 3,
+                      borderRadius: 99, background: cc, boxShadow: `0 0 8px ${cc}`,
+                      animation: 'tabPop 0.3s cubic-bezier(0.34,1.56,0.64,1) both' }}/>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* ══ OBJETOS POR RAREZA — de mítico a común ══ */}
-        {RARITY_ORDER.map(rar => {
-          const items = regulares.filter(i => i.rarity === rar);
-          if (!items.length) return null;
-          const rmeta = RARITY_META[rar];
-          const fullWidth = rar === 'mítico' || rar === 'legendario';
-          const RARITY_PLURAL = { 'mítico': 'MÍTICOS', 'legendario': 'LEGENDARIOS', 'épico': 'ÉPICOS', 'raro': 'RAROS', 'poco común': 'POCO COMUNES', 'común': 'COMUNES' };
-          return (
-            <div key={rar}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 3, height: 18, borderRadius: 99, background: rmeta.color, boxShadow: `0 0 8px ${rmeta.color}` }}/>
-                <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: 2, color: rmeta.color,
-                  textShadow: fullWidth ? `0 0 16px ${rmeta.color}66` : 'none', textTransform: 'uppercase' }}>
-                  {RARITY_PLURAL[rar] || rmeta.label}{fullWidth ? ' ✦' : ''}
-                </span>
-                <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${rmeta.color}44, transparent)` }}/>
-              </div>
-              {fullWidth ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {items.map((item, idx) => CardGrande(item, idx))}
+        {/* ══ ZONA 3 — LISTA VERTICAL DE ÍTEMS ══ */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, padding: '14px 20px 10px' }}>
+          {listItems.map((item, idx) => {
+            const rc = (RARITY_META[item.rarity] || {}).color || '#888';
+            const rmeta = RARITY_META[item.rarity] || RARITY_META['común'];
+            const isOwned = (appState.inventory || []).includes(item.id);
+            const isEquipped = appState.equipped?.[item.type]?.id === item.id;
+            const un = SHOP_UNLOCKS[item.id];
+            const bloqueado = un && !un.check(appState);
+            const desbloqueado = un && un.check(appState) && !isOwned;
+            const esOferta = oferta.item.id === item.id;
+            const activo = item.type === 'item' && PODER_ACTIVO[item.id]?.(appState);
+            return (
+              <button key={item.id} onClick={() => abrirItem(item, esOferta ? oferta.precio : null)}
+                className="fu" style={{
+                animationDelay: `${Math.min(idx * 0.04, 0.4)}s`,
+                display: 'flex', alignItems: 'center', gap: 13, width: '100%', minHeight: 90,
+                padding: '13px 15px', borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                border: `1px solid ${isEquipped ? rc : `${rc}30`}`,
+                /* gradiente MUY sutil del color de la rareza */
+                background: `linear-gradient(120deg, ${rc}0E 0%, ${C.bgAlt} 60%)`,
+                opacity: bloqueado ? 0.72 : 1,
+                boxShadow: isEquipped ? `0 6px 20px ${rc}22` : '0 4px 12px rgba(0,0,0,0.12)' }}>
+                {/* IZQUIERDA: preview animado */}
+                <div style={{ width: 60, height: 60, flexShrink: 0, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', position: 'relative', filter: bloqueado ? 'grayscale(0.9)' : 'none' }}>
+                  <Preview item={item}/>
+                  {bloqueado && (
+                    <div style={{ position: 'absolute', inset: -4, borderRadius: 14, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', background: 'rgba(4,6,12,0.55)' }}>
+                      <PkIc n="settings" s={0} c="transparent"/>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round">
+                        <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                      </svg>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: rar === 'épico' ? 12 : 10 }}>
-                  {items.map((item, idx) => CardCompacta(item, idx))}
+                {/* CENTRO: nombre + desc + rareza */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span className={item.type === 'title' && item.rarity === 'mítico' ? 'title-mythic' : item.type === 'title' && item.rarity === 'legendario' ? 'title-legendary' : ''}
+                      style={{ fontSize: 14, fontWeight: 800, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.name}
+                    </span>
+                    {esOferta && !bloqueado && (
+                      <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: 1, color: '#fff', background: '#EF4444',
+                        borderRadius: 5, padding: '2px 6px', animation: 'ofertaPulse 1.1s ease-in-out infinite', flexShrink: 0 }}>
+                        OFERTA
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, overflow: 'hidden',
+                    textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {bloqueado ? un.desc : item.desc}
+                  </div>
+                  <span style={{ display: 'inline-block', marginTop: 4, fontSize: 8.5, fontWeight: 900, letterSpacing: 1.2,
+                    color: rc, background: rmeta.bg, border: `1px solid ${rc}30`, borderRadius: 5, padding: '2px 7px' }}>
+                    {rmeta.label}{desbloqueado ? ' · DESBLOQUEADO' : ''}
+                  </span>
                 </div>
-              )}
-            </div>
-          );
-        })}
+                {/* DERECHA: precio / estado */}
+                <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                  {bloqueado ? (
+                    <PkIc n="x" s={0} c="transparent"/>
+                  ) : isOwned && item.type !== 'item' && item.type !== 'chest' ? (
+                    <span style={{ fontSize: 12, fontWeight: 800, color: rc }}>{isEquipped ? '✓ Equipado' : '✓ Tuyo'}</span>
+                  ) : activo ? (
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: '#4ADE80' }}>✓ Activo</span>
+                  ) : item.price === 0 ? (
+                    <span style={{ fontSize: 12, fontWeight: 900, color: '#34D399' }}>GRATIS</span>
+                  ) : (
+                    <div>
+                      {(esOferta || desbloqueado) && (
+                        <div style={{ fontSize: 10, color: 'rgba(245,242,235,0.4)', textDecoration: 'line-through', fontWeight: 700 }}>
+                          {item.price.toLocaleString()}
+                        </div>
+                      )}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13.5, fontWeight: 900, color: C.amberMid }}>
+                        <PkIc n="empanada" s={13} c={C.amberMid}/>
+                        {(esOferta ? oferta.precio : desbloqueado ? un.price : item.price).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     );
   }
