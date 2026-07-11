@@ -399,6 +399,16 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes modeExpand { 0%{transform:scale(0.4);opacity:0.4;border-radius:24px;} 100%{transform:scale(1);opacity:1;border-radius:0px;} }
 @keyframes iconFloatWiggle { 0%,100%{transform:translateY(0) rotate(0deg);} 30%{transform:translateY(-3px) rotate(-4deg);} 65%{transform:translateY(1px) rotate(3deg);} }
 
+/* ── INICIO v5 estilo Clash Royale ── */
+@keyframes arenaBrasa { 0%{transform:translateY(0) translateX(0) scale(1);opacity:0.9;} 100%{transform:translateY(-46px) translateX(var(--bx,8px)) scale(0.3);opacity:0;} }
+@keyframes salaSweep { 0%{transform:translateX(-60%) skewX(-20deg);} 100%{transform:translateX(360%) skewX(-20deg);} }
+@keyframes salaIcon { 0%,100%{transform:rotate(-2deg);} 50%{transform:rotate(2deg);} }
+@keyframes arrowPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.12);} }
+@keyframes slotReady { 0%,100%{box-shadow:0 0 0 0 rgba(255,215,94,0);transform:translateY(0);} 50%{box-shadow:0 0 16px 2px rgba(255,215,94,0.55);transform:translateY(-3px);} }
+@keyframes comboDot { 0%,100%{opacity:1;box-shadow:0 0 6px rgba(34,197,94,0.9);} 50%{opacity:0.4;box-shadow:0 0 1px rgba(34,197,94,0.3);} }
+@keyframes sheetUp { 0%{transform:translateY(100%);} 100%{transform:translateY(0);} }
+@keyframes checkGlow { 0%,100%{filter:drop-shadow(0 0 2px #3DA873);} 50%{filter:drop-shadow(0 0 10px #3DA873);} }
+
 /* ── RULETA CASINO: palanca y rueda del saber ── */
 @keyframes leverPull { 0%{transform:translateY(0);} 30%{transform:translateY(58px);} 58%{transform:translateY(58px);} 100%{transform:translateY(0);} }
 @keyframes leverHint { 0%,88%,100%{transform:translateY(0);} 92%{transform:translateY(7px);} 96%{transform:translateY(2px);} }
@@ -3082,11 +3092,16 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
   // App principal
   // ── RUTAS PRINCIPALES ──
   const NAV_TABS = [
-    { id: 'inicio',   icon: 'home' },
-    { id: 'icfes',    icon: 'rana' },
-    { id: 'books',    icon: 'pergamino' },
-    { id: 'friends',  icon: 'people' },
+    { id: 'tienda',  icon: 'mochila',   label: 'Tienda' },
+    { id: 'inicio',  icon: 'home',      label: 'Inicio' },
+    { id: 'icfes',   icon: 'rana',      label: 'ICFES' },
+    { id: 'books',   icon: 'pergamino', label: 'Libros' },
+    { id: 'friends', icon: 'people',    label: 'Combo' },
   ];
+  // ¿Hay cofre de racha pendiente de abrir? (badge del tab Tienda)
+  const _hoyStr = todayStr();
+  const _sealedHoy = appState.yourConfirmed || (appState.icfesHistory || []).some(r => r.date === _hoyStr || (r.ts && new Date(r.ts).toDateString() === _hoyStr));
+  const cofrePendiente = _sealedHoy && appState.cofreLastOpened !== dateKeyISO();
 
   return (
     <>
@@ -3124,56 +3139,25 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         </div>
       )}
 
-      {/* ── Header Flotante Premium ── */}
+      {/* ── Header compacto: solo recursos (estilo Clash Royale) ── */}
       <div style={{
-        padding: '16px 20px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        flexShrink: 0, zIndex: 900,
-        background: `linear-gradient(180deg, ${C.bg} 60%, transparent)`,
+        padding: '10px 18px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexShrink: 0, zIndex: 900, background: `linear-gradient(180deg, ${C.bg} 60%, transparent)`,
       }}>
-        
-        {/* 1. Saludo y Rango Actual (Izquierda) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeIn 0.5s ease' }}>
-          <PankeyLogo size={36} C={C} glow={false} />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: C.text }}>
-              Hola, {user?.name ? user.name.split(' ')[0] : 'Explorador'}
-            </span>
-            <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-              {appState.equipped?.title?.name || 'Iniciado'}
-            </span>
+        {/* Avatar → menú de identidad */}
+        <button onClick={() => setIdentityMenu(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%' }}>
+          <Av name={user?.name || '?'} sz={38} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame} />
+        </button>
+        {/* Recursos: monedas + nivel */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 12, padding: '6px 12px' }}>
+            <PkIc n="empanada" s={15} c={C.amberMid} />
+            <span style={{ fontSize: 13.5, fontWeight: 900, color: C.text }}>{(appState.ryo || 0).toLocaleString()}</span>
           </div>
-        </div>
-
-        {/* 2. Racha y Economía (Derecha) */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {/* Racha Animada Fuego Colombiano */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: `linear-gradient(90deg, ${C.amberMid}22, transparent)`,
-            border: `1px solid ${C.amberMid}40`, borderRadius: 20,
-            padding: '4px 12px 4px 6px',
-            animation:'none'
-          }}>
-            <div style={{
-              background: C.amberMid, borderRadius: '50%', width: 24, height: 24,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 0 10px ${C.amberMid}80`
-            }}>
-              <PkIc n="flame" s={14} c="#fff" />
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 900, color: C.amberMid }}>{appState.streakDays}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: `${C.accent}18`, border: `1px solid ${C.accent}40`, borderRadius: 12, padding: '4px 11px 4px 5px' }}>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent}, ${C.accentMid || C.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#fff', boxShadow: `0 2px 8px ${C.accent}60` }}>{computeLevel(appState.xp || 0).level}</div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: C.accent }}>Nivel</span>
           </div>
-          
-          {/* Empanadas (Economía) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 12, padding: '6px 10px' }}>
-            <PkIc n="empanada" s={16} c={C.amberMid} />
-            <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{appState.ryo || 0}</span>
-          </div>
-
-          {/* Avatar → menú de identidad */}
-          <button onClick={() => setIdentityMenu(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%' }}>
-            <Av name={user?.name || '?'} sz={34} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame} />
-          </button>
         </div>
       </div>
 
@@ -3181,7 +3165,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       {identityMenu && (
         <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 9994, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} onClick={() => setIdentityMenu(false)}>
           <div onClick={e => e.stopPropagation()} className="fu" style={{
-            position: 'absolute', top: 60, right: 14, width: 232,
+            position: 'absolute', top: 54, right: 14, width: 232,
             background: C.bgAlt, border: `1px solid ${C.accent}30`, borderRadius: 18,
             boxShadow: '0 16px 48px rgba(0,0,0,0.6)', overflow: 'hidden', padding: 6,
           }}>
@@ -3194,7 +3178,6 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
             </div>
             {[
               { icon: 'sombrero', label: 'Tu Pergamino', view: 'profile' },
-              { icon: 'mochila',  label: 'La Tiendita',  view: 'shop' },
               { icon: 'solandino', label: 'Ajustes',      view: 'settings' },
             ].map(opt => (
               <button key={opt.view} onClick={() => { goPerfil(opt.view); setIdentityMenu(false); }} style={{
@@ -3213,8 +3196,11 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
 
       {/* ── CONTENIDO ── */}
       <div style={{ flex: 1, position: 'relative', zIndex: 100, overflow: 'hidden' }}>
+        <div style={{ display: tab === 'tienda' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
+          <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} />
+        </div>
         <div style={{ display: tab === 'inicio' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => goPerfil('shop')} onMissionReward={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} />
+          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} />
         </div>
         <div style={{ display: tab === 'icfes' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} />
@@ -3265,6 +3251,10 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
                 }}>
                   <PkIc n={icon} s={20} c={active ? C.accent : C.textMuted} />
                 </div>
+                {id === 'tienda' && cofrePendiente && (
+                  <div style={{ position: 'absolute', top: -2, right: 4, minWidth: 8, height: 8, borderRadius: 99,
+                    background: '#EF4444', boxShadow: '0 0 6px #EF4444', animation: 'comboDot 1.4s ease-in-out infinite' }} />
+                )}
                 {active && (
                   <div style={{
                     position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
@@ -6034,9 +6024,6 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
                 cursor: 'pointer', fontFamily: 'inherit',
                 animation: siguienteMult >= 8 ? 'riskBlink 0.9s ease-in-out infinite' : 'none',
                 boxShadow: '0 6px 20px rgba(212,175,55,0.4)' }}>
-                <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 46, pointerEvents: 'none',
-                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                  animation: 'shimmerSlide 2.2s ease-in-out infinite' }}/>
                 Apostar x{siguienteMult} → {BASE * siguienteMult} emp
               </button>
             </div>
@@ -8277,6 +8264,19 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
   const nivelIdx = nivelesAsc.findIndex(c => c.id === lv.id);
   const tituloColor = canOpen ? (isLight ? lv.c3 : lv.c1) : C.text;
 
+  // 4 slots estilo Clash Royale: nivel actual + próximos niveles de cofre
+  const startIdx = Math.max(0, Math.min(nivelIdx, nivelesAsc.length - 4));
+  const slots = Array.from({ length: 4 }, (_, i) => {
+    const gi = startIdx + i;
+    const n = nivelesAsc[gi];
+    if (!n) return { estado: 'bloqueado', nombre: '', cc: nivelesAsc[nivelesAsc.length - 1] };
+    const cc = { c1: n.c1, c2: n.c2, c3: n.c3 };
+    const nombre = n.name.replace('Cofre de ', '').replace('Cofre ', '');
+    if (gi === nivelIdx) return { estado: canOpen ? 'listo' : 'pasado', nombre, cc, faltan: null };
+    if (gi < nivelIdx) return { estado: 'pasado', nombre, cc, faltan: null };
+    return { estado: 'proximo', nombre, cc, faltan: Math.max(0, n.min - streak) };
+  });
+
   // Apertura escenificada: grieta de luz → explosión + flash → recompensa
   const abrir = () => {
     const rr = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -8320,129 +8320,88 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
 
   return (
     <>
-      {/* ── Tarjeta premium en el Inicio ── */}
-      {openedToday ? (
-        /* Ya cayó el cofre del día → invitación animada al Bazar */
-        <button onClick={() => { FX.play('coin'); FX.vibrate('light'); onGoShop?.(); }} style={{
-          position: 'relative', width: '100%', padding: '15px 16px', border: 'none', borderRadius: 20,
-          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', overflow: 'hidden',
-          background: 'linear-gradient(120deg, #2A0A44, #4C1D95, #7A3B12, #2A0A44)',
-          backgroundSize: '300% 300%', animation: 'gradientShift 7s ease infinite',
-          boxShadow: '0 8px 26px rgba(139,92,246,0.3)',
-          display: 'flex', alignItems: 'center', gap: 14 }}>
-          {/* Shimmer que cruza la tarjeta */}
-          <div style={{ position: 'absolute', top: 0, bottom: 0, width: 64, pointerEvents: 'none',
-            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)',
-            animation: 'shimmerSlide 2.6s ease-in-out infinite' }}/>
-          {/* Cofre mítico flotando con partículas orbitando */}
-          <div style={{ position: 'relative', flexShrink: 0, '--cglow': 'rgba(192,132,252,0.7)',
-            animation: 'chestFloat 2s ease-in-out infinite, chestGlowPulse 2.4s ease-in-out infinite' }}>
-            <CofreSVG lv={CHEST_SHOP_COLORS['mítico']} open={false} size={54}/>
-            {[0, 1, 2].map(i => (
-              <div key={i} style={{ position: 'absolute', top: '46%', left: '50%', width: 4, height: 4,
-                borderRadius: '50%', background: '#F5D0FE', boxShadow: '0 0 6px #C084FC', pointerEvents: 'none',
-                '--orb': `${30 + i * 6}px`, animation: `chestOrbit ${3.6 + i * 1.3}s linear infinite ${i * 0.8}s` }}/>
-            ))}
-          </div>
-          <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-            <div style={{ fontSize: 13.5, fontWeight: 900, color: '#F5F2EB' }}>
-              ¿Quieres más tesoros hoy?
-            </div>
-            <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.72)', marginTop: 2.5, lineHeight: 1.4 }}>
-              El Bazar tiene cofres esperándote: Madera, Oro, Tumbaga… hasta el Ancestral.
-            </div>
-            {premio && (
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#FFD75E', marginTop: 3 }}>
-                Del cofre de racha salieron +{premio.emp} emp
-              </div>
-            )}
-          </div>
-          <div style={{ flexShrink: 0, padding: '7px 12px', borderRadius: 99, position: 'relative',
-            background: 'linear-gradient(135deg, #F5D0FE, #C084FC)', color: '#2A0A44',
-            fontSize: 11, fontWeight: 900, boxShadow: '0 3px 14px rgba(192,132,252,0.55)',
-            animation: 'chestBeat 2.4s ease-in-out infinite' }}>
-            IR AL BAZAR
-          </div>
-        </button>
-      ) : (
-      <div style={{ position: 'relative', borderRadius: 20, padding: 2, overflow: 'hidden' }}>
-        {/* Anillo dorado giratorio cuando está listo */}
-        {canOpen ? (
-          <div style={{ position: 'absolute', inset: '-80%', pointerEvents: 'none',
-            background: `conic-gradient(from 0deg, transparent 0deg, ${lv.c2} 40deg, ${lv.c1} 70deg, transparent 110deg, transparent 180deg, ${lv.c2} 220deg, ${lv.c1} 250deg, transparent 290deg)`,
-            animation: 'raysSpin 3.5s linear infinite' }}/>
-        ) : (
-          <div style={{ position: 'absolute', inset: 0, background: C.border, pointerEvents: 'none' }}/>
-        )}
-        <button onClick={() => { FX.play('tap'); setModal(true); }} style={{
-          position: 'relative', width: '100%', padding: '13px 15px',
-          background: isLight ? '#FFFDF6' : '#10141F',
-          border: 'none', borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit',
-          display: 'flex', alignItems: 'center', gap: 14, overflow: 'hidden', textAlign: 'left' }}>
-          {/* shimmer dorado */}
-          {canOpen && (
-            <div style={{ position: 'absolute', top: 0, bottom: 0, width: 56, pointerEvents: 'none',
-              background: `linear-gradient(90deg, transparent, ${lv.c1}${isLight ? '55' : '33'}, transparent)`,
-              animation: 'shimmerSlide 2.8s ease-in-out infinite' }}/>
+      {/* ── MIS COFRES: 4 slots estilo Clash Royale ── */}
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 20, padding: '14px 15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, flex: 1 }}>MIS COFRES</span>
+          {canOpen ? (
+            <button onClick={() => { FX.play('tap'); setModal(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 11, fontWeight: 800, color: lv.c1, padding: 0 }}>
+              Abrir ahora →
+            </button>
+          ) : (
+            <button onClick={() => { FX.play('tap'); onGoShop?.(); }} style={{ background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 11, fontWeight: 800, color: C.accent, padding: 0 }}>
+              Ver Bazar →
+            </button>
           )}
-          {/* Chispas flotando */}
-          {canOpen && [0, 1, 2].map(i => (
-            <div key={i} style={{ position: 'absolute', bottom: 6, left: `${16 + i * 26}%`,
-              width: 3, height: 3, borderRadius: '50%', background: lv.c1,
-              boxShadow: `0 0 6px ${lv.c2}`, pointerEvents: 'none',
-              animation: `emberFloat ${2 + i * 0.6}s ease-out infinite ${i * 0.7}s` }}/>
+        </div>
+
+        {/* Los 4 slots: nivel actual + próximos niveles de cofre */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {slots.map((slot, i) => (
+            <button key={i} onClick={() => { if (slot.estado === 'listo') { FX.play('tap'); setModal(true); } else { FX.play('tap'); setModal(true); } }}
+              style={{ flex: 1, height: 92, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 4px',
+                position: 'relative', overflow: 'hidden',
+                background: slot.estado === 'listo' ? `${slot.cc.c2}12` : slot.estado === 'proximo' ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.015)',
+                border: slot.estado === 'listo' ? `1.5px solid ${slot.cc.c2}` : slot.estado === 'proximo' ? `1.5px dashed ${slot.cc.c2}55` : `1px solid ${C.border}`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                animation: slot.estado === 'listo' ? 'slotReady 1.8s ease-in-out infinite' : 'none' }}>
+              {slot.estado === 'bloqueado' ? (
+                <>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" style={{ opacity: 0.55 }}>
+                    <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                  </svg>
+                  <span style={{ fontSize: 8, fontWeight: 700, color: C.textMuted, textAlign: 'center', lineHeight: 1.2 }}>Anterior<br/>primero</span>
+                </>
+              ) : (
+                <>
+                  <div style={{ opacity: slot.estado === 'proximo' ? 0.4 : 1,
+                    filter: slot.estado === 'listo' ? `drop-shadow(0 0 8px ${slot.cc.c2}88)` : 'none',
+                    animation: slot.estado === 'listo' ? 'chestFloat 2s ease-in-out infinite' : 'none' }}>
+                    <CofreSVG lv={slot.cc} open={false} size={40}/>
+                  </div>
+                  <span style={{ fontSize: 8, fontWeight: 800, color: slot.estado === 'listo' ? slot.cc.c1 : C.textMuted, textAlign: 'center', lineHeight: 1.15 }}>
+                    {slot.nombre}
+                  </span>
+                  {slot.estado === 'listo' && (
+                    <span style={{ position: 'absolute', top: 5, right: 5, width: 7, height: 7, borderRadius: '50%',
+                      background: '#22C55E', boxShadow: '0 0 6px #22C55E', animation: 'comboDot 1.4s ease-in-out infinite' }}/>
+                  )}
+                  {slot.estado === 'proximo' && slot.faltan != null && (
+                    <span style={{ fontSize: 7.5, fontWeight: 700, color: `${C.textMuted}CC` }}>{slot.faltan}d más</span>
+                  )}
+                </>
+              )}
+            </button>
           ))}
-          <div style={{ flexShrink: 0, position: 'relative',
-            '--cglow': `${lv.c2}88`,
-            animation: canOpen ? 'chestFloat 2s ease-in-out infinite, chestGlowPulse 2.4s ease-in-out infinite' : 'none' }}>
-            <div style={{ animation: canOpen ? 'chestIdle 4.5s ease-in-out infinite' : 'none' }}>
-              <CofreSVG lv={lv} open={false} size={54}/>
+        </div>
+
+        {/* Barra de progreso al siguiente cofre / estado */}
+        <div style={{ marginTop: 11 }}>
+          {openedToday ? (
+            <div style={{ fontSize: 10.5, color: C.textMuted, textAlign: 'center' }}>
+              {premio ? `Hoy salieron +${premio.emp} empanadas · vuelve mañana` : 'Ya abriste el cofre de hoy · vuelve mañana'}
             </div>
-            {/* Puntitos de brillo orbitando el cofre */}
-            {canOpen && [0, 1, 2].map(i => (
-              <div key={i} style={{ position: 'absolute', top: '46%', left: '50%', width: 4, height: 4,
-                borderRadius: '50%', background: lv.c1, boxShadow: `0 0 6px ${lv.c2}`, pointerEvents: 'none',
-                '--orb': `${30 + i * 5}px`,
-                animation: `chestOrbit ${4 + i * 1.4}s linear infinite ${i * 1.1}s` }}/>
-            ))}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 900, color: tituloColor }}>{lv.name}</span>
-              {/* Pips de nivel: madera → tumbaga */}
-              <span style={{ display: 'flex', gap: 3, marginLeft: 'auto', marginRight: 2 }}>
-                {nivelesAsc.map((c2, i) => (
-                  <span key={c2.id} style={{ width: 6, height: 6, borderRadius: '50%',
-                    background: i < nivelIdx ? `${c2.c2}66` : i === nivelIdx ? c2.c2 : 'transparent',
-                    border: i > nivelIdx ? `1px solid ${C.border}` : 'none',
-                    boxShadow: i === nivelIdx && canOpen ? `0 0 5px ${c2.c2}` : 'none' }}/>
-                ))}
-              </span>
+          ) : !sealed ? (
+            <div style={{ fontSize: 10.5, color: C.textMuted, textAlign: 'center' }}>
+              Sella tu racha (lee o haz un simulacro) para cargar el cofre de hoy
             </div>
-            <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2.5, lineHeight: 1.4 }}>
-              {openedToday
-                ? (premio ? `Hoy salieron +${premio.emp} empanadas` : 'Ya lo abriste hoy — vuelve mañana')
-                : canOpen
-                ? 'Recompensa misteriosa adentro. Toca'
-                : 'Sella tu racha hoy para cargarlo'}
-            </div>
-            {next && (
-              <div style={{ fontSize: 10, fontWeight: 700, color: `${C.textMuted}BB`, marginTop: 3 }}>
-                A {next.min - streak} día{next.min - streak > 1 ? 's' : ''} del {next.name}
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, color: C.textMuted, marginBottom: 4 }}>
+                <span>{next ? `Racha: ${streak} días` : `${lv.name} · nivel máximo`}</span>
+                {next && <span style={{ color: next.c2 }}>{next.min - streak} para {next.name}</span>}
               </div>
-            )}
-          </div>
-          {canOpen && (
-            <div style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 99,
-              background: `linear-gradient(135deg, ${lv.c1}, ${lv.c2})`, color: '#1A1206',
-              fontSize: 11, fontWeight: 900, boxShadow: `0 3px 12px ${lv.c2}55`,
-              animation: 'chestBeat 2.4s ease-in-out infinite' }}>
-              ABRIR
-            </div>
+              <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(90deg, #FBBF24, #D4AF37)',
+                  width: next ? `${Math.min(100, ((streak - (nivelesAsc[nivelIdx]?.min || 0)) / Math.max(1, next.min - (nivelesAsc[nivelIdx]?.min || 0))) * 100)}%` : '100%' }}/>
+              </div>
+            </>
           )}
-        </button>
+        </div>
       </div>
-      )}
+
 
       {/* ── Overlay de apertura ── */}
       {modal && (
@@ -9597,18 +9556,24 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 // ═════════════════════════════════════════════
 //  INICIO TAB v5 — CENTRO DE MANDO
 // ═════════════════════════════════════════════
-function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm }) {
+function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst }) {
   const lvl         = computeLevel(appState.xp || 0);
   const currentBook = books.find(b => b.id === appState.currentBookId) || null;
   const [rankInfo, setRankInfo]   = useState(null);
   const [retoOpen, setRetoOpen]   = useState(false);
   const [flashOpen, setFlashOpen] = useState(false);
   const [flashKey, setFlashKey]   = useState(0);
+  const [salaOpen, setSalaOpen]   = useState(false);   // bottom sheet de modos
+  const [modo, setModo]           = useState(null);    // contrarreloj | supervivencia | ruleta
+  const [modoKey, setModoKey]     = useState(0);
   const [logroShow, setLogroShow] = useState(null);
+  const [ahora, setAhora]         = useState(Date.now()); // para el countdown del reto
   const logrosRef = useRef([]);
   logrosRef.current = appState.logrosSecretos || [];
   const today = todayStr();
   const dk    = dateKeyISO();
+
+  useEffect(() => { const iv = setInterval(() => setAhora(Date.now()), 1000); return () => clearInterval(iv); }, []);
 
   // ── Ranking social ──
   useEffect(() => {
@@ -9621,7 +9586,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           ghost: (u.appState?.ghostUntil || 0) > Date.now(),
           correctas: (u.appState?.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0),
         }))
-        .filter(u => u.code === user?.code || !u.ghost)  // 👻 Modo Fantasma
+        .filter(u => u.code === user?.code || !u.ghost)
         .sort((a, b) => b.correctas - a.correctas);
       const myIdx = ranked.findIndex(u => u.code === user.code);
       if (myIdx === -1) return;
@@ -9662,400 +9627,412 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     if ((appState.readingMinutesToday || 0) >= 60) unlockSecret('maraton');
   }, [appState.readingMinutesToday]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Reto del Día: estado de la tarjeta ──
+  // Cierre común de los modos rápidos: acumula stats, paga, récords y sella la racha
+  const finalizarModo = ({ tipo, valor, pares, emp, xp }) => {
+    acumularRespuestas(setAppState, pares);
+    setAppState(s => {
+      const upd = { ...s, ryo: (s.ryo || 0) + (emp || 0), xp: (s.xp || 0) + (xp || 0) };
+      if (tipo === 'contrarreloj' && valor > (s.contrarrelojRecord || 0)) upd.contrarrelojRecord = valor;
+      if (tipo === 'supervivencia' && valor > (s.supervivenciaRecord || 0)) upd.supervivenciaRecord = valor;
+      if (tipo === 'ruleta' && valor > (s.ruletaMaxMult || 0)) upd.ruletaMaxMult = valor;
+      return upd;
+    });
+    if (emp > 0) onCoinBurst?.(emp);
+    onConfirm?.();
+    fireBoost();
+  };
+
+  // ── Reto del Día ──
   const jugadoHoy   = appState.retoDia?.date === dk && appState.retoDia?.done;
   const retoPerfect = jugadoHoy && appState.retoDia.perfect;
   const retoWins    = jugadoHoy ? (appState.retoDia.wins || 0) : 0;
   const sellosTotal = (appState.sellos || []).length;
   const retoQs      = retoQuestionsFor(dk);
+  const meta1       = SUBJECT_META[retoQs[0]?.subject] || {};
   const [ayerPct, setAyerPct] = useState(null);
   useEffect(() => {
     if (!fbOK()) return;
     FB().get(FB().ref(FB().db, `retoStats/${dateKeyISO(-1)}`)).then(s => {
-      if (s.exists()) {
-        const v = s.val();
-        if ((v.played || 0) > 0) setAyerPct(Math.round(100 * (v.perfect || 0) / v.played));
-      }
+      if (s.exists()) { const v = s.val(); if ((v.played || 0) > 0) setAyerPct(Math.round(100 * (v.perfect || 0) / v.played)); }
     }).catch(() => {});
   }, []);
+  // Countdown hasta medianoche
+  const msFin = (() => { const d = new Date(); d.setHours(24, 0, 0, 0); return Math.max(0, d.getTime() - ahora); })();
+  const hh = String(Math.floor(msFin / 3600000)).padStart(2, '0');
+  const mm = String(Math.floor((msFin % 3600000) / 60000)).padStart(2, '0');
+  const ss = String(Math.floor((msFin % 60000) / 1000)).padStart(2, '0');
 
-  // ── Misiones (cobro directo desde el Inicio) ──
-  useEffect(() => {
-    if (appState.missionsDate !== today && (appState.missionsRewarded || []).length > 0) {
-      setAppState(s => ({ ...s, missionsDate: today, missionsRewarded: [] }));
-    }
-  }, [today]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const allMissions = generateDailyMissions(today);
-  const rewarded    = appState.missionsRewarded || [];
-  const nearestMission = allMissions
-    .filter(m => !rewarded.includes(m.id))
-    .map(m => ({ ...m, progress: getMissionProgress(m, appState), pct: getMissionProgress(m, appState) / m.target }))
-    .sort((a, b) => b.pct - a.pct)[0] || null;
-  const nearestCanCollect = nearestMission && nearestMission.progress >= nearestMission.target;
-
-  const collectMission = (m) => {
-    if ((appState.missionsRewarded || []).includes(m.id)) return;
-    FX.play('levelUp'); FX.vibrate('success');
-    setAppState(s => ({
-      ...s,
-      ryo: (s.ryo || 0) + m.ryo,
-      xp: (s.xp || 0) + m.xp,
-      missionsDate: today,
-      missionsRewarded: [...(s.missionsRewarded || []), m.id],
-    }));
-    onMissionReward?.(m.ryo, m.xp);
-    fireBoost();
-  };
-
-  // ── Datos compactos ──
-  let socialText = null;
-  if (rankInfo) {
-    if (rankInfo.pos === 1) socialText = '¡Nadie te tose, parce! Eres #1 del combo';
-    else if (rankInfo.aheadGap !== null && rankInfo.aheadGap <= 5)
-      socialText = `Pispe: el #${rankInfo.pos - 1} te lleva solo ${rankInfo.aheadGap} aciertos`;
-    else socialText = `Vas #${rankInfo.pos} de ${rankInfo.total}`;
-  }
-
+  // ── Datos de stats ──
   const icfesHist = appState.icfesHistory || [];
+  const bestIcfes = icfesHist.length ? Math.max(...icfesHist.map(r => r.score || 0)) : 0;
   const lastSim   = icfesHist.length > 0 ? icfesHist[icfesHist.length - 1] : null;
   const lastSimDaysAgo = lastSim?.ts ? Math.floor((Date.now() - lastSim.ts) / 86400000) : null;
   const lastSimColor = !lastSim ? C.textMuted
     : (lastSim.correct || 0) >= 8 ? '#2D8A5E'
     : (lastSim.correct || 0) >= 5 ? '#2E86AB'
     : (lastSim.correct || 0) >= 3 ? '#E8743A' : '#EF4444';
+  const totalMin  = appState.totalMinutesRead || 0;
 
-  const rarityColor = { común: '#888', raro: '#2E86AB', épico: '#9D4E7C', legendario: '#D4AF37', mítico: '#EF4444' };
-  const destacados  = (SHOP_ITEMS || []).filter(i => DESTACADOS_IDS.includes(i.id)).slice(0, 4);
-  const meta1 = SUBJECT_META[retoQs[0]?.subject] || {};
+  const fire = fireLevelFor(streak);
+  const readGoal = appState.dailyGoal || 20;
+  const readToday = appState.readingMinutesToday || 0;
+  const readDone = readToday >= readGoal;
 
   return (
-    <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 13, minHeight: '100%' }}>
+    <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: '100%' }}>
 
-      {/* ══ CAPA 5 — FUEGO DE RACHA ══ */}
-      <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight}/>
+      {/* ══ 1. ARENA HERO ══ */}
+      <div style={{ position: 'relative', borderRadius: 24, overflow: 'hidden',
+        background: 'linear-gradient(160deg, #060C14 0%, #0D1B2A 50%, #060C14 100%)',
+        border: `1px solid ${fire.id === 0 ? C.border : `${fire.main}30`}`,
+        boxShadow: `0 12px 34px rgba(0,0,0,0.45)`, padding: '16px 16px 14px' }}>
+        {/* Textura sutil */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5,
+          background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 9px)' }}/>
+        {/* Vignette del color de la etapa del fuego */}
+        {fire.id > 0 && (
+          <>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 120, pointerEvents: 'none',
+              background: `radial-gradient(circle at 0% 0%, ${fire.halo}, transparent 70%)` }}/>
+            <div style={{ position: 'absolute', top: 0, right: 0, width: 140, height: 120, pointerEvents: 'none',
+              background: `radial-gradient(circle at 100% 0%, ${fire.halo}, transparent 70%)` }}/>
+          </>
+        )}
 
-      <GrecaDivider isLight={isLight}/>
-
-      {/* ══ CAPA 1 — RETO DEL DÍA ══ */}
-      <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
-        position: 'relative', padding: 1.5, border: 'none', borderRadius: 20, cursor: 'pointer',
-        fontFamily: 'inherit', textAlign: 'left', overflow: 'hidden',
-        background: retoPerfect
-          ? 'linear-gradient(135deg, #D4AF37, #7A5A10)'
-          : 'linear-gradient(135deg, #D4AF37, #E8743A 55%, #2D8A5E)',
-        animation: !jugadoHoy ? 'ctaPulse 5s ease-in-out infinite 2s' : 'none' }}>
-        <div style={{ position: 'relative', background: isLight ? '#FFFDF6' : '#10141F', borderRadius: 18.5,
-          padding: '15px 16px', overflow: 'hidden' }}>
-          {!jugadoHoy && (
-            <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, pointerEvents: 'none',
-              background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.14), transparent)',
-              animation: 'shimmerSlide 3.2s ease-in-out infinite' }}/>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-            <span style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: 2.5, color: isLight ? '#A8821E' : '#D4AF37' }}>RETO DEL DÍA</span>
-            {sellosTotal > 0 && (
-              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
-                padding: '2px 9px', borderRadius: 99, background: 'rgba(212,175,55,0.14)',
-                border: '1px solid rgba(168,130,30,0.4)', fontSize: 10.5, fontWeight: 900, color: isLight ? '#A8821E' : '#D4AF37' }}>
-                <PkIc n="target" s={11} c={isLight ? '#A8821E' : '#D4AF37'}/>{sellosTotal}
-              </span>
-            )}
+        {/* Fila superior: identidad + nivel */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 11, marginBottom: 6 }}>
+          <Av name={user?.name || '?'} sz={44} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="serif" style={{ fontSize: 16, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.name || 'Explorador'}
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: C.accent, textTransform: 'uppercase' }}>
+              {appState.equipped?.title?.name || 'Iniciado'}
+            </div>
           </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 99,
+              background: `linear-gradient(135deg, ${C.accent}, ${C.accentMid || C.accent})`,
+              boxShadow: `0 3px 12px ${C.accent}55` }}>
+              <span style={{ fontSize: 12, fontWeight: 900, color: '#fff' }}>Nv. {lvl.level}</span>
+            </div>
+            <div style={{ width: 68, height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.12)', marginTop: 5, marginLeft: 'auto', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${lvl.pct}%`, borderRadius: 99, background: C.accent, boxShadow: `0 0 6px ${C.accent}` }}/>
+            </div>
+          </div>
+        </div>
 
-          {jugadoHoy ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {[0, 1, 2].map(i => {
-                  const won = i < retoWins;
-                  const lost = i === retoWins && !retoPerfect;
-                  return (
-                    <div key={i} style={{ width: 30, height: 30, borderRadius: 10, display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                      background: won ? 'rgba(212,175,55,0.15)' : lost ? 'rgba(239,68,68,0.12)' : `${C.border}44`,
-                      border: `1.5px solid ${won ? '#D4AF37' : lost ? '#EF4444' : C.border}` }}>
-                      <PkIc n={won ? 'check' : lost ? 'x' : 'timer'} s={14}
-                        c={won ? '#D4AF37' : lost ? '#EF4444' : C.textMuted}/>
-                    </div>
-                  );
-                })}
+        {/* Llama evolutiva al centro */}
+        <div style={{ position: 'relative', marginTop: 2 }}>
+          <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight}/>
+        </div>
+
+        {/* Fila de 3 stats */}
+        <div style={{ position: 'relative', display: 'flex', marginTop: 12, paddingTop: 12,
+          borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          {[
+            { ic: 'star',   c: bestIcfes > 0 ? getPerfLevel(bestIcfes).color : C.textMuted, val: bestIcfes > 0 ? bestIcfes : '—', label: 'MEJOR ICFES' },
+            { ic: 'book',   c: '#2D8A5E', val: totalMin >= 60 ? `${(totalMin / 60).toFixed(1)}h` : `${totalMin}m`, label: 'LEÍDO' },
+            { ic: 'target', c: C.accent,  val: icfesHist.length, label: 'SIMULACROS' },
+          ].map((s, i) => (
+            <div key={s.label} style={{ flex: 1, textAlign: 'center',
+              borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 3 }}>
+                <PkIc n={s.ic} s={11} c={s.c}/>
+                <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,255,255,0.4)' }}>{s.label}</span>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: retoPerfect ? (isLight ? '#A8821E' : '#D4AF37') : C.text }}>
-                  {retoPerfect ? '¡Sello Perfecto!' : `Caíste en la ronda ${Math.min(retoWins + 1, 3)}`}
-                </div>
-                <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>
-                  {retoPerfect ? 'Toca para presumir por WhatsApp' : 'Mañana hay revancha'}
-                </div>
-              </div>
-              <PkIc n="right" s={13} c={C.textMuted}/>
+              <div style={{ fontSize: 17, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.val}</div>
             </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0,
-                background: `${meta1.color || '#D4AF37'}1C`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <PkIc n="target" s={22} c={meta1.color || '#D4AF37'}/>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14.5, fontWeight: 800, color: C.text }}>
-                  Ronda 1/3 · {retoQs[0]?.subject || 'Sorpresa'}
-                </div>
-                <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>
-                  ¿Podrás con las 3?{ayerPct !== null ? ` Ayer solo el ${ayerPct}% pudo.` : ' Tiempo límite por ronda.'}
-                </div>
-              </div>
-              <div style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #D4AF37, #A8821E)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(212,175,55,0.4)' }}>
-                <PkIc n="play" s={15} c="#1A1206"/>
-              </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ══ 2. MIS COFRES (4 slots) ══ */}
+      <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
+
+      {/* ══ 3. SALA DE ENTRENAMIENTO + 2 modos rápidos ══ */}
+      <button onClick={() => { FX.play('tap'); FX.vibrate('medium'); setSalaOpen(true); }} style={{
+        position: 'relative', width: '100%', height: 88, border: '1.5px solid rgba(74,158,255,0.5)',
+        borderRadius: 22, cursor: 'pointer', fontFamily: 'inherit', overflow: 'hidden', padding: 0,
+        background: 'linear-gradient(135deg, #0D2240 0%, #1A3A5C 50%, #0D2240 100%)',
+        boxShadow: '0 0 0 1px rgba(74,158,255,0.2), 0 8px 32px rgba(74,158,255,0.25), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
+        {/* Shimmer que barre */}
+        <div style={{ position: 'absolute', top: 0, bottom: 0, width: 70, pointerEvents: 'none',
+          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent)',
+          animation: 'salaSweep 3s ease-in-out infinite' }}/>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px', height: '100%' }}>
+          <div style={{ width: 56, height: 56, borderRadius: 14, flexShrink: 0,
+            background: 'linear-gradient(135deg, #4A9EFF, #2563EB)', boxShadow: '0 4px 16px rgba(74,158,255,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ animation: 'salaIcon 2s ease-in-out infinite' }}>
+              <PkIc n="rana" s={28} c="#fff"/>
             </div>
-          )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: 1, color: '#fff' }}>MODOS DE ENTRENAMIENTO ICFES</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>5 modos · IA adaptativa · Gana empanadas</div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              {['🥟 40–250', '⚡ Activa tu racha'].map(t => (
+                <span key={t} style={{ fontSize: 8.5, fontWeight: 700, color: 'rgba(255,255,255,0.85)',
+                  background: 'rgba(255,255,255,0.08)', borderRadius: 99, padding: '2.5px 8px' }}>{t}</span>
+              ))}
+            </div>
+          </div>
+          <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'arrowPulse 1.5s ease-in-out infinite' }}>
+            <PkIc n="right" s={15} c="#fff"/>
+          </div>
         </div>
       </button>
 
-      {/* ══ ACCIONES RÁPIDAS: Duelo Flash + Simulacro ══ */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button onClick={() => { FX.play('duel'); FX.vibrate('medium'); setFlashKey(k => k + 1); setFlashOpen(true); }} style={{
-          flex: 1, padding: '14px 12px', border: 'none', borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit',
-          background: 'linear-gradient(135deg, #E8743A, #C0392B)',
-          boxShadow: '0 6px 20px rgba(232,116,58,0.3)', textAlign: 'left', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, bottom: 0, width: 46, pointerEvents: 'none',
-            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)',
-            animation: 'shimmerSlide 3.6s ease-in-out infinite 1s' }}/>
-          <PkIc n="swords" s={22} c="#fff"/>
-          <div style={{ fontSize: 14.5, fontWeight: 900, color: '#fff', marginTop: 7 }}>Duelo Flash</div>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.75)', marginTop: 1 }}>
-            5 preguntas · 3 min
-          </div>
-        </button>
-        <button onClick={() => { FX.play('tap'); onGoTab('icfes'); }} style={{
-          flex: 1, padding: '14px 12px', border: 'none', borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit',
-          background: 'linear-gradient(135deg, #2D8A5E, #1A6B45)',
-          boxShadow: '0 6px 20px rgba(45,138,94,0.3)', textAlign: 'left' }}>
-          <PkIc n="rana" s={22} c="#fff"/>
-          <div style={{ fontSize: 14.5, fontWeight: 900, color: '#fff', marginTop: 7 }}>Simulacro</div>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.75)', marginTop: 1 }}>
-            ICFES completo
-          </div>
-        </button>
+      {/* Acceso rápido: 2 modos */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 2px 8px' }}>
+          <div style={{ flex: 1, height: 1, background: `${C.border}` }}/>
+          <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted }}>ACCESO RÁPIDO</span>
+          <div style={{ flex: 1, height: 1, background: `${C.border}` }}/>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {/* Duelo Flash */}
+          <button onClick={() => { FX.play('duel'); FX.vibrate('medium'); setFlashKey(k => k + 1); setFlashOpen(true); }} style={{
+            flex: 1, height: 100, border: '1px solid rgba(249,115,22,0.4)', borderRadius: 18, cursor: 'pointer',
+            fontFamily: 'inherit', textAlign: 'left', position: 'relative', overflow: 'hidden', padding: '13px 14px',
+            background: 'linear-gradient(145deg, #1A0800, #3D1500)' }}>
+            <div style={{ position: 'absolute', top: 0, right: 0, width: 90, height: 90, pointerEvents: 'none',
+              background: 'radial-gradient(circle at 100% 0%, rgba(249,115,22,0.3), transparent 60%)' }}/>
+            <div style={{ animation: 'swordsClash 2s ease-in-out infinite', display: 'inline-block' }}>
+              <PkIc n="swords" s={28} c="#F97316"/>
+            </div>
+            <div className="serif" style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginTop: 6 }}>Duelo Flash</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>5 preguntas · 3 min</div>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 8.5, fontWeight: 800,
+              color: '#F8B08A', background: 'rgba(60,25,5,0.7)', borderRadius: 99, padding: '2px 8px' }}>
+              <PkIc n="empanada" s={9} c="#F8B08A"/>30 + 60 XP
+            </span>
+          </button>
+          {/* Contrarreloj */}
+          <button onClick={() => { FX.play('duel'); FX.vibrate('medium'); setModoKey(k => k + 1); setModo('contrarreloj'); }} style={{
+            flex: 1, height: 100, border: '1px solid rgba(249,115,22,0.35)', borderRadius: 18, cursor: 'pointer',
+            fontFamily: 'inherit', textAlign: 'left', position: 'relative', overflow: 'hidden', padding: '13px 14px',
+            background: 'linear-gradient(145deg, #1A0A00, #2D1500)' }}>
+            <div style={{ position: 'absolute', top: 0, right: 0, width: 90, height: 90, pointerEvents: 'none',
+              background: 'radial-gradient(circle at 100% 0%, rgba(249,115,22,0.3), transparent 60%)' }}/>
+            {/* mini arco 90s */}
+            <div style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32 }}>
+              <svg width="32" height="32" viewBox="0 0 32 32" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="16" cy="16" r="11" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3"/>
+                <circle cx="16" cy="16" r="11" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round"
+                  strokeDasharray="69" style={{ animation: 'miniArcDrain 4s linear infinite' }}/>
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 8, fontWeight: 900, color: '#F97316' }}>90s</div>
+            </div>
+            <div style={{ animation: 'salaIcon 2.4s ease-in-out infinite', display: 'inline-block' }}>
+              <PkIc n="timer" s={28} c="#FB923C"/>
+            </div>
+            <div className="serif" style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginTop: 6 }}>Contrarreloj</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>10 preguntas · 90s</div>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 8.5, fontWeight: 800,
+              color: '#FB923C', background: 'rgba(60,25,5,0.7)', borderRadius: 99, padding: '2px 8px' }}>
+              <PkIc n="empanada" s={9} c="#FB923C"/>x1.5
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* ══ CAPA 2 — QUIÉN ANDA AQUÍ ══ */}
+      {/* ══ 4. RETO DEL DÍA ══ */}
+      <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
+        position: 'relative', border: 'none', borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+        padding: '16px', overflow: 'hidden',
+        background: jugadoHoy && retoPerfect ? 'linear-gradient(135deg, rgba(61,168,115,0.10), transparent)' : 'linear-gradient(135deg, rgba(251,191,36,0.08), transparent)',
+        borderLeft: `4px solid ${jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24'}`,
+        boxShadow: `inset 0 0 0 1px ${jugadoHoy && retoPerfect ? 'rgba(61,168,115,0.3)' : 'rgba(251,191,36,0.3)'}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <PkIc n="target" s={13} c={jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24'}/>
+          <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: 2, color: jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24' }}>RETO DEL DÍA</span>
+          <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: C.textMuted, fontVariantNumeric: 'tabular-nums' }}>
+            {hh}:{mm}:{ss} restantes
+          </span>
+        </div>
+        {jugadoHoy ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ animation: retoPerfect ? 'checkGlow 2s ease-in-out infinite' : 'none' }}>
+              <PkIc n={retoPerfect ? 'check' : 'x'} s={26} c={retoPerfect ? '#3DA873' : '#EF4444'}/>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: retoPerfect ? '#3DA873' : C.text }}>
+                {retoPerfect ? '✓ Sello Perfecto reclamado' : `Caíste en la ronda ${Math.min(retoWins + 1, 3)}`}
+              </div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                {retoPerfect ? `Llevas ${sellosTotal} sello${sellosTotal !== 1 ? 's' : ''} · toca para presumir` : 'Mañana hay revancha'}
+              </div>
+            </div>
+            <PkIc n="right" s={13} c={C.textMuted}/>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 13, flexShrink: 0,
+                background: `${meta1.color || '#FBBF24'}1C`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PkIc n="target" s={22} c={meta1.color || '#FBBF24'}/>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+                  3 rondas · empieza en {retoQs[0]?.subject || 'sorpresa'}
+                </div>
+                <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  {ayerPct !== null ? `Ayer solo el ${ayerPct}% lo logró.` : 'Dificultad creciente por ronda.'}
+                </div>
+              </div>
+            </div>
+            {/* Recompensas */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 11, alignItems: 'center' }}>
+              <span style={{ fontSize: 8.5, fontWeight: 800, color: C.textMuted, letterSpacing: 0.5 }}>GANAS:</span>
+              {[
+                { ic: 'empanada', c: '#E8B84B', t: '+150' },
+                { ic: 'star', c: '#A78BFA', t: '+300 XP' },
+                { ic: 'target', c: '#FBBF24', t: 'Sello' },
+              ].map(r => (
+                <span key={r.t} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 800,
+                  color: r.c, background: `${r.c}18`, border: `1px solid ${r.c}35`, borderRadius: 99, padding: '2.5px 8px' }}>
+                  <PkIc n={r.ic} s={9} c={r.c}/>{r.t}
+                </span>
+              ))}
+              <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#FBBF24' }}>Ir →</span>
+            </div>
+          </>
+        )}
+      </button>
+
+      {/* ══ 5. EL COMBO LIVE ══ */}
       <PresenciaViva C={C} user={user}/>
 
-      {/* ══ CAPA 3 — COFRE DE LA RACHA ══ */}
-      <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
-
-      {/* ── Misión más cercana (cobrable) ── */}
-      {nearestMission && (
-        <div style={{ padding: '10px 13px', background: nearestCanCollect ? 'rgba(45,138,94,0.10)' : C.bgAlt,
-          borderRadius: 14, border: nearestCanCollect ? '1px solid rgba(45,138,94,0.35)' : `1px solid ${C.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PkIc n="swords" s={14} c={nearestCanCollect ? '#2D8A5E' : C.textMuted}/>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 600,
-              color: nearestCanCollect ? '#2D8A5E' : C.text,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {nearestMission.text}
-            </span>
-            {nearestCanCollect ? (
-              <button onClick={() => collectMission(nearestMission)} style={{
-                padding: '5px 12px', borderRadius: 99, border: 'none', background: '#2D8A5E',
-                color: '#fff', fontSize: 11, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit',
-                animation: 'chestBeat 2.4s ease-in-out infinite' }}>
-                +{nearestMission.ryo}
-              </button>
-            ) : (
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, whiteSpace: 'nowrap' }}>
-                {nearestMission.progress}/{nearestMission.target}
-              </span>
-            )}
-          </div>
-          <div style={{ height: 4, background: `${C.border}66`, borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, Math.round(nearestMission.pct * 100))}%`,
-              background: nearestCanCollect ? '#2D8A5E' : C.accent, borderRadius: 99,
-              transition: 'width 0.5s ease',
-              animation: nearestCanCollect ? 'logGlow 1.2s ease-in-out infinite' : 'none' }}/>
-          </div>
-        </div>
-      )}
-
-      {/* ── Ranking banner ── */}
-      {rankInfo && socialText && (
+      {rankInfo && (
         <button onClick={() => onGoTab('friends')} style={{
-          padding: '9px 14px',
-          background: rankInfo.pos === 1 ? 'rgba(212,175,55,0.10)' : `linear-gradient(90deg, ${C.accent}10, transparent)`,
-          border: 'none',
-          borderLeft: rankInfo.pos !== 1 ? `3px solid ${C.accent}` : 'none',
-          outline: rankInfo.pos === 1 ? '1px solid rgba(212,175,55,0.28)' : 'none',
-          borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          display: 'flex', alignItems: 'center', gap: 8 }}>
-          <PkIc n="star" s={14} c={rankInfo.pos === 1 ? '#D4AF37' : C.accent}/>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.3, flex: 1 }}>{socialText}</span>
+          padding: '11px 15px', borderRadius: 16, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          border: `1px solid ${rankInfo.pos === 1 ? 'rgba(251,191,36,0.4)' : C.border}`,
+          background: rankInfo.pos === 1 ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.03)',
+          display: 'flex', alignItems: 'center', gap: 10 }}>
+          <PkIc n={rankInfo.pos === 1 ? 'sombrero' : 'star'} s={16} c={rankInfo.pos === 1 ? '#D4AF37' : C.accent}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted }}>TU POSICIÓN EN EL COMBO</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: rankInfo.pos === 1 ? '#D4AF37' : C.text, marginTop: 1 }}>
+              {rankInfo.pos === 1 ? '👑 #1 · ¡Nadie te tose, parce!' : `#${rankInfo.pos} de ${rankInfo.total}`}
+            </div>
+          </div>
           {rankInfo.aheadGap !== null && rankInfo.pos > 1 && (
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#2D8A5E', whiteSpace: 'nowrap' }}>
-              +{rankInfo.aheadGap} →
+            <span style={{ fontSize: 11, fontWeight: 900, color: '#2D8A5E', whiteSpace: 'nowrap' }}>
+              +{rankInfo.aheadGap} y subes →
             </span>
           )}
         </button>
       )}
 
-      {/* ── Datos compactos ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {lastSim && (
-          <button onClick={() => onGoTab('icfes')} style={{
-            padding: '8px 12px', background: 'none', border: 'none', borderRadius: 10,
-            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-            display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PkIc n="rana" s={14} c={lastSimColor}/>
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, flex: 1 }}>
-              Último simulacro:{' '}
-              <span style={{ color: lastSimColor, fontWeight: 800 }}>{lastSim.correct || 0} aciertos</span>
-              {lastSimDaysAgo !== null && lastSimDaysAgo >= 0 && (
-                <span style={{ color: C.textMuted, fontWeight: 500 }}>
-                  {' '}· {lastSimDaysAgo === 0 ? 'hoy' : lastSimDaysAgo === 1 ? 'ayer' : `hace ${lastSimDaysAgo} días`}
-                </span>
-              )}
-            </span>
-            <PkIc n="right" s={10} c={C.textMuted}/>
-          </button>
-        )}
-
-        {currentBook && (() => {
-          const prog = appState.bookProgress?.[currentBook.id] || 0;
-          return (
-            <button onClick={() => onGoTab('books')} style={{
-              padding: '8px 12px', background: 'none', border: 'none', borderRadius: 10,
-              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-              display: 'flex', alignItems: 'center', gap: 8 }}>
-              <PkIc n="book" s={14} c="#2D8A5E"/>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.text,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {currentBook.title}
-                </div>
-                <div style={{ height: 3, background: `${C.border}66`, borderRadius: 99, marginTop: 3 }}>
-                  <div style={{ height: '100%', width: `${prog}%`, background: '#2D8A5E', borderRadius: 99 }}/>
-                </div>
+      {/* ══ 6. PROGRESO DE LECTURA (compacto) ══ */}
+      <div style={{ display: 'flex', borderRadius: 16, overflow: 'hidden', border: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.03)' }}>
+        <button onClick={() => onGoTab('books')} style={{ flex: 1, padding: '12px 14px', background: 'none', border: 'none',
+          borderRight: `1px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+            <PkIc n="book" s={11} c="#2D8A5E"/>
+            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.textMuted }}>LECTURA HOY</span>
+          </div>
+          {readDone ? (
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: '#3DA873' }}>✓ Meta {readGoal}/{readGoal} min</div>
+          ) : (
+            <>
+              <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 4 }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (readToday / readGoal) * 100)}%`, borderRadius: 99,
+                  background: 'linear-gradient(90deg, #2D8A5E, #3DA873)' }}/>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#2D8A5E', whiteSpace: 'nowrap' }}>
-                {Math.round(prog)}%
-              </span>
-              <PkIc n="right" s={10} c={C.textMuted}/>
-            </button>
-          );
-        })()}
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.textMid }}>{readToday}/{readGoal} min · faltan {Math.max(0, readGoal - readToday)}</div>
+            </>
+          )}
+        </button>
+        <button onClick={() => onGoTab('icfes')} style={{ flex: 1, padding: '12px 14px', background: 'none', border: 'none',
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+            <PkIc n="rana" s={11} c={lastSimColor}/>
+            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.textMuted }}>ÚLTIMO ICFES</span>
+          </div>
+          {lastSim ? (
+            <>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: lastSimColor }}>{lastSim.correct || 0} aciertos · {lastSim.score}/500</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginTop: 3 }}>
+                {lastSimDaysAgo === 0 ? 'hoy' : lastSimDaysAgo === 1 ? 'ayer' : `hace ${lastSimDaysAgo} días`} · ver →
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.textMuted }}>Aún sin simulacros · empieza →</div>
+          )}
+        </button>
       </div>
 
-      <GrecaDivider isLight={isLight}/>
-
-      {/* ── La Tiendita: vitrina con vista previa real ── */}
-      {destacados.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px 7px' }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1.2 }}>
-              La Tiendita
-            </span>
-            <button onClick={() => { FX.play('tap'); onGoShop?.(); }} style={{ background: 'none', border: 'none', padding: 0,
-              cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: C.accent }}>
-              Ver todo →
-            </button>
-          </div>
-          <div style={{ display: 'flex', gap: 9, overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-            paddingBottom: 6, paddingTop: 2 }}>
-            {destacados.map((item, idx) => {
-              const rc = rarityColor[item.rarity] || '#888';
-              const owned = (appState.inventory || []).includes(item.id);
-              const brillante = ['épico', 'legendario', 'mítico'].includes(item.rarity);
-              return (
-                <button key={item.id} onClick={() => { FX.play('tap'); onGoShop?.(); }} style={{
-                  flexShrink: 0, width: 106, padding: '9px 7px 8px',
-                  background: C.bgAlt, border: `1px solid ${C.border}`,
-                  borderBottom: `3px solid ${rc}77`,
-                  borderRadius: 16, cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  position: 'relative', overflow: 'hidden',
-                  animation: `slideUpIn 0.5s ease ${idx * 0.09}s both` }}
-                  onPointerDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-                  onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                  onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                  {/* Brillo en rarezas altas */}
-                  {brillante && (
-                    <div style={{ position: 'absolute', top: 0, bottom: 0, width: 34, pointerEvents: 'none', zIndex: 1,
-                      background: `linear-gradient(90deg, transparent, ${rc}${isLight ? '2E' : '3E'}, transparent)`,
-                      animation: `shimmerSlide ${3 + idx * 0.6}s ease-in-out infinite ${idx * 0.5}s` }}/>
-                  )}
-                  {/* ── VISTA PREVIA REAL ── */}
-                  {item.type === 'banner' ? (
-                    <div style={{ width: 90, height: 46, borderRadius: 10, background: item.css,
-                      border: `1px solid ${rc}66`, boxShadow: `0 3px 10px ${rc}30` }}/>
-                  ) : item.type === 'frame' ? (
-                    <div style={{ height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Av name={user?.name || 'P'} sz={42} C={C} photoURL={appState.photoURL} frameData={item}/>
-                    </div>
-                  ) : (
-                    <div style={{ width: 90, height: 46, borderRadius: 10, display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', padding: '0 5px',
-                      background: `${rc}${isLight ? '14' : '1A'}`, border: `1px dashed ${rc}66` }}>
-                      <span className="serif" style={{ fontSize: 10, fontWeight: 800, fontStyle: 'italic',
-                        color: rc, textAlign: 'center', lineHeight: 1.25 }}>
-                        «{item.name}»
-                      </span>
-                    </div>
-                  )}
-                  <span style={{ fontSize: 9.5, fontWeight: 800, color: C.text, textAlign: 'center', lineHeight: 1.2,
-                    width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.type === 'title' ? `Título ${item.rarity}` : item.name}
-                  </span>
-                  {owned ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 800, color: '#2D8A5E' }}>
-                      <PkIc n="check" s={10} c="#2D8A5E"/> Tuyo
-                    </span>
-                  ) : (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 900, color: C.amberMid }}>
-                      <PkIc n="empanada" s={11} c={C.amberMid}/>{item.price}
-                    </span>
-                  )}
+      {/* ══ BOTTOM SHEET: MODOS ══ */}
+      {salaOpen && (
+        <Portal>
+          <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99992, background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+            onClick={() => setSalaOpen(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 430, maxHeight: '78vh', overflowY: 'auto',
+              background: C.bgAlt, borderRadius: '24px 24px 0 0', border: `1px solid ${C.border}`, borderBottom: 'none',
+              padding: '10px 18px 30px', animation: 'sheetUp 0.35s cubic-bezier(0.22,1,0.36,1) both' }}>
+              <div style={{ width: 40, height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.15)', margin: '4px auto 16px' }}/>
+              <div className="serif" style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Elige tu modo de entrenamiento</div>
+              <div style={{ fontSize: 11.5, color: C.textMuted, marginBottom: 16 }}>Los 5 modos activan tu racha ICFES</div>
+              {[
+                { id: 'simulacro', nom: 'Simulacro Oficial', desc: 'Como el día real del examen', c: '#4A9EFF', ic: 'pergamino',
+                  rec: bestIcfes > 0 ? `Mejor: ${bestIcfes}` : 'Sin jugar', act: () => { setSalaOpen(false); onGoTab('icfes'); } },
+                { id: 'contrarreloj', nom: 'Contrarreloj', desc: '10 preguntas · 90 segundos', c: '#F97316', ic: 'timer',
+                  rec: (appState.contrarrelojRecord || 0) > 0 ? `Mejor: ${appState.contrarrelojRecord}` : 'Sin jugar', act: () => { setSalaOpen(false); setModoKey(k => k + 1); setModo('contrarreloj'); } },
+                { id: 'supervivencia', nom: 'Supervivencia', desc: '3 vidas · preguntas infinitas', c: '#EF4444', ic: 'mountain',
+                  rec: (appState.supervivenciaRecord || 0) > 0 ? `Mejor: Ola ${appState.supervivenciaRecord}` : 'Sin jugar', act: () => { setSalaOpen(false); setModoKey(k => k + 1); setModo('supervivencia'); } },
+                { id: 'ruleta', nom: 'La Ruleta del Saber', desc: 'Tira la palanca · x2 a x32', c: '#D4AF37', ic: 'solandino',
+                  rec: (appState.ruletaMaxMult || 0) > 0 ? `Mejor: x${appState.ruletaMaxMult}` : 'Sin jugar', act: () => { setSalaOpen(false); setModoKey(k => k + 1); setModo('ruleta'); } },
+                { id: 'duelo', nom: 'Duelo Flash', desc: 'vs un rival en vivo · 3 min', c: '#DC2626', ic: 'swords',
+                  rec: 'Rival en vivo', act: () => { setSalaOpen(false); setFlashKey(k => k + 1); setFlashOpen(true); } },
+              ].map((m, i) => (
+                <button key={m.id} onClick={() => { FX.play('duel'); FX.vibrate('medium'); m.act(); }} style={{
+                  display: 'flex', alignItems: 'center', gap: 13, width: '100%', padding: '12px 4px', cursor: 'pointer',
+                  fontFamily: 'inherit', textAlign: 'left', background: 'none', border: 'none',
+                  borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, flexShrink: 0, background: `${m.c}1E`,
+                    border: `1px solid ${m.c}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PkIc n={m.ic} s={24} c={m.c}/>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="serif" style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{m.nom}</div>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{m.desc}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: m.c }}>{m.rec}</div>
+                    <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end' }}><PkIc n="right" s={13} c={m.c}/></div>
+                  </div>
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
-      {/* ── Pulse bar ── */}
-      <div style={{ display: 'flex', alignItems: 'stretch', borderTop: `1px solid ${C.border}44`, paddingTop: 2 }}>
-        <button onClick={() => onGoTab('friends')} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit' }}>
-          <PkIc n="star" s={13} c="#2E86AB"/>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#2E86AB' }}>
-            {rankInfo ? `#${rankInfo.pos}` : '—'}
-          </span>
-        </button>
-        <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
-        <button onClick={() => onGoTab('perfil')} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit' }}>
-          <PkIc n="sombrero" s={13} c={C.accent}/>
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>Nv.{lvl.level}</span>
-        </button>
-        <div style={{ width: 1, background: `${C.border}55`, margin: '6px 0' }}/>
-        <button onClick={() => onGoShop?.()} style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit' }}>
-          <PkIc n="empanada" s={13} c={C.amberMid}/>
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.amberMid }}>Tienda</span>
-        </button>
-      </div>
-
-      {/* ══ OVERLAYS ══ */}
+      {/* ══ OVERLAYS DE MODOS ══ */}
       {retoOpen && (
         <Portal>
           <RetoDelDia C={C} appState={appState} setAppState={setAppState}
             onClose={() => setRetoOpen(false)} onMissionReward={onMissionReward} unlockSecret={unlockSecret}/>
         </Portal>
+      )}
+      {modo === 'contrarreloj' && (
+        <ModoContrarreloj key={`cr${modoKey}`} C={C} appState={appState}
+          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}/>
+      )}
+      {modo === 'supervivencia' && (
+        <ModoSupervivencia key={`sv${modoKey}`} C={C} appState={appState}
+          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}
+          onRevive={(costo) => setAppState(s => ({ ...s, ryo: Math.max(0, (s.ryo || 0) - costo) }))}/>
+      )}
+      {modo === 'ruleta' && (
+        <ModoRuleta key={`rl${modoKey}`} C={C} appState={appState}
+          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}/>
       )}
       {flashOpen && (
         <DueloFlash key={flashKey} C={C} user={user} appState={appState} setAppState={setAppState}
@@ -12449,7 +12426,7 @@ function TallerAvatar({ C, appState, setAppState, onBack }) {
 // ─────────────────────────────────────────────
 //  SETTINGS TAB — ✅ XP real, achievements pagan, streak freeze
 // ─────────────────────────────────────────────
-function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientOn, appState, setAppState, user, onLogout, onSavePhoto, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, startView = 'settings', startViewNonce = 0, onGoSettings }) {
+function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientOn, appState, setAppState, user, onLogout, onSavePhoto, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, startView = 'settings', startViewNonce = 0, onGoSettings, asTab = false }) {
   const [view, setView]           = useState(startView);
 
   // Re-sincronizar la vista cuando navegan desde afuera (Inicio/menú) — el tab vive siempre montado
@@ -12927,11 +12904,13 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
 
           {/* Header del bazar */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px 4px' }}>
-            <button onClick={() => setView(startView === 'profile' ? 'profile' : 'settings')} style={{
-              background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`, borderRadius: '50%',
-              width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-              <PkIc n="left" s={17} c={C.text}/>
-            </button>
+            {!asTab && (
+              <button onClick={() => setView(startView === 'profile' ? 'profile' : 'settings')} style={{
+                background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`, borderRadius: '50%',
+                width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                <PkIc n="left" s={17} c={C.text}/>
+              </button>
+            )}
             <div style={{ flex: 1 }}>
               <div className="serif" style={{ fontSize: 21, fontWeight: 800, color: C.text }}>El Bazar del Páramo</div>
               <div style={{ fontSize: 10.5, color: C.textMuted, fontWeight: 700, letterSpacing: 0.5 }}>Tesoros, poderes y cofres del más allá</div>
