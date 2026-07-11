@@ -399,6 +399,13 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes modeExpand { 0%{transform:scale(0.4);opacity:0.4;border-radius:24px;} 100%{transform:scale(1);opacity:1;border-radius:0px;} }
 @keyframes iconFloatWiggle { 0%,100%{transform:translateY(0) rotate(0deg);} 30%{transform:translateY(-3px) rotate(-4deg);} 65%{transform:translateY(1px) rotate(3deg);} }
 
+/* ── RULETA CASINO: palanca y rueda del saber ── */
+@keyframes leverPull { 0%{transform:translateY(0);} 30%{transform:translateY(58px);} 58%{transform:translateY(58px);} 100%{transform:translateY(0);} }
+@keyframes leverHint { 0%,88%,100%{transform:translateY(0);} 92%{transform:translateY(7px);} 96%{transform:translateY(2px);} }
+@keyframes wedgeReveal { 0%{opacity:0.85;} 100%{opacity:0;} }
+@keyframes potShake { 0%,100%{transform:translateX(0) scale(1);} 25%{transform:translateX(-3px) scale(1.04);} 50%{transform:translateX(3px) scale(1.04);} 75%{transform:translateX(-2px) scale(1.02);} }
+@keyframes escaleraGlow { 0%,100%{box-shadow:0 0 6px rgba(212,175,55,0.4);} 50%{box-shadow:0 0 16px rgba(212,175,55,0.9);} }
+
 /* ── ICFES TAB v3: carrusel de modos y ruleta Doble o Nada ── */
 .modos-carousel { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; gap:12px; scrollbar-width:none; padding:4px 2px 8px; }
 .modos-carousel::-webkit-scrollbar { display:none; }
@@ -5714,57 +5721,70 @@ function ModoSupervivencia({ C, appState, onTerminar, onOtra, onClose, onRevive 
 //  LA RULETA — la suerte decide, tú arriesgas
 // ─────────────────────────────────────────────
 function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
+  const ORO = '#D4AF37';
   const VIOLETA = '#8B5CF6';
-  const RONDAS = 5;
-  const BASE = 25;              // empanadas base por pregunta correcta
-  const DECISION_MS = 10000;    // 10s para decidir: cobrar o apostar
+  const MULTS = [1, 2, 4, 8, 16, 32];
+  const BASE = 25;                       // empanadas de la primera ronda (x1)
+  const mats = Object.keys(SUBJECT_META); // 5 cuñas de 72°: las 5 materias y ya
+  const conic = `conic-gradient(from -36deg, ${mats.map((s, i) => `${SUBJECT_META[s].color} ${i * 72}deg ${(i + 1) * 72}deg`).join(', ')})`;
 
-  // 6 cuñas iguales de 60°: dos x2, un x3, un x1.5 y dos PIERDE
-  const WEDGES = [
-    { t: 'x2',     v: 2,   color: '#FBBF24', label: 'x2' },
-    { t: 'pierde', v: 0,   color: '#EF4444', label: 'PIERDE' },
-    { t: 'x2',     v: 2,   color: '#FBBF24', label: 'x2' },
-    { t: 'x15',    v: 1.5, color: '#22C55E', label: 'x1.5' },
-    { t: 'pierde', v: 0,   color: '#EF4444', label: 'PIERDE' },
-    { t: 'x3',     v: 3,   color: '#F97316', label: 'x3' },
-  ];
-  const conic = `conic-gradient(${WEDGES.map((w, i) => `${w.color} ${i * 60}deg ${(i + 1) * 60}deg`).join(', ')})`;
-
-  const ai = useAIQuestions({ count: 6, compact: true, dificultad: 'Alta' });
-  const [fase, setFase] = useState('inicio');  // inicio | pregunta | decision | giro | fin
-  const [ronda, setRonda] = useState(0);
-  const [total, setTotal] = useState(0);       // empanadas en juego (acumuladas en la sesión)
+  const ai = useAIQuestions({ count: 7, compact: true, dificultad: 'Alta' });
+  const [fase, setFase] = useState('palanca');   // palanca | girando | pregunta | decision | fin
+  const [nivel, setNivel] = useState(0);         // índice en MULTS del multiplicador EN JUEGO
+  const [deg, setDeg] = useState(0);
+  const [materia, setMateria] = useState(null);  // materia elegida por la rueda
   const [q, setQ] = useState(null);
   const [sel, setSel] = useState(null);
   const [reveal, setReveal] = useState(false);
-  const [decPct, setDecPct] = useState(100);   // % restante de la barra de decisión
-  const [deg, setDeg] = useState(0);
-  const [girando, setGirando] = useState(false);
-  const [resGiro, setResGiro] = useState(null); // cuña donde cayó
-  const [winKey, setWinKey] = useState(0);      // partículas doradas
-  const [loseKey, setLoseKey] = useState(0);    // shake + flash rojo
+  const [palancaKey, setPalancaKey] = useState(0);  // dispara la animación de la palanca
+  const [flashWedge, setFlashWedge] = useState(null); // flash del color ganador
+  const [fin, setFin] = useState(null);          // { emp, mult, perdio }
   const [esRecord, setEsRecord] = useState(false);
-  const totalRef = useRef(0);
-  const rondaRef = useRef(0);
-  const logRef = useRef([]);                    // resumen: { icono, color, texto, delta }
+  const nivelRef = useRef(0);
   const paresRef = useRef([]);
   const finRef = useRef(false);
-  const decTimerRef = useRef(null);
+  const girandoRef = useRef(false);
   const tickTimers = useRef([]);
 
-  useEffect(() => () => { clearInterval(decTimerRef.current); tickTimers.current.forEach(clearTimeout); }, []);
+  useEffect(() => () => tickTimers.current.forEach(clearTimeout), []);
 
-  const siguienteRonda = () => {
-    clearInterval(decTimerRef.current);
-    if (rondaRef.current >= RONDAS) { finalizar(); return; }
-    setQ(ai.next()); setSel(null); setReveal(false);
-    setFase('pregunta');
+  const potActual = BASE * MULTS[nivel];          // lo que ganas si aciertas ESTA pregunta
+  const potAcumulado = nivel > 0 ? BASE * MULTS[nivel - 1] : 0; // lo que ya tienes en la mesa
+
+  // Ticks de casino que arrancan rápido y se van frenando con la rueda
+  const sonarTicks = () => {
+    tickTimers.current.forEach(clearTimeout); tickTimers.current = [];
+    let t = 0, gap = 65;
+    for (let k = 0; k < 26; k++) {
+      t += gap; gap = Math.min(gap * 1.16, 420);
+      tickTimers.current.push(setTimeout(() => FX.play('tick'), t));
+    }
   };
 
-  const empezar = () => {
-    FX.play('duelStart'); FX.vibrate('medium');
-    rondaRef.current = 0; setRonda(0);
-    siguienteRonda();
+  // ¡LA PALANCA! Se tira como en los casinos y la rueda arranca
+  const tirarPalanca = () => {
+    if (fase !== 'palanca' || girandoRef.current) return;
+    girandoRef.current = true;
+    setPalancaKey(Date.now());
+    FX.play('duelStart'); FX.vibrate('heavy');
+    setTimeout(() => {
+      setFase('girando');
+      sonarTicks();
+      const i = Math.floor(Math.random() * 5);
+      const land = 360 - (i * 72 + 36);
+      setDeg(d => d - (d % 360) + 1800 + land);
+      setTimeout(() => {
+        const s = mats[i];
+        setMateria(s);
+        setFlashWedge({ color: SUBJECT_META[s].color, key: Date.now() });
+        FX.play('conjure'); FX.vibrate('medium');
+        setTimeout(() => {
+          setQ(ai.next(s)); setSel(null); setReveal(false);
+          setFase('pregunta');
+          girandoRef.current = false;
+        }, 1100);
+      }, 3600);
+    }, 420);
   };
 
   const responder = (i) => {
@@ -5775,354 +5795,339 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
     if (ok) {
       FX.play('coin'); FX.vibrate('success');
       setTimeout(() => {
-        // FASE 2: LA DECISIÓN (10 segundos o cobra automático)
-        setDecPct(100);
-        setFase('decision');
-        FX.play('duel');
-        const t0 = Date.now();
-        clearInterval(decTimerRef.current);
-        decTimerRef.current = setInterval(() => {
-          const restante = Math.max(0, 100 - ((Date.now() - t0) / DECISION_MS) * 100);
-          setDecPct(restante);
-          if (restante <= 0) { clearInterval(decTimerRef.current); cobrar(true); }
-        }, 100);
-      }, 1000);
+        if (nivelRef.current >= MULTS.length - 1) cobrar(); // x32: tope, cobra automático
+        else setFase('decision');
+      }, 1100);
     } else {
-      FX.play('error'); FX.vibrate('error');
-      logRef.current.push({ icono: 'x', color: '#EF4444', texto: `Ronda ${rondaRef.current + 1}: Incorrecto`, delta: 'Sin apuesta' });
+      // Falló: pierde TODO lo acumulado
+      FX.play('error'); FX.vibrate('heavy');
       setTimeout(() => {
-        rondaRef.current += 1; setRonda(rondaRef.current);
-        siguienteRonda();
-      }, 1400);
+        FX.play('glass');
+        terminar({ emp: 0, mult: MULTS[nivelRef.current], perdio: true });
+      }, 1000);
     }
   };
 
-  const cobrar = (auto = false) => {
-    clearInterval(decTimerRef.current);
-    totalRef.current += BASE; setTotal(totalRef.current);
-    logRef.current.push({ icono: 'check', color: '#22C55E',
-      texto: `Ronda ${rondaRef.current + 1}: Correcto · ${auto ? 'Cobró (auto)' : 'Cobró'}`, delta: `+${BASE}` });
-    FX.play('coin'); FX.vibrate('light');
-    rondaRef.current += 1; setRonda(rondaRef.current);
-    siguienteRonda();
+  const cobrar = () => {
+    const m = MULTS[nivelRef.current];
+    terminar({ emp: BASE * m, mult: m, perdio: false });
   };
 
   const apostar = () => {
-    clearInterval(decTimerRef.current);
-    setResGiro(null); setGirando(false);
-    setFase('giro');
-    FX.play('conjure');
+    nivelRef.current += 1;
+    setNivel(nivelRef.current);
+    setMateria(null);
+    setFase('palanca');
+    FX.play('duel'); FX.vibrate('medium');
   };
 
-  // Ticks que arrancan rápido y se frenan con la ruleta
-  const sonarTicks = () => {
-    tickTimers.current.forEach(clearTimeout); tickTimers.current = [];
-    let t = 0, gap = 70;
-    for (let k = 0; k < 24; k++) {
-      t += gap; gap = Math.min(gap * 1.17, 400);
-      tickTimers.current.push(setTimeout(() => FX.play('tick'), t));
-    }
-  };
-
-  const girar = () => {
-    if (girando) return;
-    setGirando(true);
-    FX.play('duelStart'); FX.vibrate('medium');
-    sonarTicks();
-    const target = Math.random() * 360;
-    const vueltas = 1440 + Math.round(target);
-    setDeg(d => d - (d % 360) + vueltas);
-    setTimeout(() => {
-      const land = (360 - (vueltas % 360)) % 360;
-      const w = WEDGES[Math.floor(land / 60) % 6];
-      setResGiro(w);
-      if (w.t === 'pierde') {
-        // Pierde lo ganado esta ronda (los +25 no entran)
-        setLoseKey(Date.now());
-        FX.play('glass'); FX.vibrate('heavy');
-        logRef.current.push({ icono: 'x', color: '#EF4444', texto: `Ronda ${rondaRef.current + 1}: Giró → PIERDE`, delta: `-${BASE}` });
-      } else {
-        const ganancia = Math.round(BASE * w.v);
-        totalRef.current += ganancia; setTotal(totalRef.current);
-        setWinKey(Date.now());
-        FX.play('levelUp'); FX.vibrate('success');
-        logRef.current.push({ icono: 'star', color: w.color, texto: `Ronda ${rondaRef.current + 1}: Giró → ${w.label}`, delta: `+${ganancia}` });
-      }
-      setTimeout(() => {
-        rondaRef.current += 1; setRonda(rondaRef.current);
-        setGirando(false);
-        siguienteRonda();
-      }, 2100);
-    }, 3300);
-  };
-
-  const finalizar = () => {
+  const terminar = ({ emp, mult, perdio }) => {
     if (finRef.current) return; finRef.current = true;
-    clearInterval(decTimerRef.current);
     const aciertos = paresRef.current.filter(p => p.ok).length;
-    const rec = totalRef.current > (appState.ruletaMaxMult || 0);
+    const rec = !perdio && mult > (appState.ruletaMaxMult || 0);
     setEsRecord(rec);
+    setFin({ emp, mult, perdio });
     setFase('fin');
-    if (totalRef.current > 0) { FX.play('levelUp'); FX.vibrate('heavy'); }
-    onTerminar({ tipo: 'ruleta', valor: totalRef.current, pares: paresRef.current, emp: totalRef.current, xp: aciertos * 10 });
+    if (!perdio && emp > 0) { FX.play('levelUp'); FX.vibrate('heavy'); }
+    onTerminar({ tipo: 'ruleta', valor: perdio ? 0 : mult, pares: paresRef.current, emp, xp: aciertos * 10 });
   };
 
-  const totalContado = useCountUp(fase === 'fin' ? total : 0, 1300);
-
-  // La rueda (compartida entre inicio y giro)
-  const Rueda = ({ size = 260, quieta = false }) => (
-    <div style={{ position: 'relative', width: size, height: size }}>
-      <div style={{ position: 'absolute', inset: 0, borderRadius: '50%',
-        border: `5px solid ${VIOLETA}`, boxShadow: `0 0 38px ${VIOLETA}55, inset 0 0 24px rgba(0,0,0,0.45)`,
-        background: conic,
-        transform: `rotate(${quieta ? 0 : deg}deg)`,
-        transition: girando ? 'transform 3.3s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
-        {WEDGES.map((w, i) => (
-          <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 52, marginLeft: -26,
-            textAlign: 'center', fontSize: w.t === 'pierde' ? 8.5 : 12, fontWeight: 900,
-            color: w.t === 'pierde' ? '#FEE2E2' : '#0F0A04',
-            transform: `rotate(${i * 60 + 30}deg) translateY(-${size * 0.37}px)` }}>
-            {w.label}
-          </div>
-        ))}
-      </div>
-      {/* Centro: la rana contra-rota */}
-      <div style={{ position: 'absolute', top: '50%', left: '50%', width: 64, height: 64, marginTop: -32, marginLeft: -32,
-        borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #2A1548, #140A24)',
-        border: `3px solid ${VIOLETA}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
-        <div style={{ animation: girando ? 'inkSpinRev 3.3s cubic-bezier(0.12,0.72,0.08,1)' : 'none' }}>
-          <PkIc n="rana" s={30} c="#C084FC"/>
-        </div>
-      </div>
-    </div>
-  );
+  const metaQ = q ? (SUBJECT_META[q.subject] || {}) : {};
+  const finContado = useCountUp(fase === 'fin' && fin ? fin.emp : 0, 1200);
+  const siguienteMult = MULTS[Math.min(nivel + 1, MULTS.length - 1)];
 
   return (
     <Portal>
-    <div key={loseKey || 'rl'} style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-      background: 'linear-gradient(180deg, #0A0514 0%, #140A24 50%, #0A0514 100%)', display: 'flex', flexDirection: 'column',
-      animation: loseKey ? 'screenShakeX 0.4s ease both' : 'none' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+      background: 'linear-gradient(180deg, #120B04 0%, #241505 45%, #0F0A03 100%)', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Flash rojo al perder el giro */}
-      {loseKey > 0 && (
-        <div key={`lf${loseKey}`} style={{ position: 'fixed', inset: 0, background: '#DC2626', pointerEvents: 'none',
-          zIndex: 4, animation: 'redFlashBg 0.35s ease-out both' }}/>
+      {/* Flash del color de la cuña ganadora */}
+      {flashWedge && (
+        <div key={flashWedge.key} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 4,
+          background: `radial-gradient(circle at 50% 38%, ${flashWedge.color}66, transparent 65%)`,
+          animation: 'wedgeReveal 1.2s ease-out both' }}/>
       )}
 
       <div style={{ maxWidth: 430, margin: '0 auto', padding: '20px 20px 34px', width: '100%', minHeight: '100%',
         display: 'flex', flexDirection: 'column' }}>
 
         {!ai.ready && fase !== 'fin' ? (
-          <ModoCargando color={VIOLETA} titulo="RULETA · DOBLE O NADA"/>
+          <ModoCargando color={ORO} titulo="LA RULETA DEL SABER"/>
         ) : (
         <>
-        {/* Banner de contexto */}
-        {(fase === 'pregunta' || fase === 'decision' || fase === 'giro') && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14,
-            padding: '10px 15px', borderRadius: 14, background: 'rgba(139,92,246,0.10)', border: `1px solid ${VIOLETA}35` }}>
-            <span style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: 1.5, color: VIOLETA }}>
-              RONDA {Math.min(ronda + 1, RONDAS)}/{RONDAS}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13.5, fontWeight: 900, color: '#E8B84B' }}>
-              En juego: {total} <PkIc n="empanada" s={13} c="#E8B84B"/>
-            </span>
+        {/* ── Header: título + pote en juego ── */}
+        {fase !== 'fin' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: ORO }}>LA RULETA DEL SABER</div>
+              <div style={{ fontSize: 10.5, color: 'rgba(245,242,235,0.5)', marginTop: 2 }}>
+                {nivel === 0 ? 'Tira la palanca y que el páramo decida' : `Apostaste x${MULTS[nivel]} · sin miedo, parce`}
+              </div>
+            </div>
+            <div key={nivel} style={{ textAlign: 'right', animation: nivel > 0 ? 'potShake 0.5s ease both' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                <PkIc n="empanada" s={16} c="#E8B84B"/>
+                <span style={{ fontSize: 27, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
+                  textShadow: '0 0 18px rgba(232,184,75,0.55)' }}>{potActual}</span>
+              </div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(245,242,235,0.45)' }}>
+                EN JUEGO · x{MULTS[nivel]}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* ══ INICIO DE SESIÓN ══ */}
-        {fase === 'inicio' && (
+        {/* ── Escalera de multiplicadores x1 → x32 ── */}
+        {fase !== 'fin' && (
+          <div style={{ display: 'flex', gap: 5, marginBottom: 16 }}>
+            {MULTS.map((m, i) => (
+              <div key={m} style={{ flex: 1, textAlign: 'center', padding: '5px 0', borderRadius: 8,
+                fontSize: 10.5, fontWeight: 900,
+                background: i === nivel ? 'rgba(212,175,55,0.24)' : i < nivel ? 'rgba(212,175,55,0.10)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${i === nivel ? ORO : i < nivel ? 'rgba(212,175,55,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                color: i <= nivel ? ORO : 'rgba(245,242,235,0.35)',
+                animation: i === nivel && nivel >= 3 ? 'escaleraGlow 1.2s ease-in-out infinite' : 'none' }}>
+                x{m}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ══ LA RUEDA + LA PALANCA ══ */}
+        {(fase === 'palanca' || fase === 'girando') && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 3, color: VIOLETA, marginBottom: 18 }}>
-              RULETA · DOBLE O NADA
-            </div>
-            <Rueda quieta/>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 20 }}>
-              <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.5, color: 'rgba(245,242,235,0.5)' }}>EMPANADAS EN JUEGO:</span>
-              <span style={{ fontSize: 18, fontWeight: 900, color: '#E8B84B' }}>0</span>
-            </div>
-            <div style={{ fontSize: 12.5, color: 'rgba(245,242,235,0.6)', marginTop: 8, textAlign: 'center', lineHeight: 1.6 }}>
-              Responde bien · Acumula · Decide si arriesgas
-            </div>
-            <button onClick={empezar} style={{
-              marginTop: 24, width: '100%', maxWidth: 300, padding: '16px', borderRadius: 16, border: 'none',
-              background: `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`, color: '#fff', fontSize: 15, fontWeight: 900,
-              cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 8px 26px ${VIOLETA}44`,
-              animation: 'ctaPulse 3.5s ease-in-out infinite 1s' }}>
-              Comenzar sesión (5 rondas)
-            </button>
-          </div>
-        )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
 
-        {/* ══ FASE 1: LA PREGUNTA ══ */}
-        {fase === 'pregunta' && q && (
-          <PreguntaRapida C={C} q={q} sel={sel} reveal={reveal} onPick={responder}/>
-        )}
-
-        {/* ══ FASE 2: LA DECISIÓN ══ */}
-        {fase === 'decision' && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 6, background: 'rgba(0,0,0,0.85)',
-            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-            display: 'flex', flexDirection: 'column', animation: 'decisionIn 0.35s ease both' }}>
-            <div style={{ maxWidth: 430, margin: '0 auto', width: '100%', flex: 1, display: 'flex', flexDirection: 'column', padding: '30px 22px' }}>
-
-              {/* MITAD SUPERIOR — COBRAR */}
-              <button onClick={() => cobrar(false)} style={{
-                flex: 1, border: 'none', borderRadius: '22px 22px 0 0', cursor: 'pointer', fontFamily: 'inherit',
-                background: 'linear-gradient(180deg, rgba(34,197,94,0.15), transparent)',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <PkIc n="empanada" s={18} c="#22C55E"/>
-                  <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: 2, color: '#22C55E' }}>COBRAR SEGURO</span>
+              {/* La rueda con marco de Tumbaga */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                {/* Puntero */}
+                <div style={{ position: 'absolute', top: -8, left: '50%', marginLeft: -13, zIndex: 3,
+                  width: 0, height: 0, borderLeft: '13px solid transparent', borderRight: '13px solid transparent',
+                  borderTop: `20px solid ${ORO}`, filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.6))',
+                  animation: fase === 'girando' ? 'indicatorBlink 0.5s ease-in-out infinite' : 'none' }}/>
+                {/* Greca vueltiao girando alrededor (marca colombiana) */}
+                <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', pointerEvents: 'none',
+                  border: '2px dashed rgba(212,175,55,0.45)', animation: 'fireRingSpinRev 22s linear infinite' }}/>
+                <div style={{ position: 'relative', width: 258, height: 258 }}>
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%',
+                    border: `6px solid ${ORO}`,
+                    boxShadow: `0 0 40px rgba(212,175,55,0.4), inset 0 0 26px rgba(0,0,0,0.5), 0 14px 40px rgba(0,0,0,0.55)`,
+                    background: conic,
+                    transform: `rotate(${deg}deg)`,
+                    transition: fase === 'girando' ? 'transform 3.5s cubic-bezier(0.13,0.73,0.09,1)' : 'none' }}>
+                    {mats.map((s, i) => (
+                      <div key={s} style={{ position: 'absolute', top: '50%', left: '50%', width: 44, marginLeft: -22,
+                        textAlign: 'center', fontSize: 14, fontWeight: 900, color: '#0F0A04',
+                        textShadow: '0 1px 0 rgba(255,255,255,0.25)',
+                        transform: `rotate(${i * 72}deg) translateY(-96px)` }}>
+                        {SUBJECT_META[s].short}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Medallón central: rana sobre Tumbaga */}
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', width: 74, height: 74, marginTop: -37, marginLeft: -37,
+                    borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #3A2A08, #1A1206)',
+                    border: `3.5px solid ${ORO}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15)' }}>
+                    <div style={{ animation: fase === 'girando' ? 'inkSpinRev 3.5s cubic-bezier(0.13,0.73,0.09,1)' : 'none' }}>
+                      <PkIc n="rana" s={34} c={ORO}/>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: 'rgba(245,242,235,0.75)' }}>+{BASE} empanadas garantizadas</div>
-                <div style={{ marginTop: 8, padding: '11px 26px', borderRadius: 13,
-                  background: 'linear-gradient(135deg, #22C55E, #15803D)', color: '#fff',
-                  fontSize: 13.5, fontWeight: 900, boxShadow: '0 6px 18px rgba(34,197,94,0.35)' }}>
-                  Cobrar y seguir →
-                </div>
-              </button>
-
-              {/* Timer de decisión: barra que se vacía de izquierda a derecha */}
-              <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.14)' }}/>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: C.textMuted }}>— O —</span>
-                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.14)' }}/>
-                </div>
-                <div style={{ width: '100%', height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${decPct}%`, borderRadius: 99,
-                    background: decPct > 40 ? 'linear-gradient(90deg, #22C55E, #4ADE80)' : 'linear-gradient(90deg, #EF4444, #F97316)',
-                    transition: 'width 0.1s linear' }}/>
-                </div>
-                <span style={{ fontSize: 9.5, fontWeight: 700, color: C.textMuted }}>
-                  {Math.ceil((decPct / 100) * 10)}s para decidir · si no, cobras automático
-                </span>
               </div>
 
-              {/* MITAD INFERIOR — APOSTAR */}
-              <button onClick={apostar} style={{
-                flex: 1, border: 'none', borderRadius: '0 0 22px 22px', cursor: 'pointer', fontFamily: 'inherit',
-                background: 'linear-gradient(180deg, transparent, rgba(139,92,246,0.15))',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%',
-                    background: conic, animation: 'raysSpin 6s linear infinite' }}/>
-                  <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: 2, color: VIOLETA }}>APOSTAR AL DOBLE</span>
+              {/* ¡LA PALANCA DE CASINO! */}
+              <button onClick={tirarPalanca} disabled={fase !== 'palanca'} style={{
+                background: 'none', border: 'none', cursor: fase === 'palanca' ? 'pointer' : 'default',
+                fontFamily: 'inherit', padding: '0 2px', WebkitTapHighlightColor: 'transparent',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div style={{ position: 'relative', width: 42, height: 158 }}>
+                  {/* Base metálica */}
+                  <div style={{ position: 'absolute', bottom: 0, left: '50%', marginLeft: -17, width: 34, height: 24,
+                    borderRadius: '8px 8px 5px 5px',
+                    background: 'linear-gradient(180deg, #4A3A18, #241A08)',
+                    border: `1.5px solid ${ORO}66`, boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.12), 0 4px 10px rgba(0,0,0,0.5)' }}/>
+                  {/* Riel */}
+                  <div style={{ position: 'absolute', top: 8, bottom: 20, left: '50%', marginLeft: -4, width: 8,
+                    borderRadius: 99, background: 'linear-gradient(180deg, #6B5518, #33270C)',
+                    border: '1px solid rgba(212,175,55,0.4)', boxShadow: 'inset 0 0 4px rgba(0,0,0,0.6)' }}/>
+                  {/* Brazo + bola: baja y regresa al tirar */}
+                  <div key={palancaKey || 'lv'} style={{ position: 'absolute', top: 0, left: '50%', marginLeft: -14,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    animation: palancaKey ? 'leverPull 0.9s cubic-bezier(0.34,1.2,0.5,1) both'
+                      : fase === 'palanca' ? 'leverHint 3.5s ease-in-out infinite' : 'none' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%',
+                      background: 'radial-gradient(circle at 34% 28%, #FF8A80, #DC2626 55%, #7F1D1D)',
+                      border: `2px solid ${ORO}`, boxShadow: '0 0 14px rgba(220,38,38,0.6), inset 0 2px 3px rgba(255,255,255,0.35)' }}/>
+                    <div style={{ width: 6, height: 52, borderRadius: 99,
+                      background: 'linear-gradient(180deg, #E8CB7A, #8A6410)', marginTop: -2 }}/>
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: 'rgba(245,242,235,0.7)', lineHeight: 1.6, textAlign: 'center' }}>
-                  Si sale <b style={{ color: '#FBBF24' }}>x2</b>: +{BASE * 2} · si sale <b style={{ color: '#F97316' }}>x3</b>: +{BASE * 3}<br/>
-                  Si sale <b style={{ color: '#EF4444' }}>PIERDE</b>: −{BASE}
-                </div>
-                <div style={{ marginTop: 8, padding: '11px 26px', borderRadius: 13, position: 'relative', overflow: 'hidden',
-                  background: `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`, color: '#fff',
-                  fontSize: 13.5, fontWeight: 900, boxShadow: `0 6px 18px ${VIOLETA}44` }}>
-                  <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 40, pointerEvents: 'none',
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                    animation: 'shimmerSlide 2.2s ease-in-out infinite' }}/>
-                  Girar la Ruleta ↻
-                </div>
+                <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: 1.2, whiteSpace: 'nowrap',
+                  color: fase === 'palanca' ? ORO : 'rgba(245,242,235,0.35)',
+                  animation: fase === 'palanca' ? 'presenceBlink 2s ease-in-out infinite' : 'none' }}>
+                  {fase === 'palanca' ? '¡TIRA!' : '…'}
+                </span>
               </button>
+            </div>
+
+            {/* Estado bajo la rueda */}
+            <div style={{ marginTop: 18, textAlign: 'center', minHeight: 44 }}>
+              {fase === 'girando' ? (
+                <div className="fi" style={{ fontSize: 13.5, fontWeight: 800, color: 'rgba(245,242,235,0.7)' }}>
+                  La rueda decide tu materia…
+                </div>
+              ) : nivel === 0 ? (
+                <div style={{ fontSize: 12.5, color: 'rgba(245,242,235,0.55)', lineHeight: 1.6, maxWidth: 300 }}>
+                  Tira la palanca. La rueda elige la materia, tú respondes.
+                  Acierta y decide: <b style={{ color: '#22C55E' }}>cobrar</b> o <b style={{ color: ORO }}>apostar al doble</b>.
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, fontWeight: 800, color: ORO }}>
+                  Vas por {potActual} empanadas. Si fallas, pierdes {potAcumulado}. ¡Sin miedo!
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* ══ FASE 3: EL GIRO ══ */}
-        {fase === 'giro' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            {/* Indicador: parpadea cuando frena */}
-            <div style={{ width: 0, height: 0, borderLeft: '13px solid transparent', borderRight: '13px solid transparent',
-              borderTop: '20px solid #fff', marginBottom: -6, zIndex: 2,
-              filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.5))',
-              animation: resGiro ? 'indBlink3 0.9s ease both' : 'none' }}/>
-            <Rueda size={280}/>
+        {/* ══ LA PREGUNTA ══ */}
+        {fase === 'pregunta' && q && (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <span style={{ display: 'inline-block', padding: '5px 16px', borderRadius: 99,
+                background: `${metaQ.color}22`, border: `1.5px solid ${metaQ.color}`,
+                fontSize: 12, fontWeight: 900, color: metaQ.color,
+                animation: 'popIn 0.4s ease both' }}>
+                La rueda eligió: {q.subject} · por {potActual} emp
+              </span>
+            </div>
+            <PreguntaRapida C={C} q={q} sel={sel} reveal={reveal} onPick={responder}/>
+          </>
+        )}
 
-            {/* Partículas doradas al ganar (máx 10) */}
-            {winKey > 0 && resGiro && resGiro.t !== 'pierde' && (
-              <div key={winKey} style={{ position: 'absolute', top: '46%', left: '50%', pointerEvents: 'none' }}>
+        {/* ══ LA DECISIÓN: cobrar o apostar al doble ══ */}
+        {fase === 'decision' && (
+          <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 2.5, color: '#7EE2AE', marginBottom: 8 }}>¡CORRECTO, PARCE!</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+              <span style={{ fontSize: 52, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
+                textShadow: '0 0 30px rgba(232,184,75,0.55)' }}>{potActual}</span>
+              <PkIc n="empanada" s={22} c="#E8B84B"/>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(245,242,235,0.65)', marginTop: 6, marginBottom: 22 }}>
+              empanadas ganadas en esta ronda
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11, width: '100%', maxWidth: 320 }}>
+              {/* COBRAR Y RETIRARSE */}
+              <button onClick={cobrar} style={{ padding: '16px', borderRadius: 16, border: 'none',
+                background: 'linear-gradient(135deg, #22C55E, #15803D)', color: '#fff', fontSize: 14.5, fontWeight: 900,
+                cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(34,197,94,0.35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <PkIc n="empanada" s={16} c="#fff"/> Cobrar {potActual} y retirarse
+              </button>
+              {/* APOSTAR AL DOBLE */}
+              <button onClick={apostar} style={{ padding: '16px', borderRadius: 16, border: 'none',
+                position: 'relative', overflow: 'hidden',
+                background: `linear-gradient(135deg, ${ORO}, #8A6410)`, color: '#1A1206', fontSize: 14.5, fontWeight: 900,
+                cursor: 'pointer', fontFamily: 'inherit',
+                animation: siguienteMult >= 8 ? 'riskBlink 0.9s ease-in-out infinite' : 'none',
+                boxShadow: '0 6px 20px rgba(212,175,55,0.4)' }}>
+                <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 46, pointerEvents: 'none',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                  animation: 'shimmerSlide 2.2s ease-in-out infinite' }}/>
+                Apostar x{siguienteMult} → {BASE * siguienteMult} emp
+              </button>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 800, marginTop: 14,
+              color: siguienteMult >= 8 ? '#EF4444' : 'rgba(245,242,235,0.45)',
+              animation: siguienteMult >= 8 ? 'presenceBlink 1.4s ease-in-out infinite' : 'none' }}>
+              {siguienteMult >= 8 ? `Pille bien: si falla, pierde las ${potActual} de una` : 'Si fallas la siguiente, pierdes todo lo acumulado'}
+            </div>
+          </div>
+        )}
+
+        {/* ══ FIN: cobró o lo perdió todo ══ */}
+        {fase === 'fin' && fin && (
+          <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', position: 'relative' }}>
+            {/* Lluvia de empanadas perdidas */}
+            {fin.perdio && (
+              <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 4, overflow: 'hidden' }}>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <div key={i} style={{ position: 'absolute', top: 0, left: `${6 + (i * 8) % 88}%`,
+                    '--er': `${(i % 2 ? 1 : -1) * (200 + i * 30)}deg`,
+                    animation: `empanadaRain ${1.6 + (i % 5) * 0.35}s ease-in ${i * 0.1}s both` }}>
+                    <PkIc n="empanada" s={16 + (i % 3) * 5} c="#E8B84B"/>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Chispas doradas al cobrar */}
+            {!fin.perdio && fin.emp > 0 && (
+              <div style={{ position: 'absolute', top: '32%', left: '50%', pointerEvents: 'none' }}>
                 {Array.from({ length: 10 }, (_, i) => (
                   <div key={i} style={{ position: 'absolute', width: 6, height: 6, borderRadius: '50%',
                     background: '#FFD75E', boxShadow: '0 0 8px #FBBF24',
-                    '--gx': `${Math.round(Math.cos((i / 10) * Math.PI * 2) * 90)}px`,
-                    '--gy': `${Math.round(Math.sin((i / 10) * Math.PI * 2) * 80)}px`,
-                    animation: `goldBurst 1s ease-out ${i * 0.04}s both` }}/>
+                    '--gx': `${Math.round(Math.cos((i / 10) * Math.PI * 2) * 95)}px`,
+                    '--gy': `${Math.round(Math.sin((i / 10) * Math.PI * 2) * 85)}px`,
+                    animation: `goldBurst 1.1s ease-out ${i * 0.05}s both` }}/>
                 ))}
               </div>
             )}
 
-            {/* Resultado del giro */}
-            {resGiro ? (
-              <div className="fi" style={{ marginTop: 22, textAlign: 'center', animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-                <div style={{ fontSize: 30, fontWeight: 900, color: resGiro.color,
-                  textShadow: `0 0 30px ${resGiro.color}88` }}>
-                  {resGiro.t === 'pierde' ? '¡PERDISTE LA RONDA!' : `¡${resGiro.label}!`}
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'rgba(245,242,235,0.75)', marginTop: 6 }}>
-                  {resGiro.t === 'pierde' ? `Los +${BASE} se esfumaron` : `+${Math.round(BASE * resGiro.v)} empanadas`}
-                </div>
-              </div>
-            ) : (
-              <button onClick={girar} disabled={girando} style={{
-                marginTop: 24, width: '100%', maxWidth: 300, padding: '16px', borderRadius: 16, border: 'none',
-                background: girando ? 'rgba(139,92,246,0.3)' : `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`,
-                color: '#fff', fontSize: 15, fontWeight: 900, cursor: girando ? 'default' : 'pointer',
-                fontFamily: 'inherit', boxShadow: `0 8px 26px ${VIOLETA}44` }}>
-                {girando ? 'El destino gira…' : '¡GIRAR!'}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ══ FIN DE SESIÓN ══ */}
-        {fase === 'fin' && (
-          <div className="fi" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-            {esRecord && total > 0 && (
+            {esRecord && !fin.perdio && (
               <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color: '#FFD75E', marginBottom: 10,
                 animation: 'comboPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-                ¡TU MEJOR SESIÓN!
+                ¡NUEVO RÉCORD DE MULTIPLICADOR!
               </div>
             )}
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 2, color: `${VIOLETA}CC`, marginBottom: 6 }}>
-              SESIÓN DE RULETA COMPLETADA
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 2, color: `${ORO}CC`, marginBottom: 6 }}>
+              LA RULETA DEL SABER
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 60, fontWeight: 900, color: total > 0 ? '#E8B84B' : '#EF4444', lineHeight: 1,
-                textShadow: total > 0 ? '0 0 34px rgba(232,184,75,0.5)' : 'none', fontVariantNumeric: 'tabular-nums',
-                animation: 'popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>+{totalContado}</span>
-              <PkIc n="empanada" s={24} c="#E8B84B"/>
-            </div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'rgba(245,242,235,0.6)', marginTop: 6 }}>
-              +{paresRef.current.filter(p => p.ok).length * 10} XP
-            </div>
-
-            {/* Resumen de las 5 rondas */}
-            <div style={{ width: '100%', maxWidth: 320, margin: '18px 0 4px', textAlign: 'left' }}>
-              {logRef.current.map((r, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px',
-                  borderRadius: 10, background: 'rgba(255,255,255,0.04)', marginBottom: 5,
-                  animation: `slideUpIn 0.4s ease ${i * 0.08}s both` }}>
-                  <PkIc n={r.icono} s={14} c={r.color}/>
-                  <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#F5F2EB' }}>{r.texto}</span>
-                  <span style={{ fontSize: 12, fontWeight: 900, color: r.color }}>{r.delta}</span>
+            {fin.perdio ? (
+              <>
+                <div style={{ fontSize: 34, fontWeight: 900, color: '#EF4444', lineHeight: 1.15,
+                  textShadow: '0 0 34px rgba(239,68,68,0.6)', animation: 'popIn 0.6s ease both', maxWidth: 300 }}>
+                  EL PÁRAMO TE LO QUITÓ TODO
                 </div>
-              ))}
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(245,242,235,0.65)', marginTop: 10 }}>
+                  Caíste apostando x{fin.mult}. Así es el juego, parce.
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 62, fontWeight: 900, color: '#E8B84B', lineHeight: 1,
+                    textShadow: '0 0 34px rgba(232,184,75,0.55)', fontVariantNumeric: 'tabular-nums',
+                    animation: 'popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both' }}>+{finContado}</span>
+                  <PkIc n="empanada" s={26} c="#E8B84B"/>
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: ORO, marginTop: 8 }}>
+                  Te retiraste en x{fin.mult}{fin.mult === 32 ? ' · ¡LA CIMA!' : ''}
+                </div>
+              </>
+            )}
+            <div style={{ fontSize: 12, color: 'rgba(245,242,235,0.5)', marginTop: 8 }}>
+              Tu mejor multiplicador: x{Math.max(fin.perdio ? 0 : fin.mult, appState.ruletaMaxMult || 0)}
             </div>
 
-            <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 320, marginTop: 14 }}>
+            <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 320, marginTop: 22 }}>
               <button onClick={onOtra} style={{ flex: 1.3, padding: '15px', borderRadius: 15, border: 'none',
-                background: `linear-gradient(135deg, ${VIOLETA}, #6D28D9)`, color: '#fff', fontSize: 14, fontWeight: 900,
-                cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 6px 20px ${VIOLETA}40` }}>
-                Jugar otra sesión
+                background: `linear-gradient(135deg, ${ORO}, #8A6410)`, color: '#1A1206', fontSize: 14, fontWeight: 900,
+                cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(212,175,55,0.4)' }}>
+                Otra ronda
               </button>
               <button onClick={onClose} style={{ flex: 1, padding: '15px', borderRadius: 15,
                 border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)',
                 color: '#F5F2EB', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Volver
+                Salir
               </button>
             </div>
             <button onClick={() => { FX.play('tap'); shareWhatsApp(
-              `PANKEY 🎰 Ruleta: Doble o Nada\nGané ${total} empanadas en una sesión${esRecord && total > 0 ? ' — ¡MI MEJOR MARCA!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Te atreves a apostar? → pankey.vercel.app`
+              fin.perdio
+                ? `PANKEY 🎰 La Ruleta del Saber\nEl páramo me quitó todo apostando x${fin.mult} 😤\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Tú sí aguantas? → pankey.vercel.app`
+                : `PANKEY 🎰 La Ruleta del Saber\nMe retiré en x${fin.mult} con ${fin.emp} empanadas${esRecord ? ' — ¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Llegas al x32? → pankey.vercel.app`
             ); }} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               width: '100%', maxWidth: 320, marginTop: 10, padding: '12px', borderRadius: 15,
@@ -6133,11 +6138,11 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
           </div>
         )}
 
-        {(fase === 'inicio' || fase === 'pregunta' || fase === 'giro') && (
-          <button onClick={() => { if (rondaRef.current > 0 || totalRef.current > 0) finalizar(); else onClose(); }}
+        {(fase === 'palanca' || fase === 'pregunta') && (
+          <button onClick={() => { if (nivelRef.current > 0 && fase === 'palanca') cobrarAnterior(); else onClose(); }}
             style={{ marginTop: 'auto', paddingTop: 14, background: 'none', border: 'none',
             color: 'rgba(245,242,235,0.3)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            {rondaRef.current > 0 || totalRef.current > 0 ? 'Terminar y cobrar' : 'Salir de la ruleta'}
+            {nivelRef.current > 0 && fase === 'palanca' ? `Arrepentirse y cobrar ${potAcumulado}` : 'Salir de la ruleta'}
           </button>
         )}
         </>
@@ -6146,6 +6151,12 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
     </div>
     </Portal>
   );
+
+  // Se arrepintió antes de girar: cobra lo del nivel anterior
+  function cobrarAnterior() {
+    const m = MULTS[Math.max(0, nivelRef.current - 1)];
+    terminar({ emp: BASE * m, mult: m, perdio: false });
+  }
 }
 
 function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoOracle, onMissionReward, onGoShop, onModo, onFlash, onPracticeWeak }) {
@@ -6176,7 +6187,7 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
     simulacro: '#4A9EFF',
     contrarreloj: '#F97316',
     supervivencia: '#EF4444',
-    ruleta: '#8B5CF6',
+    ruleta: '#D4AF37',
     duelo: '#DC2626',
   };
 
@@ -6244,17 +6255,18 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
         </div>
       ),
       accion: () => onModo?.('supervivencia') },
-    { id: 'ruleta', nombre: 'Ruleta: Doble o Nada', desc: 'Responde, acumula y decide: ¿cobras o apuestas?',
+    { id: 'ruleta', nombre: 'La Ruleta del Saber', desc: 'Tira la palanca, responde y apuesta: del x2 al x32.',
       color: MODE_COLORS.ruleta,
-      grad: 'linear-gradient(145deg, #0A0514 0%, #1E0A3D 60%, #0F0520 100%)',
-      glow: 'radial-gradient(circle at 80% 20%, rgba(139,92,246,0.3), transparent 55%)',
-      dif: 2, rec: 'hasta x3',
-      record: (appState.ruletaMaxMult || 0) > 0 ? `Mejor: ${appState.ruletaMaxMult} emp` : 'Sin jugar',
+      grad: 'linear-gradient(145deg, #170F03 0%, #33240A 60%, #120C04 100%)',
+      glow: 'radial-gradient(circle at 80% 20%, rgba(212,175,55,0.3), transparent 55%)',
+      dif: 2, rec: 'hasta x32',
+      record: (appState.ruletaMaxMult || 0) > 0 ? `Mejor: x${appState.ruletaMaxMult}` : 'Sin jugar',
       icono: (
         <div style={{ width: 22, height: 22, borderRadius: '50%', animation: 'raysSpin 30s linear infinite',
-          background: 'conic-gradient(#FBBF24 0deg 60deg, #EF4444 60deg 120deg, #FBBF24 120deg 180deg, #22C55E 180deg 240deg, #EF4444 240deg 300deg, #F97316 300deg 360deg)',
+          border: '1.5px solid #D4AF37',
+          background: `conic-gradient(${Object.values(SUBJECT_META).map((m, i) => `${m.color} ${i * 72}deg ${(i + 1) * 72}deg`).join(', ')})`,
           display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0A0514' }}/>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1A1206', border: '1px solid #D4AF37' }}/>
         </div>
       ),
       accion: () => onModo?.('ruleta') },
@@ -10842,12 +10854,152 @@ function ofertaDelDia() {
   return { item, precio: Math.round(item.price * 0.7) };
 }
 
+// Preview visual de un ítem del Bazar (60×60, con su animación activa).
+// Vive a nivel de módulo para que React NO lo remonte en cada re-render
+// (el countdown de la oferta reiniciaba las animaciones cada segundo).
+function BazarPreview({ item, size = 60, C, user, appState }) {
+  const rc = (RARITY_META[item.rarity] || {}).color || '#888';
+  if (item.type === 'frame') return <Av name={user?.name || '?'} sz={size - 8} C={C} photoURL={appState.photoURL} frameData={item}/>;
+  if (item.type === 'banner') return (
+    <div className={item.animClass || ''} style={{ width: size, height: Math.round(size * 0.66), borderRadius: 9,
+      background: item.css, boxShadow: `inset 0 0 0 1px ${rc}40` }}/>
+  );
+  if (item.type === 'chest') {
+    const cc = CHEST_SHOP_COLORS[item.rarity] || CHEST_SHOP_COLORS['común'];
+    return (
+      <div style={{ '--cglow': `${cc.c2}77`, animation: 'chestFloat 2.4s ease-in-out infinite, chestGlowPulse 2.8s ease-in-out infinite' }}>
+        <CofreSVG lv={cc} open={false} size={size - 12}/>
+      </div>
+    );
+  }
+  if (item.type === 'item') return (
+    <div style={{ width: size - 8, height: size - 8, borderRadius: '50%', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: `${rc}16`, border: `1.5px solid ${rc}45`,
+      boxShadow: `0 0 14px ${rc}33`, animation: 'breathe 2.6s ease-in-out infinite' }}>
+      <PkIc n={PODER_ICONS[item.id] || 'star'} s={Math.round(size * 0.42)} c={rc}/>
+    </div>
+  );
+  // título
+  return (
+    <div className={item.rarity === 'mítico' ? 'title-mythic' : item.rarity === 'legendario' ? 'title-legendary' : ''}
+      style={{ width: size, textAlign: 'center', fontSize: 9.5, fontWeight: 900, fontStyle: 'italic',
+        fontFamily: "'Fraunces', serif", color: rc, lineHeight: 1.25 }}>
+      «{item.name}»
+    </div>
+  );
+}
+
 const ACCENT_COLORS = [
   { name: 'Ciruelo', value: '#9D4E7C' }, { name: 'Jade',    value: '#2D8A5E' },
   { name: 'Índigo',  value: '#4A6FA5' }, { name: 'Crisantemo', value: '#D4853A' },
   { name: 'Shogun',  value: '#7C3D3D' }, { name: 'Loto',    value: '#7B5EA7' },
   { name: 'Bambú',   value: '#5B8C5A' }, { name: 'Granate', value: '#8B2252' },
 ];
+
+// ─────────────────────────────────────────────
+//  PANEL DEL CREADOR — usuario admin de pruebas
+//  Entra con uno de estos códigos y aparece el panel en Ajustes.
+// ─────────────────────────────────────────────
+const ADMIN_CODES = ['PANKEYDEV', 'ADMINSITO', 'ALEJK15'];
+
+function AdminPanel({ C, appState, setAppState, pushNotif }) {
+  const [vals, setVals] = useState({});
+  const campos = [
+    { k: 'ryo',           label: 'Empanadas' },
+    { k: 'xp',            label: 'XP' },
+    { k: 'streakDays',    label: 'Racha lectura (días)' },
+    { k: 'icfesStreak',   label: 'Racha ICFES (días)' },
+    { k: 'streakFreezes', label: 'Kodachis de Hielo' },
+  ];
+  const fijar = (k, label) => {
+    const v = parseInt(vals[k]);
+    if (isNaN(v) || v < 0) { pushNotif?.('Escribe un número válido.'); return; }
+    FX.play('coin');
+    setAppState(s => ({ ...s, [k]: v, ...(k === 'streakDays' && v > 0 ? { lastConfirmedDate: todayStr() } : {}) }));
+    pushNotif?.(`${label} → ${v}`);
+    fireBoost();
+  };
+  const accion = (nombre, cambios) => {
+    FX.play('success');
+    setAppState(s => ({ ...s, ...(typeof cambios === 'function' ? cambios(s) : cambios) }));
+    pushNotif?.(nombre);
+  };
+  const RACHAS_FUEGO = [0, 1, 3, 7, 14, 30, 55];
+
+  return (
+    <Card C={C} isLight={false} style={{ padding: '18px', border: '1.5px dashed rgba(212,175,55,0.5)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <PkIc n="settings" s={15} c="#D4AF37"/>
+        <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 2, color: '#D4AF37' }}>PANEL DEL CREADOR</span>
+      </div>
+      <div style={{ fontSize: 10.5, color: C.textMuted, marginBottom: 14 }}>
+        Solo tú ves esto. Modifica el perfil para probar la app.
+      </div>
+
+      {/* Editores numéricos */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+        {campos.map(({ k, label }) => (
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted }}>{label}</div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: C.text }}>{(appState[k] || 0).toLocaleString()}</div>
+            </div>
+            <input type="number" inputMode="numeric" placeholder="valor" value={vals[k] ?? ''}
+              onChange={e => setVals(p => ({ ...p, [k]: e.target.value }))}
+              style={{ width: 90, padding: '9px 10px', borderRadius: 10, border: `1px solid ${C.border}`,
+                background: 'rgba(255,255,255,0.05)', color: C.text, fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}/>
+            <button onClick={() => fijar(k, label)} style={{ padding: '9px 13px', borderRadius: 10, border: 'none',
+              background: 'linear-gradient(135deg, #D4AF37, #8A6410)', color: '#1A1206',
+              fontSize: 11.5, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              Fijar
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Vista rápida del fuego: salta a cualquier nivel de racha */}
+      <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, marginBottom: 6 }}>
+        VER NIVELES DEL FUEGO (racha lectura)
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        {RACHAS_FUEGO.map(n => (
+          <button key={n} onClick={() => accion(`Racha → ${n} días`, s => ({ streakDays: n, lastConfirmedDate: n > 0 ? todayStr() : null, yourConfirmed: n > 0 }))}
+            style={{ padding: '7px 13px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit',
+              background: (appState.streakDays || 0) === n ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${(appState.streakDays || 0) === n ? '#F97316' : C.border}`,
+              color: (appState.streakDays || 0) === n ? '#F97316' : C.textMid, fontSize: 12, fontWeight: 800 }}>
+            {n}
+          </button>
+        ))}
+      </div>
+
+      {/* Acciones rápidas */}
+      <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, marginBottom: 6 }}>
+        ACCIONES RÁPIDAS
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+        {[
+          { txt: '+1.000 emp', fn: s => ({ ryo: (s.ryo || 0) + 1000 }) },
+          { txt: '+1.000 XP', fn: s => ({ xp: (s.xp || 0) + 1000 }) },
+          { txt: 'Recargar cofre del día', fn: s => ({ cofreLastOpened: null, yourConfirmed: true, lastConfirmedDate: todayStr() }) },
+          { txt: 'Reset misiones de hoy', fn: () => ({ missionsRewarded: [] }) },
+          { txt: 'Desbloquear TODA la tienda', fn: s => ({ inventory: [...new Set([...(s.inventory || []), ...SHOP_ITEMS.filter(i => i.type !== 'chest' && i.type !== 'item').map(i => i.id)])] }) },
+          { txt: 'Vaciar inventario', fn: () => ({ inventory: ['t_iniciado'], equipped: { title: null, frame: null, banner: null } }) },
+          { txt: 'Activar todos los poderes', fn: s => ({ xpBoostActive: true, duelShieldActive: true, repasoActive: true, comodinActive: true, simXpBoost: true, ghostUntil: Date.now() + 48 * 3600 * 1000, streakFreezes: (s.streakFreezes || 0) + 1 }) },
+          { txt: 'Apagar poderes', fn: () => ({ xpBoostActive: false, duelShieldActive: false, repasoActive: false, comodinActive: false, simXpBoost: false, ghostUntil: null }) },
+          { txt: 'Reset récords de modos', fn: () => ({ contrarrelojRecord: 0, supervivenciaRecord: 0, ruletaMaxMult: 0 }) },
+          { txt: 'Borrar historial ICFES', fn: () => ({ icfesHistory: [], modeStats: {}, weakStats: {}, icfesStreak: 0, lastIcfesDate: null }) },
+        ].map(({ txt, fn }) => (
+          <button key={txt} onClick={() => accion(txt, fn)} style={{ padding: '10px 8px', borderRadius: 11,
+            border: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.04)', color: C.textMid,
+            fontSize: 10.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.3 }}>
+            {txt}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 // ─────────────────────────────────────────────
 //  PROFILE MINI CARD
@@ -12311,6 +12463,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [chestShow, setChestShow] = useState(null); // { chest, premio } → show de apertura
   const [bazarCat, setBazarCat] = useState('chest'); // categoría activa del Bazar
   const [heroIdx, setHeroIdx] = useState(0);         // slide activo del escaparate
+  const [bundleConfirm, setBundleConfirm] = useState(null); // pack pendiente de confirmar
   const [, setBazarTick] = useState(0);              // tick del countdown de la oferta
   const fileInputRef = useRef(null);
 
@@ -12645,39 +12798,6 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       .filter(i => i.type === bazarCat)
       .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
 
-    // Preview 60×60 con animación activa según el tipo
-    const Preview = ({ item, size = 60 }) => {
-      const rc = (RARITY_META[item.rarity] || {}).color || '#888';
-      if (item.type === 'frame') return <Av name={user?.name || '?'} sz={size - 8} C={C} photoURL={appState.photoURL} frameData={item}/>;
-      if (item.type === 'banner') return (
-        <div className={item.animClass || ''} style={{ width: size, height: Math.round(size * 0.66), borderRadius: 9,
-          background: item.css, boxShadow: `inset 0 0 0 1px ${rc}40` }}/>
-      );
-      if (item.type === 'chest') {
-        const cc = CHEST_SHOP_COLORS[item.rarity] || CHEST_SHOP_COLORS['común'];
-        return (
-          <div style={{ '--cglow': `${cc.c2}77`, animation: 'chestFloat 2.4s ease-in-out infinite, chestGlowPulse 2.8s ease-in-out infinite' }}>
-            <CofreSVG lv={cc} open={false} size={size - 12}/>
-          </div>
-        );
-      }
-      if (item.type === 'item') return (
-        <div style={{ width: size - 8, height: size - 8, borderRadius: '50%', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', background: `${rc}16`, border: `1.5px solid ${rc}45`,
-          boxShadow: `0 0 14px ${rc}33`, animation: 'breathe 2.6s ease-in-out infinite' }}>
-          <PkIc n={PODER_ICONS[item.id] || 'star'} s={Math.round(size * 0.42)} c={rc}/>
-        </div>
-      );
-      // título
-      return (
-        <div className={item.rarity === 'mítico' ? 'title-mythic' : item.rarity === 'legendario' ? 'title-legendary' : ''}
-          style={{ width: size, textAlign: 'center', fontSize: 9.5, fontWeight: 900, fontStyle: 'italic',
-            fontFamily: "'Fraunces', serif", color: rc, lineHeight: 1.25 }}>
-          «{item.name}»
-        </div>
-      );
-    };
-
     const abrirItem = (item, precioOverride = null) => {
       FX.play('tap');
       const un = SHOP_UNLOCKS[item.id];
@@ -12726,6 +12846,78 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           <ShopItemModal C={C} isLight={isLight} item={selectedShopItem} appState={appState} user={user} onBuy={buyItem} onEquip={equipItem} onClose={() => setSelectedShopItem(null)} />
         )}
 
+        {/* ── Confirmación de compra de pack ── */}
+        {bundleConfirm && (() => {
+          const b = bundleConfirm;
+          const rmeta = RARITY_META[b.rarity] || RARITY_META['común'];
+          const alcanza = (appState.ryo || 0) >= b.price;
+          return (
+            <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0,0,0,0.85)',
+              backdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+              onClick={() => setBundleConfirm(null)}>
+              <div onClick={e => e.stopPropagation()} className="fu" style={{ width: '100%', maxWidth: 350,
+                background: C.bgAlt, border: `1.5px solid ${rmeta.color}50`, borderRadius: 24, padding: '24px 22px',
+                boxShadow: `0 24px 70px rgba(0,0,0,0.7), 0 0 34px ${rmeta.color}22` }}>
+                <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: 2, color: rmeta.color, background: rmeta.bg,
+                  border: `1px solid ${rmeta.color}30`, borderRadius: 6, padding: '4px 10px', display: 'inline-block', marginBottom: 12 }}>
+                  PACK TEMÁTICO · {rmeta.label}
+                </div>
+                <div className="serif" style={{ fontSize: 21, fontWeight: 800, color: C.text, marginBottom: 6 }}>{b.name}</div>
+                <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginBottom: 16 }}>{b.desc}</div>
+
+                {/* Contenido del pack */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 18 }}>
+                  {b.items.map(id => {
+                    const it = SHOP_ITEMS.find(x => x.id === id);
+                    if (!it) return null;
+                    const rc = (RARITY_META[it.rarity] || {}).color || '#888';
+                    return (
+                      <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 12px',
+                        borderRadius: 14, background: `${rc}0C`, border: `1px solid ${rc}28` }}>
+                        <div style={{ width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <BazarPreview item={it} size={46} C={C} user={user} appState={appState}/>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{it.name}</div>
+                          <div style={{ fontSize: 10.5, color: C.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.desc}</div>
+                        </div>
+                        {it.price > 0 && (
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color: C.textMuted, textDecoration: 'line-through', flexShrink: 0 }}>
+                            {it.price.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Total y confirmación */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted }}>TOTAL DEL PACK</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 19, fontWeight: 900, color: C.amberMid }}>
+                    <PkIc n="empanada" s={16} c={C.amberMid}/>{b.price.toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 9 }}>
+                  <button onClick={() => setBundleConfirm(null)} style={{ flex: 1, padding: '14px', borderRadius: 13,
+                    border: `1px solid ${C.border}`, background: 'transparent', color: C.textMid,
+                    fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cancelar
+                  </button>
+                  <button onClick={() => { if (alcanza) { comprarBundle(b); setBundleConfirm(null); } }} disabled={!alcanza}
+                    style={{ flex: 1.4, padding: '14px', borderRadius: 13, border: 'none',
+                    background: alcanza ? `linear-gradient(135deg, ${rmeta.color}, ${rmeta.color}BB)` : C.bgAlt,
+                    color: alcanza ? '#fff' : C.textMuted, fontSize: 13, fontWeight: 900,
+                    cursor: alcanza ? 'pointer' : 'not-allowed',
+                    boxShadow: alcanza ? `0 6px 18px ${rmeta.color}40` : 'none', fontFamily: 'inherit' }}>
+                    {alcanza ? '¡Confirmar compra!' : `Faltan ${(b.price - (appState.ryo || 0)).toLocaleString()} emp`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ══ ZONA 1 — EL ESCAPARATE ══ */}
         <div style={{ position: 'relative', overflow: 'hidden' }}>
           {/* Fondo con crossfade según el ítem activo */}
@@ -12765,7 +12957,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
               return (
                 <div key={i} className="bazar-slide" style={{ padding: '14px 20px 10px' }}>
                   <button onClick={() => {
-                    if (s.tipo === 'bundle') comprarBundle(s.bundle);
+                    if (s.tipo === 'bundle') { FX.play('tap'); setBundleConfirm(s.bundle); }
                     else abrirItem(s.item, s.tipo === 'oferta' ? s.precio : null);
                   }} style={{
                     position: 'relative', width: '100%', height: 230, border: `1.5px solid ${rc}55`, borderRadius: 24,
@@ -12812,7 +13004,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                           {s.bundle.items.map(id => {
                             const it = SHOP_ITEMS.find(x => x.id === id);
-                            return it ? <Preview key={id} item={it} size={54}/> : null;
+                            return it ? <BazarPreview key={id} item={it} size={54} C={C} user={user} appState={appState}/> : null;
                           })}
                         </div>
                       ) : s.item.type === 'title' ? (
@@ -12828,7 +13020,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                           <CofreSVG lv={CHEST_SHOP_COLORS[s.item.rarity] || CHEST_SHOP_COLORS['común']} open={false} size={92}/>
                         </div>
                       ) : s.item.type === 'item' ? (
-                        <Preview item={s.item} size={104}/>
+                        <BazarPreview item={s.item} size={104} C={C} user={user} appState={appState}/>
                       ) : (
                         <div style={{ width: '68%', height: 86 }}/>
                       )}
@@ -12924,7 +13116,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                 {/* IZQUIERDA: preview animado */}
                 <div style={{ width: 60, height: 60, flexShrink: 0, display: 'flex', alignItems: 'center',
                   justifyContent: 'center', position: 'relative', filter: bloqueado ? 'grayscale(0.9)' : 'none' }}>
-                  <Preview item={item}/>
+                  <BazarPreview item={item} C={C} user={user} appState={appState}/>
                   {bloqueado && (
                     <div style={{ position: 'absolute', inset: -4, borderRadius: 14, display: 'flex',
                       alignItems: 'center', justifyContent: 'center', background: 'rgba(4,6,12,0.55)' }}>
@@ -13117,6 +13309,11 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           </button>
         </div>
       </Card>
+
+      {/* ── Panel del Creador (solo códigos admin) ── */}
+      {ADMIN_CODES.includes(user?.code) && (
+        <AdminPanel C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif}/>
+      )}
 
       <button onClick={onLogout} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 14, padding: '13px', color: C.textMuted, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
         Cerrar sesión
