@@ -399,6 +399,15 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes modeExpand { 0%{transform:scale(0.4);opacity:0.4;border-radius:24px;} 100%{transform:scale(1);opacity:1;border-radius:0px;} }
 @keyframes iconFloatWiggle { 0%,100%{transform:translateY(0) rotate(0deg);} 30%{transform:translateY(-3px) rotate(-4deg);} 65%{transform:translateY(1px) rotate(3deg);} }
 
+/* ── INICIO v6 "El Fogón de la Casa" ── */
+@keyframes fichaRingSpin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes coronaShine { 0%,88%,100%{filter:drop-shadow(0 0 2px #FFD75E);} 94%{filter:drop-shadow(0 0 11px #FFD75E);} }
+@keyframes jugarShine { 0%{transform:translateX(-60%) skewX(-20deg);} 18%,100%{transform:translateX(420%) skewX(-20deg);} }
+@keyframes retoUrge { 0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0);} 50%{box-shadow:0 0 14px 2px rgba(212,175,55,0.5);} }
+@keyframes fichaBreathe { 0%,100%{transform:scale(1);} 50%{transform:scale(1.04);} }
+@keyframes staggerRise { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes palmSway { 0%,100%{transform:rotate(-1.5deg);} 50%{transform:rotate(1.5deg);} }
+
 /* ── INICIO v5 estilo Clash Royale ── */
 @keyframes arenaBrasa { 0%{transform:translateY(0) translateX(0) scale(1);opacity:0.9;} 100%{transform:translateY(-46px) translateX(var(--bx,8px)) scale(0.3);opacity:0;} }
 @keyframes salaSweep { 0%{transform:translateX(-60%) skewX(-20deg);} 100%{transform:translateX(360%) skewX(-20deg);} }
@@ -9558,22 +9567,25 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 // ═════════════════════════════════════════════
 function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst }) {
   const lvl         = computeLevel(appState.xp || 0);
-  const currentBook = books.find(b => b.id === appState.currentBookId) || null;
   const [rankInfo, setRankInfo]   = useState(null);
   const [retoOpen, setRetoOpen]   = useState(false);
   const [flashOpen, setFlashOpen] = useState(false);
   const [flashKey, setFlashKey]   = useState(0);
-  const [salaOpen, setSalaOpen]   = useState(false);   // bottom sheet de modos
-  const [modo, setModo]           = useState(null);    // contrarreloj | supervivencia | ruleta
+  const [modo, setModo]           = useState(null);    // overlay activo: contrarreloj | supervivencia | ruleta
   const [modoKey, setModoKey]     = useState(0);
+  const [modoSel, setModoSel]     = useState(1);        // ficha seleccionada (default Contrarreloj para arrancar rápido)
   const [logroShow, setLogroShow] = useState(null);
-  const [ahora, setAhora]         = useState(Date.now()); // para el countdown del reto
+  const [ahora, setAhora]         = useState(Date.now());
+  const [fuegoStats, setFuegoStats] = useState(false);  // panel de racha (long-press del fuego)
+  const [jugarPress, setJugarPress] = useState(false);
   const logrosRef = useRef([]);
   logrosRef.current = appState.logrosSecretos || [];
+  const lpTimer = useRef(null);
   const today = todayStr();
   const dk    = dateKeyISO();
 
   useEffect(() => { const iv = setInterval(() => setAhora(Date.now()), 1000); return () => clearInterval(iv); }, []);
+  useEffect(() => () => clearTimeout(lpTimer.current), []);
 
   // ── Ranking social ──
   useEffect(() => {
@@ -9581,53 +9593,50 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     FB().get(FB().ref(FB().db, 'users')).then(snap => {
       if (!snap.exists()) return;
       const ranked = Object.values(snap.val())
-        .map(u => ({
-          code: u.code,
-          ghost: (u.appState?.ghostUntil || 0) > Date.now(),
-          correctas: (u.appState?.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0),
-        }))
+        .map(u => ({ code: u.code, ghost: (u.appState?.ghostUntil || 0) > Date.now(),
+          correctas: (u.appState?.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0) }))
         .filter(u => u.code === user?.code || !u.ghost)
         .sort((a, b) => b.correctas - a.correctas);
       const myIdx = ranked.findIndex(u => u.code === user.code);
       if (myIdx === -1) return;
-      setRankInfo({
-        pos: myIdx + 1, total: ranked.length,
-        myCorrectas: ranked[myIdx].correctas,
+      setRankInfo({ pos: myIdx + 1, total: ranked.length,
         aheadGap: myIdx > 0 ? ranked[myIdx - 1].correctas - ranked[myIdx].correctas : null,
-      });
+        aheadName: myIdx > 0 ? ranked[myIdx - 1].code : null });
     }).catch(() => {});
   }, [user?.code]);
 
   const streak = appState.streakDays || 0;
   const sealed = appState.yourConfirmed ||
     (appState.icfesHistory || []).some(r => r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
-
   const last7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const ds = d.toDateString();
-    return (appState.icfesHistory || []).some(r => r.date === ds || (r.ts && new Date(r.ts).toDateString() === ds))
-      || (ds === today && appState.yourConfirmed);
+    return (appState.icfesHistory || []).some(r => r.date === ds || (r.ts && new Date(r.ts).toDateString() === ds)) || (ds === today && appState.yourConfirmed);
   });
+
+  // ── Saludo dinámico según hora + racha ──
+  const hora = new Date().getHours();
+  const enPeligro = !sealed && streak > 0 && hora >= 18;
+  const saludo = (() => {
+    if (streak === 0) return hora < 12 ? '¡Buenos días! Prende el fogón hoy.' : hora < 18 ? 'Aún estás a tiempo de prender el fogón.' : 'Prende una chispa antes de dormir, parce.';
+    if (enPeligro) return 'Ojo, que se te apaga el fogón esta noche.';
+    if (!sealed && hora >= 12) return '¿Ya vas a sellar hoy o qué, berraco?';
+    if (hora < 12) return '¡Buenos días, berraco! El fogón te espera.';
+    if (hora < 18) return sealed ? '¡Vas finísimo hoy, siga así!' : 'Buenas tardes. Séllela cuando pueda.';
+    return sealed ? 'Fogón sellado. Descanse tranquilo.' : 'Buenas noches. No deje apagar el fuego.';
+  })();
 
   // ── Logros secretos ──
   const unlockSecret = (id) => {
     const logro = SECRET_LOGROS[id];
     if (!logro || logrosRef.current.includes(id)) return;
     logrosRef.current = [...logrosRef.current, id];
-    setAppState(s => ({
-      ...s,
-      logrosSecretos: [...(s.logrosSecretos || []), id],
-      ryo: (s.ryo || 0) + logro.ryo,
-      xp: (s.xp || 0) + logro.xp,
-    }));
+    setAppState(s => ({ ...s, logrosSecretos: [...(s.logrosSecretos || []), id], ryo: (s.ryo || 0) + logro.ryo, xp: (s.xp || 0) + logro.xp }));
     setTimeout(() => setLogroShow(logro), 650);
   };
+  useEffect(() => { if ((appState.readingMinutesToday || 0) >= 60) unlockSecret('maraton'); }, [appState.readingMinutesToday]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if ((appState.readingMinutesToday || 0) >= 60) unlockSecret('maraton');
-  }, [appState.readingMinutesToday]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cierre común de los modos rápidos: acumula stats, paga, récords y sella la racha
+  // ── Cierre común de modos ──
   const finalizarModo = ({ tipo, valor, pares, emp, xp }) => {
     acumularRespuestas(setAppState, pares);
     setAppState(s => {
@@ -9638,17 +9647,13 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       return upd;
     });
     if (emp > 0) onCoinBurst?.(emp);
-    onConfirm?.();
-    fireBoost();
+    onConfirm?.(); fireBoost();
   };
 
   // ── Reto del Día ──
   const jugadoHoy   = appState.retoDia?.date === dk && appState.retoDia?.done;
   const retoPerfect = jugadoHoy && appState.retoDia.perfect;
-  const retoWins    = jugadoHoy ? (appState.retoDia.wins || 0) : 0;
-  const sellosTotal = (appState.sellos || []).length;
   const retoQs      = retoQuestionsFor(dk);
-  const meta1       = SUBJECT_META[retoQs[0]?.subject] || {};
   const [ayerPct, setAyerPct] = useState(null);
   useEffect(() => {
     if (!fbOK()) return;
@@ -9656,390 +9661,291 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       if (s.exists()) { const v = s.val(); if ((v.played || 0) > 0) setAyerPct(Math.round(100 * (v.perfect || 0) / v.played)); }
     }).catch(() => {});
   }, []);
-  // Countdown hasta medianoche
   const msFin = (() => { const d = new Date(); d.setHours(24, 0, 0, 0); return Math.max(0, d.getTime() - ahora); })();
-  const hh = String(Math.floor(msFin / 3600000)).padStart(2, '0');
-  const mm = String(Math.floor((msFin % 3600000) / 60000)).padStart(2, '0');
-  const ss = String(Math.floor((msFin % 60000) / 1000)).padStart(2, '0');
+  const cuenta = `${String(Math.floor(msFin / 3600000)).padStart(2, '0')}:${String(Math.floor((msFin % 3600000) / 60000)).padStart(2, '0')}`;
 
-  // ── Datos de stats ──
+  // ── Datos ──
   const icfesHist = appState.icfesHistory || [];
   const bestIcfes = icfesHist.length ? Math.max(...icfesHist.map(r => r.score || 0)) : 0;
-  const lastSim   = icfesHist.length > 0 ? icfesHist[icfesHist.length - 1] : null;
-  const lastSimDaysAgo = lastSim?.ts ? Math.floor((Date.now() - lastSim.ts) / 86400000) : null;
-  const lastSimColor = !lastSim ? C.textMuted
-    : (lastSim.correct || 0) >= 8 ? '#2D8A5E'
-    : (lastSim.correct || 0) >= 5 ? '#2E86AB'
-    : (lastSim.correct || 0) >= 3 ? '#E8743A' : '#EF4444';
   const totalMin  = appState.totalMinutesRead || 0;
-
-  const fire = fireLevelFor(streak);
-  const readGoal = appState.dailyGoal || 20;
   const readToday = appState.readingMinutesToday || 0;
-  const readDone = readToday >= readGoal;
+  const empanadasCount = useCountUp(appState.ryo || 0, 900);
+
+  // ── Los 5 modos (fichas) ──
+  const lanzarModo = (id) => {
+    if (id === 'simulacro') { onGoTab('icfes'); return; }
+    if (id === 'duelo') { setFlashKey(k => k + 1); setFlashOpen(true); return; }
+    setModoKey(k => k + 1); setModo(id);
+  };
+  const MODOS = [
+    { id: 'simulacro',    nom: 'Simulacro',    det: 'ICFES completo', color: '#3DA873', ic: 'rana',
+      rec: bestIcfes > 0 ? `Récord: ${bestIcfes}` : 'Nuevo' },
+    { id: 'contrarreloj', nom: 'Contrarreloj', det: '90 segundos',    color: '#EF4444', ic: 'timer',
+      rec: (appState.contrarrelojRecord || 0) > 0 ? `Récord: ${appState.contrarrelojRecord}` : 'Nuevo' },
+    { id: 'supervivencia',nom: 'Supervivencia',det: '3 vidas',        color: '#8B5CF6', ic: 'mountain',
+      rec: (appState.supervivenciaRecord || 0) > 0 ? `Récord: Ola ${appState.supervivenciaRecord}` : 'Nuevo' },
+    { id: 'ruleta',       nom: 'La Ruleta',    det: 'x2 a x32',       color: '#D4AF37', ic: 'solandino',
+      rec: (appState.ruletaMaxMult || 0) > 0 ? `Récord: x${appState.ruletaMaxMult}` : 'Nuevo' },
+    { id: 'duelo',        nom: 'Duelo Flash',  det: 'vs rival · 3min',color: '#F97316', ic: 'swords',
+      rec: 'En vivo' },
+  ];
+  const sel = MODOS[modoSel];
+
+  // Long-press del fuego → panel de stats
+  const fuegoDown = () => { lpTimer.current = setTimeout(() => { setFuegoStats(true); FX.vibrate('medium'); }, 380); };
+  const fuegoUp = () => { clearTimeout(lpTimer.current); setFuegoStats(false); };
+
+  const gradFondo = 'linear-gradient(180deg, #0a1420 0%, #0c1524 38%, #120f10 78%, #17110a 100%)';
 
   return (
-    <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: '100%' }}>
+    <div className="fi" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 14, minHeight: '100%' }}>
+      {/* Fondo cálido de temperatura (solo visible en este tab) */}
+      <div style={{ position: 'fixed', inset: 0, background: gradFondo, pointerEvents: 'none', zIndex: 0 }}/>
+      {/* Silueta de palmera meciéndose, casi imperceptible */}
+      <div style={{ position: 'fixed', bottom: 66, right: -6, width: 90, height: 150, pointerEvents: 'none', zIndex: 0,
+        opacity: 0.05, transformOrigin: 'bottom center', animation: 'palmSway 7s ease-in-out infinite' }}>
+        <svg viewBox="0 0 60 100" fill="none" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round">
+          <path d="M30 100 Q28 60 30 40"/>
+          <path d="M30 40 Q10 30 2 34 M30 40 Q14 24 8 16 M30 40 Q30 20 30 8 M30 40 Q46 24 52 16 M30 40 Q50 30 58 34"/>
+        </svg>
+      </div>
 
-      {/* ══ 1. ARENA HERO ══ */}
-      <div style={{ position: 'relative', borderRadius: 24, overflow: 'hidden',
-        background: 'linear-gradient(160deg, #060C14 0%, #0D1B2A 50%, #060C14 100%)',
-        border: `1px solid ${fire.id === 0 ? C.border : `${fire.main}30`}`,
-        boxShadow: `0 12px 34px rgba(0,0,0,0.45)`, padding: '16px 16px 14px' }}>
-        {/* Textura sutil */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5,
-          background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 9px)' }}/>
-        {/* Vignette del color de la etapa del fuego */}
-        {fire.id > 0 && (
-          <>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: 140, height: 120, pointerEvents: 'none',
-              background: `radial-gradient(circle at 0% 0%, ${fire.halo}, transparent 70%)` }}/>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: 140, height: 120, pointerEvents: 'none',
-              background: `radial-gradient(circle at 100% 0%, ${fire.halo}, transparent 70%)` }}/>
-          </>
-        )}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-        {/* Fila superior: identidad + nivel */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 11, marginBottom: 6 }}>
-          <Av name={user?.name || '?'} sz={44} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="serif" style={{ fontSize: 16, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.name || 'Explorador'}
+        {/* ══ 1. IDENTIDAD ══ */}
+        <div style={{ animation: 'staggerRise 0.5s ease both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <button onClick={() => { FX.play('tap'); onGoTab('perfil'); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}>
+              <Av name={user?.name || '?'} sz={46} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
+            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="serif" style={{ fontSize: 17, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.name || 'Explorador'}
+              </div>
+              <div className={appState.equipped?.title?.rarity === 'legendario' ? 'title-legendary' : appState.equipped?.title?.rarity === 'mítico' ? 'title-mythic' : ''}
+                style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
+                  color: appState.equipped?.title?.rarity ? (RARITY_META[appState.equipped.title.rarity] || {}).color : C.accent }}>
+                {appState.equipped?.title?.name || 'Iniciado'}
+              </div>
             </div>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: C.accent, textTransform: 'uppercase' }}>
-              {appState.equipped?.title?.name || 'Iniciado'}
+            {/* Micro-badges */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+              {/* Ranking escudo */}
+              {rankInfo && (
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: 30, height: 33, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    animation: rankInfo.pos === 1 ? 'coronaShine 4s ease-in-out infinite' : 'none' }}>
+                    <svg viewBox="0 0 24 26" width="30" height="33">
+                      <path d="M12 1 L22 5 L22 13 Q22 22 12 25 Q2 22 2 13 L2 5 Z"
+                        fill={rankInfo.pos === 1 ? '#3A2A08' : '#1A2333'}
+                        stroke={rankInfo.pos === 1 ? '#FFD75E' : '#AEB8C2'} strokeWidth="1.5"/>
+                    </svg>
+                    <span style={{ position: 'absolute', fontSize: 11, fontWeight: 900, color: rankInfo.pos === 1 ? '#FFD75E' : '#E5E9F0' }}>{rankInfo.pos}</span>
+                    {rankInfo.pos === 1 && <span style={{ position: 'absolute', top: -7, fontSize: 11 }}>👑</span>}
+                  </div>
+                </div>
+              )}
+              {/* Empanadas con count-up */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 11, padding: '5px 9px' }}>
+                <PkIc n="empanada" s={13} c={C.amberMid}/>
+                <span style={{ fontSize: 12, fontWeight: 900, color: C.amberMid, fontVariantNumeric: 'tabular-nums' }}>{empanadasCount.toLocaleString()}</span>
+              </div>
+              {/* Nivel con anillo de progreso */}
+              <div style={{ position: 'relative', width: 34, height: 34 }}>
+                <svg width="34" height="34" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="17" cy="17" r="14" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3"/>
+                  <circle cx="17" cy="17" r="14" fill="none" stroke={C.accent} strokeWidth="3" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - lvl.pct / 100)}
+                    style={{ transition: 'stroke-dashoffset 1s ease', filter: lvl.pct > 80 ? `drop-shadow(0 0 4px ${C.accent})` : 'none' }}/>
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: C.accent }}>{lvl.level}</div>
+              </div>
             </div>
           </div>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 99,
-              background: `linear-gradient(135deg, ${C.accent}, ${C.accentMid || C.accent})`,
-              boxShadow: `0 3px 12px ${C.accent}55` }}>
-              <span style={{ fontSize: 12, fontWeight: 900, color: '#fff' }}>Nv. {lvl.level}</span>
-            </div>
-            <div style={{ width: 68, height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.12)', marginTop: 5, marginLeft: 'auto', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${lvl.pct}%`, borderRadius: 99, background: C.accent, boxShadow: `0 0 6px ${C.accent}` }}/>
-            </div>
+          {/* Saludo dinámico */}
+          <div style={{ fontSize: 11.5, fontWeight: 600, marginTop: 8, marginLeft: 2,
+            color: enPeligro ? '#EF4444' : C.textMid, animation: enPeligro ? 'presenceBlink 1.6s ease-in-out infinite' : 'fadeIn 0.6s ease both' }}>
+            {saludo}
           </div>
         </div>
 
-        {/* Llama evolutiva al centro */}
-        <div style={{ position: 'relative', marginTop: 2 }}>
+        {/* ══ 2. COFRES ══ */}
+        <div style={{ animation: 'staggerRise 0.5s ease 0.08s both' }}>
+          <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
+        </div>
+
+        {/* ══ 3. EL FOGÓN (fuego libre) ══ */}
+        <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoUp}
+          style={{ position: 'relative', animation: 'staggerRise 0.6s ease 0.16s both', margin: '2px 0' }}>
           <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight}/>
+          {/* Panel de stats (long-press) */}
+          {fuegoStats && (
+            <div className="fi" style={{ position: 'absolute', inset: 0, borderRadius: 20, zIndex: 5,
+              background: 'rgba(10,20,32,0.82)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,215,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, padding: 18 }}>
+                {[
+                  { label: 'RACHA ACTUAL', val: `${streak}d`, c: '#FBBF24' },
+                  { label: 'SELLOS TOTALES', val: (appState.sellos || []).length, c: '#D4AF37' },
+                  { label: 'KODACHIS', val: appState.streakFreezes || 0, c: '#38BDF8' },
+                  { label: 'SIMULACROS', val: icfesHist.length, c: C.accent },
+                ].map(s => (
+                  <div key={s.label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.val}</div>
+                    <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Fila de 3 stats */}
-        <div style={{ position: 'relative', display: 'flex', marginTop: 12, paddingTop: 12,
-          borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        {/* ══ 4. EL PULSO (stats + reto) ══ */}
+        <div style={{ display: 'flex', alignItems: 'stretch', animation: 'staggerRise 0.5s ease 0.24s both' }}>
           {[
-            { ic: 'star',   c: bestIcfes > 0 ? getPerfLevel(bestIcfes).color : C.textMuted, val: bestIcfes > 0 ? bestIcfes : '—', label: 'MEJOR ICFES' },
-            { ic: 'book',   c: '#2D8A5E', val: totalMin >= 60 ? `${(totalMin / 60).toFixed(1)}h` : `${totalMin}m`, label: 'LEÍDO' },
-            { ic: 'target', c: C.accent,  val: icfesHist.length, label: 'SIMULACROS' },
+            { ic: 'star',   c: bestIcfes > 0 ? getPerfLevel(bestIcfes).color : C.textMuted, val: bestIcfes > 0 ? bestIcfes : '—', label: 'MEJOR ICFES', tab: 'icfes' },
+            { ic: 'book',   c: '#3DA873', val: `${readToday}m`, label: 'LEÍDO HOY', tab: 'books' },
+            { ic: 'target', c: C.accent,  val: icfesHist.length, label: 'SIMULACROS', tab: 'icfes' },
           ].map((s, i) => (
-            <div key={s.label} style={{ flex: 1, textAlign: 'center',
-              borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+            <button key={s.label} onClick={() => { FX.play('tap'); onGoTab(s.tab); }} style={{
+              flex: 1, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 0',
+              borderRight: '1px solid rgba(255,255,255,0.07)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 3 }}>
                 <PkIc n={s.ic} s={11} c={s.c}/>
-                <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,255,255,0.4)' }}>{s.label}</span>
+                <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color: 'rgba(255,255,255,0.4)' }}>{s.label}</span>
               </div>
-              <div style={{ fontSize: 17, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.val}</div>
-            </div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.val}</div>
+            </button>
           ))}
-        </div>
-      </div>
-
-      {/* ══ 2. MIS COFRES (4 slots) ══ */}
-      <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
-
-      {/* ══ 3. SALA DE ENTRENAMIENTO + 2 modos rápidos ══ */}
-      <button onClick={() => { FX.play('tap'); FX.vibrate('medium'); setSalaOpen(true); }} style={{
-        position: 'relative', width: '100%', height: 88, border: '1.5px solid rgba(74,158,255,0.5)',
-        borderRadius: 22, cursor: 'pointer', fontFamily: 'inherit', overflow: 'hidden', padding: 0,
-        background: 'linear-gradient(135deg, #0D2240 0%, #1A3A5C 50%, #0D2240 100%)',
-        boxShadow: '0 0 0 1px rgba(74,158,255,0.2), 0 8px 32px rgba(74,158,255,0.25), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
-        {/* Shimmer que barre */}
-        <div style={{ position: 'absolute', top: 0, bottom: 0, width: 70, pointerEvents: 'none',
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent)',
-          animation: 'salaSweep 3s ease-in-out infinite' }}/>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 13, padding: '0 16px', height: '100%' }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, flexShrink: 0,
-            background: 'linear-gradient(135deg, #4A9EFF, #2563EB)', boxShadow: '0 4px 16px rgba(74,158,255,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ animation: 'salaIcon 2s ease-in-out infinite' }}>
-              <PkIc n="rana" s={28} c="#fff"/>
+          {/* Reto del Día — especial, pulsa con countdown */}
+          <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
+            flex: 1.15, background: jugadoHoy ? 'none' : 'rgba(212,175,55,0.08)', borderRadius: 12,
+            border: jugadoHoy ? 'none' : '1px solid rgba(212,175,55,0.3)', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 2px',
+            animation: jugadoHoy ? 'none' : 'retoUrge 2s ease-in-out infinite' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 3 }}>
+              <PkIc n="target" s={11} c={jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24'}/>
+              <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color: jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24' }}>RETO DÍA</span>
             </div>
-          </div>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <div style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: 1, color: '#fff' }}>MODOS DE ENTRENAMIENTO ICFES</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>5 modos · IA adaptativa · Gana empanadas</div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-              {['🥟 40–250', '⚡ Activa tu racha'].map(t => (
-                <span key={t} style={{ fontSize: 8.5, fontWeight: 700, color: 'rgba(255,255,255,0.85)',
-                  background: 'rgba(255,255,255,0.08)', borderRadius: 99, padding: '2.5px 8px' }}>{t}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'arrowPulse 1.5s ease-in-out infinite' }}>
-            <PkIc n="right" s={15} c="#fff"/>
-          </div>
-        </div>
-      </button>
-
-      {/* Acceso rápido: 2 modos */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 2px 8px' }}>
-          <div style={{ flex: 1, height: 1, background: `${C.border}` }}/>
-          <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted }}>ACCESO RÁPIDO</span>
-          <div style={{ flex: 1, height: 1, background: `${C.border}` }}/>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {/* Duelo Flash */}
-          <button onClick={() => { FX.play('duel'); FX.vibrate('medium'); setFlashKey(k => k + 1); setFlashOpen(true); }} style={{
-            flex: 1, height: 100, border: '1px solid rgba(249,115,22,0.4)', borderRadius: 18, cursor: 'pointer',
-            fontFamily: 'inherit', textAlign: 'left', position: 'relative', overflow: 'hidden', padding: '13px 14px',
-            background: 'linear-gradient(145deg, #1A0800, #3D1500)' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: 90, height: 90, pointerEvents: 'none',
-              background: 'radial-gradient(circle at 100% 0%, rgba(249,115,22,0.3), transparent 60%)' }}/>
-            <div style={{ animation: 'swordsClash 2s ease-in-out infinite', display: 'inline-block' }}>
-              <PkIc n="swords" s={28} c="#F97316"/>
-            </div>
-            <div className="serif" style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginTop: 6 }}>Duelo Flash</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>5 preguntas · 3 min</div>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 8.5, fontWeight: 800,
-              color: '#F8B08A', background: 'rgba(60,25,5,0.7)', borderRadius: 99, padding: '2px 8px' }}>
-              <PkIc n="empanada" s={9} c="#F8B08A"/>30 + 60 XP
-            </span>
-          </button>
-          {/* Contrarreloj */}
-          <button onClick={() => { FX.play('duel'); FX.vibrate('medium'); setModoKey(k => k + 1); setModo('contrarreloj'); }} style={{
-            flex: 1, height: 100, border: '1px solid rgba(249,115,22,0.35)', borderRadius: 18, cursor: 'pointer',
-            fontFamily: 'inherit', textAlign: 'left', position: 'relative', overflow: 'hidden', padding: '13px 14px',
-            background: 'linear-gradient(145deg, #1A0A00, #2D1500)' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: 90, height: 90, pointerEvents: 'none',
-              background: 'radial-gradient(circle at 100% 0%, rgba(249,115,22,0.3), transparent 60%)' }}/>
-            {/* mini arco 90s */}
-            <div style={{ position: 'absolute', top: 12, right: 12, width: 32, height: 32 }}>
-              <svg width="32" height="32" viewBox="0 0 32 32" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="16" cy="16" r="11" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3"/>
-                <circle cx="16" cy="16" r="11" fill="none" stroke="#F97316" strokeWidth="3" strokeLinecap="round"
-                  strokeDasharray="69" style={{ animation: 'miniArcDrain 4s linear infinite' }}/>
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 8, fontWeight: 900, color: '#F97316' }}>90s</div>
-            </div>
-            <div style={{ animation: 'salaIcon 2.4s ease-in-out infinite', display: 'inline-block' }}>
-              <PkIc n="timer" s={28} c="#FB923C"/>
-            </div>
-            <div className="serif" style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginTop: 6 }}>Contrarreloj</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>10 preguntas · 90s</div>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 8.5, fontWeight: 800,
-              color: '#FB923C', background: 'rgba(60,25,5,0.7)', borderRadius: 99, padding: '2px 8px' }}>
-              <PkIc n="empanada" s={9} c="#FB923C"/>x1.5
-            </span>
+            {jugadoHoy ? (
+              <div style={{ fontSize: 13, fontWeight: 900, color: retoPerfect ? '#3DA873' : '#EF4444', lineHeight: 1 }}>
+                {retoPerfect ? '✓' : `R${Math.min((appState.retoDia?.wins || 0) + 1, 3)}`}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, fontWeight: 900, color: '#FBBF24', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{cuenta}</div>
+            )}
           </button>
         </div>
-      </div>
 
-      {/* ══ 4. RETO DEL DÍA ══ */}
-      <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
-        position: 'relative', border: 'none', borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-        padding: '16px', overflow: 'hidden',
-        background: jugadoHoy && retoPerfect ? 'linear-gradient(135deg, rgba(61,168,115,0.10), transparent)' : 'linear-gradient(135deg, rgba(251,191,36,0.08), transparent)',
-        borderLeft: `4px solid ${jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24'}`,
-        boxShadow: `inset 0 0 0 1px ${jugadoHoy && retoPerfect ? 'rgba(61,168,115,0.3)' : 'rgba(251,191,36,0.3)'}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <PkIc n="target" s={13} c={jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24'}/>
-          <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: 2, color: jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24' }}>RETO DEL DÍA</span>
-          <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: C.textMuted, fontVariantNumeric: 'tabular-nums' }}>
-            {hh}:{mm}:{ss} restantes
-          </span>
+        {/* ══ 5. EL COMBO VIVO ══ */}
+        <div style={{ animation: 'staggerRise 0.5s ease 0.3s both' }}>
+          <PresenciaViva C={C} user={user}/>
         </div>
-        {jugadoHoy ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ animation: retoPerfect ? 'checkGlow 2s ease-in-out infinite' : 'none' }}>
-              <PkIc n={retoPerfect ? 'check' : 'x'} s={26} c={retoPerfect ? '#3DA873' : '#EF4444'}/>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: retoPerfect ? '#3DA873' : C.text }}>
-                {retoPerfect ? '✓ Sello Perfecto reclamado' : `Caíste en la ronda ${Math.min(retoWins + 1, 3)}`}
-              </div>
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-                {retoPerfect ? `Llevas ${sellosTotal} sello${sellosTotal !== 1 ? 's' : ''} · toca para presumir` : 'Mañana hay revancha'}
-              </div>
-            </div>
-            <PkIc n="right" s={13} c={C.textMuted}/>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 13, flexShrink: 0,
-                background: `${meta1.color || '#FBBF24'}1C`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <PkIc n="target" s={22} c={meta1.color || '#FBBF24'}/>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
-                  3 rondas · empieza en {retoQs[0]?.subject || 'sorpresa'}
-                </div>
-                <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                  {ayerPct !== null ? `Ayer solo el ${ayerPct}% lo logró.` : 'Dificultad creciente por ronda.'}
-                </div>
-              </div>
-            </div>
-            {/* Recompensas */}
-            <div style={{ display: 'flex', gap: 6, marginTop: 11, alignItems: 'center' }}>
-              <span style={{ fontSize: 8.5, fontWeight: 800, color: C.textMuted, letterSpacing: 0.5 }}>GANAS:</span>
-              {[
-                { ic: 'empanada', c: '#E8B84B', t: '+150' },
-                { ic: 'star', c: '#A78BFA', t: '+300 XP' },
-                { ic: 'target', c: '#FBBF24', t: 'Sello' },
-              ].map(r => (
-                <span key={r.t} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 800,
-                  color: r.c, background: `${r.c}18`, border: `1px solid ${r.c}35`, borderRadius: 99, padding: '2.5px 8px' }}>
-                  <PkIc n={r.ic} s={9} c={r.c}/>{r.t}
-                </span>
-              ))}
-              <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#FBBF24' }}>Ir →</span>
-            </div>
-          </>
+        {rankInfo && rankInfo.pos > 1 && rankInfo.aheadGap !== null && rankInfo.aheadGap <= 8 && (
+          <button onClick={() => onGoTab('friends')} style={{ padding: '9px 14px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'left', border: 'none', borderLeft: `3px solid ${C.accent}`, background: `linear-gradient(90deg, ${C.accent}12, transparent)`,
+            display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PkIc n="star" s={13} c={C.accent}/>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: C.text }}>
+              @{rankInfo.aheadName} te va a quitar el #{rankInfo.pos - 1}. Le faltan {rankInfo.aheadGap} aciertos.
+            </span>
+          </button>
         )}
-      </button>
 
-      {/* ══ 5. EL COMBO LIVE ══ */}
-      <PresenciaViva C={C} user={user}/>
-
-      {rankInfo && (
-        <button onClick={() => onGoTab('friends')} style={{
-          padding: '11px 15px', borderRadius: 16, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          border: `1px solid ${rankInfo.pos === 1 ? 'rgba(251,191,36,0.4)' : C.border}`,
-          background: rankInfo.pos === 1 ? 'rgba(251,191,36,0.06)' : 'rgba(255,255,255,0.03)',
-          display: 'flex', alignItems: 'center', gap: 10 }}>
-          <PkIc n={rankInfo.pos === 1 ? 'sombrero' : 'star'} s={16} c={rankInfo.pos === 1 ? '#D4AF37' : C.accent}/>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted }}>TU POSICIÓN EN EL COMBO</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: rankInfo.pos === 1 ? '#D4AF37' : C.text, marginTop: 1 }}>
-              {rankInfo.pos === 1 ? '👑 #1 · ¡Nadie te tose, parce!' : `#${rankInfo.pos} de ${rankInfo.total}`}
-            </div>
+        {/* ══ 6. FICHAS DE MODO ══ */}
+        <div style={{ animation: 'staggerRise 0.5s ease 0.36s both' }}>
+          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, marginBottom: 10, textAlign: 'center' }}>
+            ¿A QUÉ LE VAS HOY?
           </div>
-          {rankInfo.aheadGap !== null && rankInfo.pos > 1 && (
-            <span style={{ fontSize: 11, fontWeight: 900, color: '#2D8A5E', whiteSpace: 'nowrap' }}>
-              +{rankInfo.aheadGap} y subes →
-            </span>
-          )}
-        </button>
-      )}
-
-      {/* ══ 6. PROGRESO DE LECTURA (compacto) ══ */}
-      <div style={{ display: 'flex', borderRadius: 16, overflow: 'hidden', border: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.03)' }}>
-        <button onClick={() => onGoTab('books')} style={{ flex: 1, padding: '12px 14px', background: 'none', border: 'none',
-          borderRight: `1px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
-            <PkIc n="book" s={11} c="#2D8A5E"/>
-            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.textMuted }}>LECTURA HOY</span>
-          </div>
-          {readDone ? (
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: '#3DA873' }}>✓ Meta {readGoal}/{readGoal} min</div>
-          ) : (
-            <>
-              <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 4 }}>
-                <div style={{ height: '100%', width: `${Math.min(100, (readToday / readGoal) * 100)}%`, borderRadius: 99,
-                  background: 'linear-gradient(90deg, #2D8A5E, #3DA873)' }}/>
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.textMid }}>{readToday}/{readGoal} min · faltan {Math.max(0, readGoal - readToday)}</div>
-            </>
-          )}
-        </button>
-        <button onClick={() => onGoTab('icfes')} style={{ flex: 1, padding: '12px 14px', background: 'none', border: 'none',
-          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
-            <PkIc n="rana" s={11} c={lastSimColor}/>
-            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.textMuted }}>ÚLTIMO ICFES</span>
-          </div>
-          {lastSim ? (
-            <>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: lastSimColor }}>{lastSim.correct || 0} aciertos · {lastSim.score}/500</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginTop: 3 }}>
-                {lastSimDaysAgo === 0 ? 'hoy' : lastSimDaysAgo === 1 ? 'ayer' : `hace ${lastSimDaysAgo} días`} · ver →
-              </div>
-            </>
-          ) : (
-            <div style={{ fontSize: 12, fontWeight: 700, color: C.textMuted }}>Aún sin simulacros · empieza →</div>
-          )}
-        </button>
-      </div>
-
-      {/* ══ BOTTOM SHEET: MODOS ══ */}
-      {salaOpen && (
-        <Portal>
-          <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99992, background: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-            onClick={() => setSalaOpen(false)}>
-            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 430, maxHeight: '78vh', overflowY: 'auto',
-              background: C.bgAlt, borderRadius: '24px 24px 0 0', border: `1px solid ${C.border}`, borderBottom: 'none',
-              padding: '10px 18px 30px', animation: 'sheetUp 0.35s cubic-bezier(0.22,1,0.36,1) both' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.15)', margin: '4px auto 16px' }}/>
-              <div className="serif" style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Elige tu modo de entrenamiento</div>
-              <div style={{ fontSize: 11.5, color: C.textMuted, marginBottom: 16 }}>Los 5 modos activan tu racha ICFES</div>
-              {[
-                { id: 'simulacro', nom: 'Simulacro Oficial', desc: 'Como el día real del examen', c: '#4A9EFF', ic: 'pergamino',
-                  rec: bestIcfes > 0 ? `Mejor: ${bestIcfes}` : 'Sin jugar', act: () => { setSalaOpen(false); onGoTab('icfes'); } },
-                { id: 'contrarreloj', nom: 'Contrarreloj', desc: '10 preguntas · 90 segundos', c: '#F97316', ic: 'timer',
-                  rec: (appState.contrarrelojRecord || 0) > 0 ? `Mejor: ${appState.contrarrelojRecord}` : 'Sin jugar', act: () => { setSalaOpen(false); setModoKey(k => k + 1); setModo('contrarreloj'); } },
-                { id: 'supervivencia', nom: 'Supervivencia', desc: '3 vidas · preguntas infinitas', c: '#EF4444', ic: 'mountain',
-                  rec: (appState.supervivenciaRecord || 0) > 0 ? `Mejor: Ola ${appState.supervivenciaRecord}` : 'Sin jugar', act: () => { setSalaOpen(false); setModoKey(k => k + 1); setModo('supervivencia'); } },
-                { id: 'ruleta', nom: 'La Ruleta del Saber', desc: 'Tira la palanca · x2 a x32', c: '#D4AF37', ic: 'solandino',
-                  rec: (appState.ruletaMaxMult || 0) > 0 ? `Mejor: x${appState.ruletaMaxMult}` : 'Sin jugar', act: () => { setSalaOpen(false); setModoKey(k => k + 1); setModo('ruleta'); } },
-                { id: 'duelo', nom: 'Duelo Flash', desc: 'vs un rival en vivo · 3 min', c: '#DC2626', ic: 'swords',
-                  rec: 'Rival en vivo', act: () => { setSalaOpen(false); setFlashKey(k => k + 1); setFlashOpen(true); } },
-              ].map((m, i) => (
-                <button key={m.id} onClick={() => { FX.play('duel'); FX.vibrate('medium'); m.act(); }} style={{
-                  display: 'flex', alignItems: 'center', gap: 13, width: '100%', padding: '12px 4px', cursor: 'pointer',
-                  fontFamily: 'inherit', textAlign: 'left', background: 'none', border: 'none',
-                  borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, flexShrink: 0, background: `${m.c}1E`,
-                    border: `1px solid ${m.c}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PkIc n={m.ic} s={24} c={m.c}/>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4 }}>
+            {MODOS.map((m, i) => {
+              const activo = modoSel === i;
+              return (
+                <button key={m.id} onClick={() => { if (!activo) { FX.play('nav'); FX.vibrate('light'); setModoSel(i); } }} style={{
+                  flex: 1, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '4px 0',
+                  opacity: activo ? 1 : 0.5, transform: activo ? 'scale(1.12)' : 'scale(0.92)',
+                  transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                  <div style={{ position: 'relative', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {/* Anillo de luz girando en el seleccionado */}
+                    {activo && (
+                      <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none',
+                        border: '2px solid transparent', borderTopColor: m.color, borderRightColor: `${m.color}66`,
+                        animation: 'fichaRingSpin 2.5s linear infinite' }}/>
+                    )}
+                    <div style={{ width: 44, height: 44, borderRadius: '50%',
+                      background: activo ? `${m.color}22` : 'rgba(255,255,255,0.04)',
+                      border: `1.5px solid ${activo ? m.color : C.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: activo ? `0 0 16px ${m.color}55` : 'none',
+                      animation: activo && m.id === 'ruleta' ? 'raysSpin 8s linear infinite' : activo && m.id === 'supervivencia' ? 'fichaBreathe 1.6s ease-in-out infinite' : 'none' }}>
+                      <PkIc n={m.ic} s={22} c={activo ? m.color : C.textMuted}/>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="serif" style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{m.nom}</div>
-                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{m.desc}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: m.c }}>{m.rec}</div>
-                    <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end' }}><PkIc n="right" s={13} c={m.c}/></div>
-                  </div>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: activo ? m.color : C.textMuted, textAlign: 'center', lineHeight: 1.1 }}>{m.nom}</span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        </Portal>
-      )}
+          {/* Récord del modo seleccionado */}
+          <div style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: sel.color, marginTop: 6 }}>{sel.rec}</div>
+        </div>
 
-      {/* ══ OVERLAYS DE MODOS ══ */}
-      {retoOpen && (
-        <Portal>
-          <RetoDelDia C={C} appState={appState} setAppState={setAppState}
-            onClose={() => setRetoOpen(false)} onMissionReward={onMissionReward} unlockSecret={unlockSecret}/>
-        </Portal>
-      )}
-      {modo === 'contrarreloj' && (
-        <ModoContrarreloj key={`cr${modoKey}`} C={C} appState={appState}
-          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}/>
-      )}
-      {modo === 'supervivencia' && (
-        <ModoSupervivencia key={`sv${modoKey}`} C={C} appState={appState}
-          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}
-          onRevive={(costo) => setAppState(s => ({ ...s, ryo: Math.max(0, (s.ryo || 0) - costo) }))}/>
-      )}
-      {modo === 'ruleta' && (
-        <ModoRuleta key={`rl${modoKey}`} C={C} appState={appState}
-          onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}/>
-      )}
-      {flashOpen && (
-        <DueloFlash key={flashKey} C={C} user={user} appState={appState} setAppState={setAppState}
-          onClose={() => setFlashOpen(false)} onRematch={() => setFlashKey(k => k + 1)}
-          onMissionReward={onMissionReward} unlockSecret={unlockSecret} pushNotif={pushNotif} onConfirm={onConfirm}/>
-      )}
-      {logroShow && <LogroSecretoOverlay logro={logroShow} onClose={() => setLogroShow(null)}/>}
+        {/* ══ 7. BOTÓN JUGAR (dinámico, 3D) ══ */}
+        <button
+          onPointerDown={() => setJugarPress(true)}
+          onPointerUp={() => setJugarPress(false)}
+          onPointerLeave={() => setJugarPress(false)}
+          onClick={() => { FX.play('duelStart'); FX.vibrate('heavy'); lanzarModo(sel.id); }}
+          style={{
+            position: 'relative', width: '100%', height: 62, border: 'none', borderRadius: 18, cursor: 'pointer',
+            fontFamily: 'inherit', overflow: 'hidden', marginTop: 2,
+            background: `linear-gradient(135deg, ${sel.color}, ${sel.color}CC)`,
+            color: '#fff', fontSize: 16, fontWeight: 900, letterSpacing: 0.5,
+            transform: jugarPress ? 'translateY(3px)' : 'translateY(0)',
+            boxShadow: jugarPress
+              ? `0 2px 0 ${sel.color}66, 0 3px 10px rgba(0,0,0,0.4)`
+              : `0 6px 0 ${sel.color}66, 0 10px 26px ${sel.color}44`,
+            transition: 'transform 0.1s ease, box-shadow 0.1s ease, background 0.4s ease',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            animation: jugarPress ? 'none' : 'ctaPulse 4s ease-in-out infinite 1s' }}>
+          {/* Shimmer que recorre el botón */}
+          {!jugarPress && (
+            <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, pointerEvents: 'none',
+              background: `linear-gradient(90deg, transparent, ${streak >= 30 ? 'rgba(255,215,94,0.45)' : 'rgba(255,255,255,0.28)'}, transparent)`,
+              animation: 'jugarShine 4s ease-in-out infinite 1s' }}/>
+          )}
+          <PkIc n={sel.ic} s={22} c="#fff"/>
+          <span>JUGAR</span>
+          <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.85 }}>· {sel.nom} · {sel.det}</span>
+        </button>
+
+        {/* ══ OVERLAYS ══ */}
+        {retoOpen && (
+          <Portal>
+            <RetoDelDia C={C} appState={appState} setAppState={setAppState}
+              onClose={() => setRetoOpen(false)} onMissionReward={onMissionReward} unlockSecret={unlockSecret}/>
+          </Portal>
+        )}
+        {modo === 'contrarreloj' && (
+          <ModoContrarreloj key={`cr${modoKey}`} C={C} appState={appState}
+            onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}/>
+        )}
+        {modo === 'supervivencia' && (
+          <ModoSupervivencia key={`sv${modoKey}`} C={C} appState={appState}
+            onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}
+            onRevive={(costo) => setAppState(s => ({ ...s, ryo: Math.max(0, (s.ryo || 0) - costo) }))}/>
+        )}
+        {modo === 'ruleta' && (
+          <ModoRuleta key={`rl${modoKey}`} C={C} appState={appState}
+            onTerminar={finalizarModo} onOtra={() => setModoKey(k => k + 1)} onClose={() => setModo(null)}/>
+        )}
+        {flashOpen && (
+          <DueloFlash key={flashKey} C={C} user={user} appState={appState} setAppState={setAppState}
+            onClose={() => setFlashOpen(false)} onRematch={() => setFlashKey(k => k + 1)}
+            onMissionReward={onMissionReward} unlockSecret={unlockSecret} pushNotif={pushNotif} onConfirm={onConfirm}/>
+        )}
+        {logroShow && <LogroSecretoOverlay logro={logroShow} onClose={() => setLogroShow(null)}/>}
+      </div>
     </div>
   );
 }
