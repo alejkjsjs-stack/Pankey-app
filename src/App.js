@@ -399,6 +399,19 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes modeExpand { 0%{transform:scale(0.4);opacity:0.4;border-radius:24px;} 100%{transform:scale(1);opacity:1;border-radius:0px;} }
 @keyframes iconFloatWiggle { 0%,100%{transform:translateY(0) rotate(0deg);} 30%{transform:translateY(-3px) rotate(-4deg);} 65%{transform:translateY(1px) rotate(3deg);} }
 
+/* ── INICIO v7 "El Templo del Saber" — atmósfera ── */
+@keyframes twinkle { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
+@keyframes nieblaDrift { 0%{transform:translateX(-10px);} 100%{transform:translateX(10px);} }
+@keyframes dustFloat { 0%,100%{transform:translate(0,0);} 50%{transform:translate(var(--dx,10px), var(--dy,-16px));} }
+@keyframes runaBreath { 0%,100%{opacity:0.3;} 50%{opacity:0.7;} }
+@keyframes runaBreathAlt { 0%,100%{opacity:0.7;} 50%{opacity:0.3;} }
+@keyframes shimmerButton { 0%{background-position:200% center;} 100%{background-position:-200% center;} }
+@keyframes listoPulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.08);opacity:0.75;} }
+@keyframes luzRespira { 0%,100%{opacity:0.7;} 50%{opacity:1;} }
+@keyframes sombraLlama { 0%,100%{transform:translateX(-50%) scaleX(0.9);} 50%{transform:translateX(-50%) scaleX(1.1);} }
+.modos-cartas { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; gap:8px; scrollbar-width:none; padding:6px 2px 8px; }
+.modos-cartas::-webkit-scrollbar { display:none; }
+
 /* ── INICIO v6 "El Fogón de la Casa" ── */
 @keyframes fichaRingSpin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
 @keyframes coronaShine { 0%,88%,100%{filter:drop-shadow(0 0 2px #FFD75E);} 94%{filter:drop-shadow(0 0 11px #FFD75E);} }
@@ -1504,7 +1517,7 @@ function AvatarFrame({ frameData, sz, c }) {
   if (id === 'f_aurora') return (
     <div style={{ position: 'absolute', inset: -4, zIndex: 3, pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', padding: 3.5,
-        background: 'linear-gradient(120deg, #34D399, #22D3EE, #A78BFA, #F472B6, #34D399)',
+        backgroundImage: 'linear-gradient(120deg, #34D399, #22D3EE, #A78BFA, #F472B6, #34D399)',
         backgroundSize: '300% 300%', animation: 'auroraFlow 7s ease infinite',
         WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
         WebkitMaskComposite: 'xor', maskComposite: 'exclude',
@@ -3208,7 +3221,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         <div style={{ display: tab === 'tienda' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} />
         </div>
-        <div style={{ display: tab === 'inicio' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: tab === 'inicio' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '14px 20px 10px', WebkitOverflowScrolling: 'touch' }}>
           <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} />
         </div>
         <div style={{ display: tab === 'icfes' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
@@ -7718,9 +7731,56 @@ function GrecaDivider({ isLight }) {
 }
 
 // ─────────────────────────────────────────────
+//  EL ALTAR DEL TEMPLO — base de piedra precolombina para la llama
+// ─────────────────────────────────────────────
+function AltarDelTemplo({ lvl, off }) {
+  const glow = off ? 'rgba(148,163,184,0.15)' : `${lvl.main}26`;
+  return (
+    <div style={{ position: 'absolute', bottom: -24, left: '50%', transform: 'translateX(-50%)',
+      width: 210, pointerEvents: 'none' }}>
+      {/* Runas laterales que respiran alternadas */}
+      {[0, 1].map(i => (
+        <svg key={i} viewBox="0 0 24 24" width="22" height="22" fill="none"
+          stroke={off ? '#64748B' : lvl.main} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"
+          style={{ position: 'absolute', bottom: 26, [i === 0 ? 'left' : 'right']: 4,
+            animation: `${i === 0 ? 'runaBreath' : 'runaBreathAlt'} 3s ease-in-out infinite` }}>
+          <path d={PETROGLIFOS_MARCA[i]}/>
+        </svg>
+      ))}
+      <svg viewBox="0 0 210 58" width="210" height="58" style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="altarPiedra" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#4A5568"/>
+            <stop offset="100%" stopColor="#2D3748"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="105" cy="54" rx="96" ry="6" fill="rgba(0,0,0,0.4)"/>
+        <rect x="5" y="40" width="200" height="15" rx="4" fill="url(#altarPiedra)"/>
+        <rect x="35" y="26" width="140" height="15" rx="4" fill="url(#altarPiedra)"/>
+        <rect x="60" y="15" width="90" height="12" rx="4" fill="url(#altarPiedra)"/>
+        <rect x="60" y="15" width="90" height="12" rx="4" fill={glow}/>
+        <g stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" fill="none">
+          <path d="M20 47 q4 -4 8 0 q4 4 8 0"/>
+          <path d="M174 47 q4 -4 8 0 q4 4 8 0"/>
+          <circle cx="105" cy="47.5" r="3.4"/>
+          <path d="M105 42.5 v-2 M105 52.5 v2 M100 47.5 h-2 M110 47.5 h2"/>
+          <path d="M50 33 h4 M56 30 v6"/>
+          <path d="M160 33 h-4 M154 30 v6"/>
+        </g>
+        <g fill="rgba(255,255,255,0.07)">
+          <rect x="5" y="40" width="200" height="2" rx="1"/>
+          <rect x="35" y="26" width="140" height="2" rx="1"/>
+          <rect x="60" y="15" width="90" height="2" rx="1"/>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 //  CAPA 5 — FUEGO DE RACHA (CSS puro, evoluciona)
 // ─────────────────────────────────────────────
-function FuegoRacha({ streak, C, week, sealed, isLight }) {
+function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false }) {
   const lvl = fireLevelFor(streak);
   const off = lvl.id === 0;
   const spark = lvl.id === 1;
@@ -7772,6 +7832,15 @@ function FuegoRacha({ streak, C, week, sealed, isLight }) {
       {/* Escenario del fuego (tocable) */}
       <div onClick={tocarFuego} style={{ position: 'relative', width: 170, height: lvl.h + 34, cursor: 'pointer',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+
+        {/* El Altar del Templo bajo la llama */}
+        {enAltar && <AltarDelTemplo lvl={lvl} off={off}/>}
+        {/* Sombra de la llama sobre la plataforma */}
+        {enAltar && !off && (
+          <div style={{ position: 'absolute', bottom: 4, left: '50%', width: 60, height: 8, borderRadius: '50%',
+            background: `radial-gradient(ellipse, ${lvl.main}66 0%, transparent 70%)`,
+            animation: 'sombraLlama 2.2s ease-in-out infinite', pointerEvents: 'none' }}/>
+        )}
 
         {/* Glow radial grande detrás de la llama */}
         {!off && lvl.glowR > 0 && (
@@ -7960,31 +8029,39 @@ function FuegoRacha({ streak, C, week, sealed, isLight }) {
         ))}
       </div>
 
-      {/* Número gigante */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2, position: 'relative' }}>
-        <span style={{ fontSize: 42, fontWeight: 900, lineHeight: 1,
-          color: numColor,
-          textShadow: off ? 'none' : isLight ? `0 2px 10px ${lvl.halo}` : `0 0 24px ${lvl.halo}` }}>{streak}</span>
-        <span style={{ fontSize: 13, fontWeight: 800, color: off ? C.textMuted : `${numColor}CC` }}>
-          {streak === 1 ? 'día' : 'días'}
-        </span>
-      </div>
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2.4, textTransform: 'uppercase',
-        color: numColor, marginTop: 4, opacity: 0.92, position: 'relative' }}>
-        {lvl.frase}
+      {/* Número: runa iluminada del altar (enAltar) o texto flotante */}
+      <div style={enAltar ? {
+        position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
+        marginTop: 30, padding: '7px 26px 9px', borderRadius: 13,
+        background: off ? 'rgba(51,65,85,0.35)' : `${lvl.main}14`,
+        border: `1px solid ${off ? 'rgba(71,85,105,0.3)' : lvl.main + '2E'}`,
+        boxShadow: off ? 'none' : `0 4px 18px ${lvl.halo}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+        backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+      } : { display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+          <span style={{ fontSize: enAltar ? 32 : 42, fontWeight: 900, lineHeight: 1,
+            color: numColor,
+            textShadow: off ? 'none' : isLight ? `0 2px 10px ${lvl.halo}` : `0 0 24px ${lvl.halo}` }}>{streak}</span>
+          <span style={{ fontSize: enAltar ? 11 : 13, fontWeight: 800, color: off ? C.textMuted : `${numColor}CC` }}>
+            {streak === 1 ? 'día' : 'días'}
+          </span>
+        </div>
+        <div style={{ fontSize: enAltar ? 8 : 11, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase',
+          color: numColor, marginTop: 4, opacity: 0.92 }}>
+          {lvl.frase}
+        </div>
+        {/* Puntos de la semana */}
+        <div style={{ display: 'flex', gap: enAltar ? 5 : 7, marginTop: enAltar ? 7 : 10 }}>
+          {week.map((on, i) => (
+            <div key={i} style={{ width: enAltar ? 7 : 9, height: enAltar ? 7 : 9, borderRadius: '50%',
+              background: on ? (off ? C.textMuted : numColor) : 'transparent',
+              border: on ? 'none' : `1.5px solid ${C.borderStrong || C.border}`,
+              boxShadow: on && !off ? `0 0 6px ${lvl.halo}` : 'none' }}/>
+          ))}
+        </div>
       </div>
 
-      {/* Puntos de la semana */}
-      <div style={{ display: 'flex', gap: 7, marginTop: 10, position: 'relative' }}>
-        {week.map((on, i) => (
-          <div key={i} style={{ width: 9, height: 9, borderRadius: '50%',
-            background: on ? (off ? C.textMuted : numColor) : 'transparent',
-            border: on ? 'none' : `1.5px solid ${C.borderStrong || C.border}`,
-            boxShadow: on && !off ? `0 0 6px ${lvl.halo}` : 'none' }}/>
-        ))}
-      </div>
-
-      {!sealed && streak > 0 && (
+      {!enAltar && !sealed && streak > 0 && (
         <div style={{ marginTop: 9, fontSize: 11, fontWeight: 700, color: '#E8743A',
           display: 'flex', alignItems: 'center', gap: 5, position: 'relative' }}>
           <PkIc n="flame" s={11} c="#E8743A"/> Sella hoy o el fuego se apaga
@@ -8329,10 +8406,10 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
 
   return (
     <>
-      {/* ── MIS COFRES: 4 slots estilo Clash Royale ── */}
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 20, padding: '14px 15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-          <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, flex: 1 }}>MIS COFRES</span>
+      {/* ── MIS COFRES: vitrina flotante del templo (sin card) ── */}
+      <div style={{ padding: '0 2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.8, color: C.textMuted, flex: 1 }}>MIS COFRES</span>
           {canOpen ? (
             <button onClick={() => { FX.play('tap'); setModal(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 11, fontWeight: 800, color: lv.c1, padding: 0 }}>
@@ -8346,39 +8423,62 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
           )}
         </div>
 
-        {/* Los 4 slots: nivel actual + próximos niveles de cofre */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        {/* Los cofres flotan libres en el espacio del templo */}
+        <div style={{ display: 'flex', gap: 6 }}>
           {slots.map((slot, i) => (
-            <button key={i} onClick={() => { if (slot.estado === 'listo') { FX.play('tap'); setModal(true); } else { FX.play('tap'); setModal(true); } }}
-              style={{ flex: 1, height: 92, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 4px',
-                position: 'relative', overflow: 'hidden',
-                background: slot.estado === 'listo' ? `${slot.cc.c2}12` : slot.estado === 'proximo' ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.015)',
-                border: slot.estado === 'listo' ? `1.5px solid ${slot.cc.c2}` : slot.estado === 'proximo' ? `1.5px dashed ${slot.cc.c2}55` : `1px solid ${C.border}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                animation: slot.estado === 'listo' ? 'slotReady 1.8s ease-in-out infinite' : 'none' }}>
+            <button key={i} onClick={() => { FX.play('tap'); setModal(true); }}
+              style={{ flex: 1, height: 96, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                padding: '6px 2px 2px', position: 'relative',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
               {slot.estado === 'bloqueado' ? (
                 <>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" style={{ opacity: 0.55 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" style={{ opacity: 0.4, marginBottom: 14 }}>
                     <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
                   </svg>
-                  <span style={{ fontSize: 8, fontWeight: 700, color: C.textMuted, textAlign: 'center', lineHeight: 1.2 }}>Anterior<br/>primero</span>
+                  <span style={{ fontSize: 7.5, fontWeight: 700, color: C.textMuted, textAlign: 'center', lineHeight: 1.2 }}>Anterior primero</span>
+                </>
+              ) : slot.estado === 'proximo' ? (
+                <>
+                  <div style={{ width: 54, height: 50, borderRadius: 12, border: `1.5px dashed ${slot.cc.c2}45`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
+                    <div style={{ opacity: 0.35, filter: 'grayscale(0.6)' }}>
+                      <CofreSVG lv={slot.cc} open={false} size={36}/>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 8, fontWeight: 800, color: C.textMuted, lineHeight: 1.1 }}>{slot.nombre}</span>
+                  {slot.faltan != null && <span style={{ fontSize: 7.5, fontWeight: 700, color: `${C.textMuted}BB` }}>{slot.faltan}d más</span>}
                 </>
               ) : (
                 <>
-                  <div style={{ opacity: slot.estado === 'proximo' ? 0.4 : 1,
-                    filter: slot.estado === 'listo' ? `drop-shadow(0 0 8px ${slot.cc.c2}88)` : 'none',
-                    animation: slot.estado === 'listo' ? 'chestFloat 2s ease-in-out infinite' : 'none' }}>
-                    <CofreSVG lv={slot.cc} open={false} size={40}/>
+                  <div style={{ position: 'relative',
+                    animation: `chestFloat 3s ease-in-out infinite ${i * 0.8}s`, willChange: 'transform' }}>
+                    <div style={{
+                      filter: slot.estado === 'listo' ? `drop-shadow(0 0 10px ${slot.cc.c2}99)` : `drop-shadow(0 3px 6px rgba(0,0,0,0.4))`,
+                      animation: slot.estado === 'listo' ? 'chestIdle 3.5s ease-in-out infinite' : 'none' }}>
+                      <CofreSVG lv={slot.cc} open={false} size={44}/>
+                    </div>
+                    {/* Chispas del cofre listo */}
+                    {slot.estado === 'listo' && [0, 1, 2].map(k => (
+                      <div key={k} style={{ position: 'absolute', bottom: 4, left: `${22 + k * 24}%`,
+                        width: 3, height: 3, borderRadius: '50%', background: slot.cc.c1,
+                        boxShadow: `0 0 5px ${slot.cc.c2}`, pointerEvents: 'none',
+                        animation: `emberFloat ${1.8 + k * 0.5}s ease-out infinite ${k * 0.6}s` }}/>
+                    ))}
+                    {/* La luz del cofre ilumina el piso */}
+                    <div style={{ position: 'absolute', bottom: -7, left: '50%', transform: 'translateX(-50%)',
+                      width: 42, height: 7, borderRadius: '50%', pointerEvents: 'none',
+                      background: `radial-gradient(ellipse, ${slot.cc.c2}${slot.estado === 'listo' ? '55' : '22'} 0%, transparent 70%)` }}/>
                   </div>
-                  <span style={{ fontSize: 8, fontWeight: 800, color: slot.estado === 'listo' ? slot.cc.c1 : C.textMuted, textAlign: 'center', lineHeight: 1.15 }}>
+                  <span style={{ fontSize: 8, fontWeight: 800, color: slot.estado === 'listo' ? slot.cc.c1 : C.textMuted, lineHeight: 1.1 }}>
                     {slot.nombre}
                   </span>
                   {slot.estado === 'listo' && (
-                    <span style={{ position: 'absolute', top: 5, right: 5, width: 7, height: 7, borderRadius: '50%',
-                      background: '#22C55E', boxShadow: '0 0 6px #22C55E', animation: 'comboDot 1.4s ease-in-out infinite' }}/>
-                  )}
-                  {slot.estado === 'proximo' && slot.faltan != null && (
-                    <span style={{ fontSize: 7.5, fontWeight: 700, color: `${C.textMuted}CC` }}>{slot.faltan}d más</span>
+                    <span style={{ position: 'absolute', top: 0, right: 4, fontSize: 7, fontWeight: 900, letterSpacing: 0.5,
+                      color: '#1A1206', background: `linear-gradient(135deg, ${slot.cc.c1}, ${slot.cc.c2})`,
+                      borderRadius: 99, padding: '2px 6px', boxShadow: `0 0 8px ${slot.cc.c2}`,
+                      animation: 'listoPulse 1.5s ease-in-out infinite' }}>
+                      ¡LISTO!
+                    </span>
                   )}
                 </>
               )}
@@ -8386,19 +8486,19 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
           ))}
         </div>
 
-        {/* Barra de progreso al siguiente cofre / estado */}
-        <div style={{ marginTop: 11 }}>
+        {/* Progreso al siguiente cofre */}
+        <div style={{ marginTop: 8 }}>
           {openedToday ? (
-            <div style={{ fontSize: 10.5, color: C.textMuted, textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: C.textMuted, textAlign: 'center' }}>
               {premio ? `Hoy salieron +${premio.emp} empanadas · vuelve mañana` : 'Ya abriste el cofre de hoy · vuelve mañana'}
             </div>
           ) : !sealed ? (
-            <div style={{ fontSize: 10.5, color: C.textMuted, textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: C.textMuted, textAlign: 'center' }}>
               Sella tu racha (lee o haz un simulacro) para cargar el cofre de hoy
             </div>
           ) : (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 700, color: C.textMuted, marginBottom: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8.5, fontWeight: 700, color: C.textMuted, marginBottom: 4 }}>
                 <span>{next ? `Racha: ${streak} días` : `${lv.name} · nivel máximo`}</span>
                 {next && <span style={{ color: next.c2 }}>{next.min - streak} para {next.name}</span>}
               </div>
@@ -9174,6 +9274,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
       ryo: (s.ryo || 0) + emp,
       xp: (s.xp || 0) + xpG,
       flashWinStreak: win ? (s.flashWinStreak || 0) + 1 : 0,
+      duelosGanados: (s.duelosGanados || 0) + (win ? 1 : 0),
     }));
     if (emp > 0) onMissionReward?.(emp);
     if (win) { FX.play('levelUp'); FX.vibrate('success'); }
@@ -9571,21 +9672,31 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const [retoOpen, setRetoOpen]   = useState(false);
   const [flashOpen, setFlashOpen] = useState(false);
   const [flashKey, setFlashKey]   = useState(0);
-  const [modo, setModo]           = useState(null);    // overlay activo: contrarreloj | supervivencia | ruleta
+  const [modo, setModo]           = useState(null);    // overlay activo
   const [modoKey, setModoKey]     = useState(0);
-  const [modoSel, setModoSel]     = useState(1);        // ficha seleccionada (default Contrarreloj para arrancar rápido)
+  const [modoSel, setModoSel]     = useState(1);       // carta seleccionada
+  const [btnFade, setBtnFade]     = useState(false);   // transición del botón JUGAR
   const [logroShow, setLogroShow] = useState(null);
   const [ahora, setAhora]         = useState(Date.now());
-  const [fuegoStats, setFuegoStats] = useState(false);  // panel de racha (long-press del fuego)
+  const [fuegoStats, setFuegoStats] = useState(false);
   const [jugarPress, setJugarPress] = useState(false);
   const logrosRef = useRef([]);
   logrosRef.current = appState.logrosSecretos || [];
   const lpTimer = useRef(null);
+  const primeraSel = useRef(true);
   const today = todayStr();
   const dk    = dateKeyISO();
 
   useEffect(() => { const iv = setInterval(() => setAhora(Date.now()), 1000); return () => clearInterval(iv); }, []);
   useEffect(() => () => clearTimeout(lpTimer.current), []);
+
+  // Transición del botón JUGAR al cambiar de modo (fade out → in)
+  useEffect(() => {
+    if (primeraSel.current) { primeraSel.current = false; return; }
+    setBtnFade(true);
+    const t = setTimeout(() => setBtnFade(false), 150);
+    return () => clearTimeout(t);
+  }, [modoSel]);
 
   // ── Ranking social ──
   useEffect(() => {
@@ -9606,6 +9717,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   }, [user?.code]);
 
   const streak = appState.streakDays || 0;
+  const fire   = fireLevelFor(streak);
   const sealed = appState.yourConfirmed ||
     (appState.icfesHistory || []).some(r => r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
   const last7 = Array.from({ length: 7 }, (_, i) => {
@@ -9621,9 +9733,9 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     if (streak === 0) return hora < 12 ? '¡Buenos días! Prende el fogón hoy.' : hora < 18 ? 'Aún estás a tiempo de prender el fogón.' : 'Prende una chispa antes de dormir, parce.';
     if (enPeligro) return 'Ojo, que se te apaga el fogón esta noche.';
     if (!sealed && hora >= 12) return '¿Ya vas a sellar hoy o qué, berraco?';
-    if (hora < 12) return '¡Buenos días, berraco! El fogón te espera.';
+    if (hora < 12) return '¡Buenos días, berraco! El templo te espera.';
     if (hora < 18) return sealed ? '¡Vas finísimo hoy, siga así!' : 'Buenas tardes. Séllela cuando pueda.';
-    return sealed ? 'Fogón sellado. Descanse tranquilo.' : 'Buenas noches. No deje apagar el fuego.';
+    return sealed ? 'Templo sellado. Descanse tranquilo.' : 'Buenas noches. No deje apagar el fuego.';
   })();
 
   // ── Logros secretos ──
@@ -9654,6 +9766,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const jugadoHoy   = appState.retoDia?.date === dk && appState.retoDia?.done;
   const retoPerfect = jugadoHoy && appState.retoDia.perfect;
   const retoQs      = retoQuestionsFor(dk);
+  const meta1       = SUBJECT_META[retoQs[0]?.subject] || {};
   const [ayerPct, setAyerPct] = useState(null);
   useEffect(() => {
     if (!fbOK()) return;
@@ -9668,26 +9781,25 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const icfesHist = appState.icfesHistory || [];
   const bestIcfes = icfesHist.length ? Math.max(...icfesHist.map(r => r.score || 0)) : 0;
   const totalMin  = appState.totalMinutesRead || 0;
-  const readToday = appState.readingMinutesToday || 0;
   const empanadasCount = useCountUp(appState.ryo || 0, 900);
 
-  // ── Los 5 modos (fichas) ──
+  // ── Los 5 modos (cartas) ──
   const lanzarModo = (id) => {
     if (id === 'simulacro') { onGoTab('icfes'); return; }
     if (id === 'duelo') { setFlashKey(k => k + 1); setFlashOpen(true); return; }
     setModoKey(k => k + 1); setModo(id);
   };
   const MODOS = [
-    { id: 'simulacro',    nom: 'Simulacro',    det: 'ICFES completo', color: '#3DA873', ic: 'rana',
-      rec: bestIcfes > 0 ? `Récord: ${bestIcfes}` : 'Nuevo' },
-    { id: 'contrarreloj', nom: 'Contrarreloj', det: '90 segundos',    color: '#EF4444', ic: 'timer',
-      rec: (appState.contrarrelojRecord || 0) > 0 ? `Récord: ${appState.contrarrelojRecord}` : 'Nuevo' },
-    { id: 'supervivencia',nom: 'Supervivencia',det: '3 vidas',        color: '#8B5CF6', ic: 'mountain',
-      rec: (appState.supervivenciaRecord || 0) > 0 ? `Récord: Ola ${appState.supervivenciaRecord}` : 'Nuevo' },
-    { id: 'ruleta',       nom: 'La Ruleta',    det: 'x2 a x32',       color: '#D4AF37', ic: 'solandino',
-      rec: (appState.ruletaMaxMult || 0) > 0 ? `Récord: x${appState.ruletaMaxMult}` : 'Nuevo' },
-    { id: 'duelo',        nom: 'Duelo Flash',  det: 'vs rival · 3min',color: '#F97316', ic: 'swords',
-      rec: 'En vivo' },
+    { id: 'simulacro',    nom: 'Simulacro',     det: 'ICFES completo', color: '#3DA873', grad: 'linear-gradient(160deg, #0A2416, #123A22)', ic: 'rana',
+      rec: bestIcfes > 0 ? `Récord ${bestIcfes}` : 'Nuevo', anim: 'kanjiGlow 3s ease-in-out infinite' },
+    { id: 'contrarreloj', nom: 'Contrarreloj',  det: '90 segundos',    color: '#EF4444', grad: 'linear-gradient(160deg, #2A0A0A, #3D1010)', ic: 'timer',
+      rec: (appState.contrarrelojRecord || 0) > 0 ? `Récord ${appState.contrarrelojRecord}` : 'Nuevo', anim: 'clockHands 3s linear infinite' },
+    { id: 'supervivencia',nom: 'Supervivencia', det: '3 vidas',        color: '#8B5CF6', grad: 'linear-gradient(160deg, #1A0F2E, #241448)', ic: 'mountain',
+      rec: (appState.supervivenciaRecord || 0) > 0 ? `Ola ${appState.supervivenciaRecord}` : 'Nuevo', anim: 'heartBeat 1.4s ease-in-out infinite' },
+    { id: 'ruleta',       nom: 'La Ruleta',     det: 'x2 a x32',       color: '#D4AF37', grad: 'linear-gradient(160deg, #241A06, #3A2A0C)', ic: 'solandino',
+      rec: (appState.ruletaMaxMult || 0) > 0 ? `x${appState.ruletaMaxMult}` : 'Nuevo', anim: 'raysSpin 9s linear infinite' },
+    { id: 'duelo',        nom: 'Duelo Flash',   det: 'vs rival · 3min',color: '#F97316', grad: 'linear-gradient(160deg, #2A1204, #3D1D08)', ic: 'swords',
+      rec: (appState.duelosGanados || 0) > 0 ? `${appState.duelosGanados} ganados` : 'En vivo', anim: 'swordsClash 2.2s ease-in-out infinite' },
   ];
   const sel = MODOS[modoSel];
 
@@ -9695,24 +9807,59 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const fuegoDown = () => { lpTimer.current = setTimeout(() => { setFuegoStats(true); FX.vibrate('medium'); }, 380); };
   const fuegoUp = () => { clearTimeout(lpTimer.current); setFuegoStats(false); };
 
-  const gradFondo = 'linear-gradient(180deg, #0a1420 0%, #0c1524 38%, #120f10 78%, #17110a 100%)';
+  // ── Atmósfera: estrellas, niebla y polvo (deterministas, estables) ──
+  const estrellas = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
+    left: 4 + (i * 7.31) % 92, top: (i * 13.7) % 38,
+    s: 1.5 + (i % 3) * 0.5, o: 0.4 + (i % 4) * 0.08,
+    dur: 3 + (i % 5), del: (i * 0.73) % 5,
+  })), []);
+  const nieblas = useMemo(() => [
+    { w: '85%', h: 52, b: '4%',  l: '-5%', dur: 9,  del: 0 },
+    { w: '70%', h: 44, b: '14%', l: '25%', dur: 12, del: 2.5 },
+    { w: '95%', h: 58, b: '0%',  l: '5%',  dur: 10, del: 5 },
+  ], []);
+  const polvo = useMemo(() => Array.from({ length: 8 }, (_, i) => ({
+    left: 18 + (i * 9.5) % 64, top: 12 + (i * 11) % 70,
+    s: 2 + (i % 3), dx: (i % 2 ? 1 : -1) * (8 + (i % 4) * 4), dy: -(10 + (i % 3) * 5),
+    dur: 4 + (i % 5), del: (i * 0.6) % 4, o: 0.2 + (i % 3) * 0.1,
+  })), []);
 
   return (
-    <div className="fi" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 14, minHeight: '100%' }}>
-      {/* Fondo cálido de temperatura (solo visible en este tab) */}
-      <div style={{ position: 'fixed', inset: 0, background: gradFondo, pointerEvents: 'none', zIndex: 0 }}/>
-      {/* Silueta de palmera meciéndose, casi imperceptible */}
-      <div style={{ position: 'fixed', bottom: 66, right: -6, width: 90, height: 150, pointerEvents: 'none', zIndex: 0,
-        opacity: 0.05, transformOrigin: 'bottom center', animation: 'palmSway 7s ease-in-out infinite' }}>
-        <svg viewBox="0 0 60 100" fill="none" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round">
-          <path d="M30 100 Q28 60 30 40"/>
-          <path d="M30 40 Q10 30 2 34 M30 40 Q14 24 8 16 M30 40 Q30 20 30 8 M30 40 Q46 24 52 16 M30 40 Q50 30 58 34"/>
-        </svg>
+    <div className="fi" style={{ position: 'relative', display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+
+      {/* ══ CAPA 1 — EL CIELO DEL PÁRAMO ══ */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse 120% 60% at 50% 0%, #1A2744 0%, #0D1525 40%, #060C14 100%)' }}>
+        {estrellas.map((e, i) => (
+          <div key={i} style={{ position: 'absolute', left: `${e.left}%`, top: `${e.top}%`,
+            width: e.s, height: e.s, borderRadius: '50%', background: `rgba(255,255,255,${e.o})`,
+            animation: `twinkle ${e.dur}s ease-in-out infinite ${e.del}s` }}/>
+        ))}
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* ══ CAPA 2 — EL TEMPLO (suelo + piedra + niebla) ══ */}
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, height: '45%', pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse 140% 80% at 50% 100%, #1A3A1A 0%, #0D1A0D 40%, transparent 70%)' }}>
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.55,
+          background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 14px)' }}/>
+        {nieblas.map((n, i) => (
+          <div key={i} style={{ position: 'absolute', bottom: n.b, left: n.l, width: n.w, height: n.h,
+            background: 'radial-gradient(ellipse, rgba(255,255,255,0.03) 0%, transparent 60%)',
+            animation: `nieblaDrift ${n.dur}s ease-in-out infinite alternate ${n.del}s`, willChange: 'transform' }}/>
+        ))}
+      </div>
 
-        {/* ══ 1. IDENTIDAD ══ */}
+      {/* ══ CAPA 3 — LUZ AMBIENTAL (rebote en el suelo) ══ */}
+      {fire.id > 0 && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, height: 130, pointerEvents: 'none', zIndex: 0,
+          background: `radial-gradient(ellipse 300px 100px at 50% 100%, ${fire.halo} 0%, transparent 60%)`,
+          animation: `luzRespira ${fire.id >= 5 ? 2 : 3}s ease-in-out infinite` }}/>
+      )}
+
+      {/* ══ CONTENIDO ══ */}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 15, flex: 1 }}>
+
+        {/* ── 1. IDENTIDAD (texto flotante, sin card) ── */}
         <div style={{ animation: 'staggerRise 0.5s ease both' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
             <button onClick={() => { FX.play('tap'); onGoTab('perfil'); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}>
@@ -9728,29 +9875,23 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
                 {appState.equipped?.title?.name || 'Iniciado'}
               </div>
             </div>
-            {/* Micro-badges */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-              {/* Ranking escudo */}
               {rankInfo && (
-                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ width: 30, height: 33, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    animation: rankInfo.pos === 1 ? 'coronaShine 4s ease-in-out infinite' : 'none' }}>
-                    <svg viewBox="0 0 24 26" width="30" height="33">
-                      <path d="M12 1 L22 5 L22 13 Q22 22 12 25 Q2 22 2 13 L2 5 Z"
-                        fill={rankInfo.pos === 1 ? '#3A2A08' : '#1A2333'}
-                        stroke={rankInfo.pos === 1 ? '#FFD75E' : '#AEB8C2'} strokeWidth="1.5"/>
-                    </svg>
-                    <span style={{ position: 'absolute', fontSize: 11, fontWeight: 900, color: rankInfo.pos === 1 ? '#FFD75E' : '#E5E9F0' }}>{rankInfo.pos}</span>
-                    {rankInfo.pos === 1 && <span style={{ position: 'absolute', top: -7, fontSize: 11 }}>👑</span>}
-                  </div>
+                <div style={{ position: 'relative', width: 30, height: 33, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  animation: rankInfo.pos === 1 ? 'coronaShine 4s ease-in-out infinite' : 'none' }}>
+                  <svg viewBox="0 0 24 26" width="30" height="33">
+                    <path d="M12 1 L22 5 L22 13 Q22 22 12 25 Q2 22 2 13 L2 5 Z"
+                      fill={rankInfo.pos === 1 ? '#3A2A08' : '#1A2333'}
+                      stroke={rankInfo.pos === 1 ? '#FFD75E' : '#AEB8C2'} strokeWidth="1.5"/>
+                  </svg>
+                  <span style={{ position: 'absolute', fontSize: 11, fontWeight: 900, color: rankInfo.pos === 1 ? '#FFD75E' : '#E5E9F0' }}>{rankInfo.pos}</span>
+                  {rankInfo.pos === 1 && <span style={{ position: 'absolute', top: -7, fontSize: 11 }}>👑</span>}
                 </div>
               )}
-              {/* Empanadas con count-up */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 11, padding: '5px 9px' }}>
                 <PkIc n="empanada" s={13} c={C.amberMid}/>
                 <span style={{ fontSize: 12, fontWeight: 900, color: C.amberMid, fontVariantNumeric: 'tabular-nums' }}>{empanadasCount.toLocaleString()}</span>
               </div>
-              {/* Nivel con anillo de progreso */}
               <div style={{ position: 'relative', width: 34, height: 34 }}>
                 <svg width="34" height="34" style={{ transform: 'rotate(-90deg)' }}>
                   <circle cx="17" cy="17" r="14" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3"/>
@@ -9762,22 +9903,45 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
               </div>
             </div>
           </div>
-          {/* Saludo dinámico */}
-          <div style={{ fontSize: 11.5, fontWeight: 600, marginTop: 8, marginLeft: 2,
+          <div style={{ fontSize: 11.5, fontWeight: 600, marginTop: 7, marginLeft: 2,
             color: enPeligro ? '#EF4444' : C.textMid, animation: enPeligro ? 'presenceBlink 1.6s ease-in-out infinite' : 'fadeIn 0.6s ease both' }}>
             {saludo}
           </div>
         </div>
 
-        {/* ══ 2. COFRES ══ */}
+        {/* ── 2. COFRES FLOTANTES (sin card contenedora) ── */}
         <div style={{ animation: 'staggerRise 0.5s ease 0.08s both' }}>
           <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
         </div>
 
-        {/* ══ 3. EL FOGÓN (fuego libre) ══ */}
+        {/* ── 3. LA LLAMA SOBRE EL ALTAR ── */}
         <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoUp}
-          style={{ position: 'relative', animation: 'staggerRise 0.6s ease 0.16s both', margin: '2px 0' }}>
-          <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight}/>
+          style={{ position: 'relative', animation: 'staggerRise 0.6s ease 0.16s both', margin: '0 0 2px' }}>
+          {/* Luz primaria: la llama ilumina hacia arriba */}
+          {fire.id > 0 && (
+            <div style={{ position: 'absolute', top: '-8%', left: '50%', transform: 'translateX(-50%)',
+              width: 240, height: 300, pointerEvents: 'none',
+              background: `radial-gradient(ellipse 200px 300px at 50% 45%, ${fire.halo} 0%, transparent 70%)`,
+              animation: `luzRespira ${fire.id >= 5 ? 2 : 3}s ease-in-out infinite` }}/>
+          )}
+          <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight} enAltar/>
+          {/* Polvo de oro cuando la racha está sellada */}
+          {streak > 0 && sealed && polvo.map((p, i) => (
+            <div key={i} style={{ position: 'absolute', left: `${p.left}%`, top: `${p.top}%`,
+              width: p.s, height: p.s, borderRadius: '50%', background: '#FBBF24',
+              opacity: p.o, pointerEvents: 'none',
+              '--dx': `${p.dx}px`, '--dy': `${p.dy}px`,
+              animation: `dustFloat ${p.dur}s ease-in-out infinite ${p.del}s` }}/>
+          ))}
+          {/* Alerta: mini llama parpadeando al lado del altar */}
+          {!sealed && streak > 0 && (
+            <div style={{ position: 'absolute', bottom: 46, left: 'calc(50% - 128px)', display: 'flex',
+              alignItems: 'center', gap: 5, pointerEvents: 'none',
+              animation: 'presenceBlink 1.4s ease-in-out infinite' }}>
+              <PkIc n="flame" s={13} c="#E8743A"/>
+              <span style={{ fontSize: 9, fontWeight: 800, color: '#E8743A', maxWidth: 74, lineHeight: 1.25 }}>Sella hoy o se apaga</span>
+            </div>
+          )}
           {/* Panel de stats (long-press) */}
           {fuegoStats && (
             <div className="fi" style={{ position: 'absolute', inset: 0, borderRadius: 20, zIndex: 5,
@@ -9800,16 +9964,19 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           )}
         </div>
 
-        {/* ══ 4. EL PULSO (stats + reto) ══ */}
-        <div style={{ display: 'flex', alignItems: 'stretch', animation: 'staggerRise 0.5s ease 0.24s both' }}>
+        {/* ── 4. PANEL DE STATS (recursos del templo) ── */}
+        <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: 16, overflow: 'hidden',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          animation: 'staggerRise 0.5s ease 0.24s both' }}>
           {[
-            { ic: 'star',   c: bestIcfes > 0 ? getPerfLevel(bestIcfes).color : C.textMuted, val: bestIcfes > 0 ? bestIcfes : '—', label: 'MEJOR ICFES', tab: 'icfes' },
-            { ic: 'book',   c: '#3DA873', val: `${readToday}m`, label: 'LEÍDO HOY', tab: 'books' },
-            { ic: 'target', c: C.accent,  val: icfesHist.length, label: 'SIMULACROS', tab: 'icfes' },
-          ].map((s, i) => (
+            { ic: 'star',   c: bestIcfes > 0 ? getPerfLevel(bestIcfes).color : C.textMuted, val: bestIcfes > 0 ? bestIcfes : '—', label: 'MEJOR', tab: 'icfes' },
+            { ic: 'book',   c: '#3DA873', val: totalMin >= 60 ? `${Math.round(totalMin / 60)}h` : `${totalMin}m`, label: 'LEÍDO', tab: 'books' },
+            { ic: 'swords', c: '#F97316', val: appState.duelosGanados || 0, label: 'DUELOS', tab: 'friends' },
+          ].map((s) => (
             <button key={s.label} onClick={() => { FX.play('tap'); onGoTab(s.tab); }} style={{
-              flex: 1, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 0',
-              borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+              flex: 1, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '10px 0',
+              borderRight: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 3 }}>
                 <PkIc n={s.ic} s={11} c={s.c}/>
                 <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color: 'rgba(255,255,255,0.4)' }}>{s.label}</span>
@@ -9817,26 +9984,25 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
               <div style={{ fontSize: 16, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.val}</div>
             </button>
           ))}
-          {/* Reto del Día — especial, pulsa con countdown */}
           <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
-            flex: 1.15, background: jugadoHoy ? 'none' : 'rgba(212,175,55,0.08)', borderRadius: 12,
-            border: jugadoHoy ? 'none' : '1px solid rgba(212,175,55,0.3)', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 2px',
+            flex: 1.1, background: jugadoHoy ? 'none' : 'rgba(212,175,55,0.10)', border: 'none',
+            cursor: 'pointer', fontFamily: 'inherit', padding: '10px 0',
             animation: jugadoHoy ? 'none' : 'retoUrge 2s ease-in-out infinite' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 3 }}>
               <PkIc n="target" s={11} c={jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24'}/>
-              <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color: jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24' }}>RETO DÍA</span>
+              <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color: jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24' }}>RETO</span>
             </div>
             {jugadoHoy ? (
-              <div style={{ fontSize: 13, fontWeight: 900, color: retoPerfect ? '#3DA873' : '#EF4444', lineHeight: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 900, color: retoPerfect ? '#3DA873' : '#EF4444', lineHeight: 1 }}>
                 {retoPerfect ? '✓' : `R${Math.min((appState.retoDia?.wins || 0) + 1, 3)}`}
               </div>
             ) : (
-              <div style={{ fontSize: 11, fontWeight: 900, color: '#FBBF24', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{cuenta}</div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: '#FBBF24', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{cuenta}</div>
             )}
           </button>
         </div>
 
-        {/* ══ 5. EL COMBO VIVO ══ */}
+        {/* ── 5. EL COMBO VIVO ── */}
         <div style={{ animation: 'staggerRise 0.5s ease 0.3s both' }}>
           <PresenciaViva C={C} user={user}/>
         </div>
@@ -9846,78 +10012,117 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
             display: 'flex', alignItems: 'center', gap: 8 }}>
             <PkIc n="star" s={13} c={C.accent}/>
             <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: C.text }}>
-              @{rankInfo.aheadName} te va a quitar el #{rankInfo.pos - 1}. Le faltan {rankInfo.aheadGap} aciertos.
+              Estás a {rankInfo.aheadGap} acierto{rankInfo.aheadGap !== 1 ? 's' : ''} de quitarle el #{rankInfo.pos - 1} a @{rankInfo.aheadName}.
             </span>
           </button>
         )}
 
-        {/* ══ 6. FICHAS DE MODO ══ */}
-        <div style={{ animation: 'staggerRise 0.5s ease 0.36s both' }}>
-          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, marginBottom: 10, textAlign: 'center' }}>
+        {/* ── 6. RETO DEL DÍA (banner slim, solo si no lo has hecho) ── */}
+        {!jugadoHoy && (
+          <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
+            border: 'none', borderRadius: 16, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+            padding: '13px 15px', borderLeft: '4px solid #FBBF24',
+            background: 'linear-gradient(135deg, rgba(251,191,36,0.08), transparent)',
+            boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.28)',
+            display: 'flex', alignItems: 'center', gap: 12,
+            animation: 'staggerRise 0.5s ease 0.34s both' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+              background: `${meta1.color || '#FBBF24'}1C`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PkIc n="target" s={20} c={meta1.color || '#FBBF24'}/>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>Reto del Día · 3 rondas</div>
+              <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 1 }}>
+                {ayerPct !== null ? `Ayer solo el ${ayerPct}% lo logró` : `Empieza en ${retoQs[0]?.subject || 'sorpresa'}`}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 800,
+                color: '#E8B84B', background: 'rgba(232,184,75,0.14)', border: '1px solid rgba(232,184,75,0.35)', borderRadius: 99, padding: '2px 8px' }}>
+                <PkIc n="empanada" s={9} c="#E8B84B"/>+150 · Sello
+              </span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: '#FBBF24' }}>Ir →</span>
+            </div>
+          </button>
+        )}
+
+        {/* ── 7. CARTAS DE MODO (carrusel snap) ── */}
+        <div style={{ animation: 'staggerRise 0.5s ease 0.38s both' }}>
+          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, marginBottom: 4, marginLeft: 2 }}>
             ¿A QUÉ LE VAS HOY?
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4 }}>
+          <div className="modos-cartas">
             {MODOS.map((m, i) => {
               const activo = modoSel === i;
               return (
                 <button key={m.id} onClick={() => { if (!activo) { FX.play('nav'); FX.vibrate('light'); setModoSel(i); } }} style={{
-                  flex: 1, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '4px 0',
-                  opacity: activo ? 1 : 0.5, transform: activo ? 'scale(1.12)' : 'scale(0.92)',
-                  transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
-                  <div style={{ position: 'relative', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {/* Anillo de luz girando en el seleccionado */}
-                    {activo && (
-                      <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', pointerEvents: 'none',
-                        border: '2px solid transparent', borderTopColor: m.color, borderRightColor: `${m.color}66`,
-                        animation: 'fichaRingSpin 2.5s linear infinite' }}/>
-                    )}
-                    <div style={{ width: 44, height: 44, borderRadius: '50%',
-                      background: activo ? `${m.color}22` : 'rgba(255,255,255,0.04)',
-                      border: `1.5px solid ${activo ? m.color : C.border}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: activo ? `0 0 16px ${m.color}55` : 'none',
-                      animation: activo && m.id === 'ruleta' ? 'raysSpin 8s linear infinite' : activo && m.id === 'supervivencia' ? 'fichaBreathe 1.6s ease-in-out infinite' : 'none' }}>
-                      <PkIc n={m.ic} s={22} c={activo ? m.color : C.textMuted}/>
-                    </div>
+                  flexShrink: 0, width: 80, height: 88, borderRadius: 14, scrollSnapAlign: 'start',
+                  cursor: 'pointer', fontFamily: 'inherit', padding: '10px 4px 8px',
+                  background: m.grad,
+                  border: activo ? `1.5px solid ${m.color}` : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: activo ? `0 0 20px ${m.color}50` : 'none',
+                  opacity: activo ? 1 : 0.7,
+                  transform: activo ? 'scale(1)' : 'scale(0.92)',
+                  transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1), border 0.3s ease, box-shadow 0.3s ease',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ animation: activo ? m.anim : 'none', color: m.color, display: 'flex' }}>
+                    <PkIc n={m.ic} s={26} c={activo ? m.color : `${m.color}99`}/>
                   </div>
-                  <span style={{ fontSize: 9, fontWeight: 800, color: activo ? m.color : C.textMuted, textAlign: 'center', lineHeight: 1.1 }}>{m.nom}</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: activo ? '#fff' : 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 1.15 }}>{m.nom}</span>
+                  <span style={{ fontSize: 8.5, fontWeight: 700, color: activo ? m.color : C.textMuted }}>{m.rec}</span>
                 </button>
               );
             })}
           </div>
-          {/* Récord del modo seleccionado */}
-          <div style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: sel.color, marginTop: 6 }}>{sel.rec}</div>
         </div>
 
-        {/* ══ 7. BOTÓN JUGAR (dinámico, 3D) ══ */}
-        <button
-          onPointerDown={() => setJugarPress(true)}
-          onPointerUp={() => setJugarPress(false)}
-          onPointerLeave={() => setJugarPress(false)}
-          onClick={() => { FX.play('duelStart'); FX.vibrate('heavy'); lanzarModo(sel.id); }}
-          style={{
-            position: 'relative', width: '100%', height: 62, border: 'none', borderRadius: 18, cursor: 'pointer',
-            fontFamily: 'inherit', overflow: 'hidden', marginTop: 2,
-            background: `linear-gradient(135deg, ${sel.color}, ${sel.color}CC)`,
-            color: '#fff', fontSize: 16, fontWeight: 900, letterSpacing: 0.5,
-            transform: jugarPress ? 'translateY(3px)' : 'translateY(0)',
-            boxShadow: jugarPress
-              ? `0 2px 0 ${sel.color}66, 0 3px 10px rgba(0,0,0,0.4)`
-              : `0 6px 0 ${sel.color}66, 0 10px 26px ${sel.color}44`,
-            transition: 'transform 0.1s ease, box-shadow 0.1s ease, background 0.4s ease',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            animation: jugarPress ? 'none' : 'ctaPulse 4s ease-in-out infinite 1s' }}>
-          {/* Shimmer que recorre el botón */}
-          {!jugarPress && (
-            <div style={{ position: 'absolute', top: 0, bottom: 0, width: 60, pointerEvents: 'none',
-              background: `linear-gradient(90deg, transparent, ${streak >= 30 ? 'rgba(255,215,94,0.45)' : 'rgba(255,255,255,0.28)'}, transparent)`,
-              animation: 'jugarShine 4s ease-in-out infinite 1s' }}/>
-          )}
-          <PkIc n={sel.ic} s={22} c="#fff"/>
-          <span>JUGAR</span>
-          <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.85 }}>· {sel.nom} · {sel.det}</span>
-        </button>
+        {/* ── 8. EVOLUCIÓN compacta (solo con historial) ── */}
+        {icfesHist.length > 3 && (
+          <div style={{ animation: 'staggerRise 0.5s ease 0.44s both' }}>
+            <EvolucionChart C={C} history={icfesHist}/>
+          </div>
+        )}
+
+        {/* Empuja el botón JUGAR al fondo cuando hay poco contenido */}
+        <div style={{ flex: 1 }}/>
+
+        {/* ══ BOTÓN JUGAR — la puerta del templo (sticky) ══ */}
+        <div style={{ position: 'sticky', bottom: 4, zIndex: 50, paddingTop: 6 }}>
+          {/* Latido del glow (respiración del botón) */}
+          <div style={{ position: 'absolute', inset: '6px 2px 0', borderRadius: 18, pointerEvents: 'none',
+            boxShadow: `0 10px 30px ${sel.color}55`, animation: 'luzRespira 2s ease-in-out infinite' }}/>
+          <button
+            onPointerDown={() => setJugarPress(true)}
+            onPointerUp={() => setJugarPress(false)}
+            onPointerLeave={() => setJugarPress(false)}
+            onClick={() => { FX.play('duelStart'); FX.vibrate('heavy'); lanzarModo(sel.id); }}
+            style={{
+              position: 'relative', width: '100%', height: 62, border: 'none', borderRadius: 18, cursor: 'pointer',
+              fontFamily: 'inherit', overflow: 'hidden',
+              backgroundImage: `linear-gradient(135deg, ${sel.color}CC 0%, ${sel.color} 50%, ${sel.color}CC 100%)`,
+              backgroundSize: '200% 100%',
+              animation: 'shimmerButton 3s linear infinite',
+              transform: jugarPress ? 'scale(0.97)' : 'scale(1)',
+              boxShadow: `0 0 0 1px rgba(255,255,255,0.12), 0 8px 24px ${sel.color}70, inset 0 -1px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)`,
+              transition: 'transform 0.12s ease, background 0.3s ease',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 11 }}>
+            <div style={{ opacity: btnFade ? 0 : 1, transition: 'opacity 0.15s ease',
+              display: 'flex', alignItems: 'center', gap: 11 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                <PkIc n={sel.ic} s={20} c={sel.color}/>
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 19, fontWeight: 900, color: '#fff', letterSpacing: 2, lineHeight: 1 }}>JUGAR</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>· {sel.nom} · {sel.det}</div>
+              </div>
+              <div style={{ marginLeft: 6, animation: 'arrowPulse 1s ease-in-out infinite', display: 'flex' }}>
+                <PkIc n="right" s={18} c="#fff"/>
+              </div>
+            </div>
+          </button>
+        </div>
 
         {/* ══ OVERLAYS ══ */}
         {retoOpen && (
