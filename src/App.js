@@ -3123,6 +3123,29 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     pushNotif(`Le echaste memoria a ${user?.partner || 'tu parcero'}`);
   };
 
+  // Vincular parcero por código desde el Sanctuario (mismo flujo que el onboarding)
+  const handleLinkPartner = async (rawCode) => {
+    const code = (rawCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!code) return { ok: false, msg: 'Ingresa el código de tu parcero.' };
+    if (code === user?.code) return { ok: false, msg: 'Ese es tu propio código.' };
+    if (!fbOK()) return { ok: false, msg: 'Sin conexión ahora mismo.' };
+    try {
+      const snap = await FB().get(FB().ref(FB().db, `users/${code}`));
+      if (!snap.exists()) return { ok: false, msg: 'No encontramos ese código.' };
+      const partner = snap.val();
+      const sid = [user.code, code].sort().join('_');
+      await FB().update(FB().ref(FB().db, `sessions/${sid}`), {
+        user1Code: user.code, user2Code: code, user1Name: user.name, user2Name: partner.name,
+        user1Confirmed: false, user2Confirmed: false, user1Online: false, user2Online: false, created: Date.now(),
+      });
+      await FB().update(FB().ref(FB().db, `users/${user.code}`), { partner: partner.name, partnerCode: code, sessionId: sid });
+      await FB().update(FB().ref(FB().db, `users/${code}`), { partner: user.name, partnerCode: user.code, sessionId: sid });
+      setUser(u => ({ ...u, partner: partner.name, partnerCode: code, partnerConnected: true, sessionId: sid }));
+      pushNotif(`¡Conectado con ${partner.name}!`);
+      return { ok: true };
+    } catch (e) { return { ok: false, msg: 'Error de red. Intenta de nuevo.' }; }
+  };
+
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
     const note = {
@@ -3317,7 +3340,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} />
         </div>
         <div style={{ display: tab === 'books' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} />
+          <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} onConnectPartner={handleLinkPartner} />
         </div>
         <div style={{ display: tab === 'friends' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <FriendsView C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} pushNotif={pushNotif} onBack={() => setTab('books')} />
@@ -4449,26 +4472,36 @@ function PlantSVG({ streak = 0, color = '#4A7EB8', done = false, size = 56 }) {
 }
 
 // ── Sección 1: El Dúo de Lectura Activa ──
-function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPhotoURL, myReading }) {
+function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPhotoURL, myReading, onConnectPartner }) {
+  const connected = !!user?.partnerConnected;
   const partnerReading = !!appState.theirTimerActive && partnerOnline;
   const bothReading = myReading && partnerReading;
-  const yourSealed = appState.yourConfirmed;
-  const theirSealed = appState.theirConfirmed;
-  const shared = appState.streakDays || 0;
+  const [showConnect, setShowConnect] = useState(false);
+  const [pcode, setPcode] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const miEstado = myReading
     ? { txt: 'Leyendo ahora', dot: C.tealMid, pulse: true }
-    : yourSealed ? { txt: 'Leído hoy', dot: C.tealMid, pulse: false }
-    : { txt: 'Sin leer hoy', dot: C.border, pulse: false };
-  const suEstado = !user?.partnerConnected ? { txt: 'Sin parcero', dot: C.border, pulse: false }
-    : partnerReading ? { txt: 'Leyendo ahora', dot: C.accent, pulse: true }
-    : partnerOnline ? { txt: theirSealed ? 'Leyó hoy' : 'En línea', dot: C.tealMid, pulse: true }
+    : { txt: 'En el sanctuario', dot: C.tealMid, pulse: false };
+  const suEstado = partnerReading ? { txt: 'Leyendo ahora', dot: C.accent, pulse: true }
+    : partnerOnline ? { txt: 'En línea', dot: C.tealMid, pulse: true }
     : { txt: 'Desconectado', dot: C.border, pulse: false };
 
   const Dot = ({ c, pulse }) => (
     <span style={{ width: 7, height: 7, borderRadius: '50%', background: c, display: 'inline-block', flexShrink: 0,
       boxShadow: pulse ? `0 0 6px ${c}` : 'none', animation: pulse ? 'dotPulse 1.6s ease-in-out infinite' : 'none' }} />
   );
+
+  const submit = async () => {
+    setErr(''); setLoading(true);
+    const r = await (onConnectPartner ? onConnectPartner(pcode) : Promise.resolve({ ok: false, msg: 'No disponible.' }));
+    setLoading(false);
+    if (r && !r.ok) setErr(r.msg || 'No se pudo vincular.');
+    else { setShowConnect(false); setPcode(''); }
+  };
+  const copyCode = () => { try { navigator.clipboard?.writeText(user?.code || ''); } catch (e) {} setCopied(true); setTimeout(() => setCopied(false), 1500); };
 
   return (
     <div style={{ position: 'relative', borderRadius: 22, padding: '15px 16px',
@@ -4490,39 +4523,63 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
           <svg width="54" height="24" viewBox="0 0 54 24" style={{ display: 'block' }}>
             <path d="M2 12 H52" fill="none" stroke={bothReading ? C.accent : (myReading || partnerReading ? `${C.accent}88` : C.border)}
               strokeWidth={bothReading ? 2.4 : 1.6} strokeLinecap="round"
-              strokeDasharray={bothReading ? '6 5' : (myReading || partnerReading ? 'none' : '2 4')}
+              strokeDasharray={bothReading ? '6 5' : (connected ? (myReading || partnerReading ? 'none' : '2 4') : '2 4')}
               style={{ animation: bothReading ? 'threadFlow 0.9s linear infinite' : 'none',
                 filter: bothReading ? `drop-shadow(0 0 3px ${C.accent})` : 'none' }} />
             <circle cx="2" cy="12" r="2.6" fill={myReading ? C.tealMid : C.border} />
             <circle cx="52" cy="12" r="2.6" fill={partnerReading ? C.accent : C.border} />
           </svg>
         </div>
-        {/* PARCERO */}
-        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-          <Av name={partner} sz={46} C={C} color={C.blueMid} photoURL={partnerPhotoURL}
-            style={{ margin: '0 auto', border: `2px solid ${partnerReading ? C.accent : C.bg}` }} />
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.partnerConnected ? partner : '—'}</div>
-          <div style={{ fontSize: 9.5, color: C.textMuted, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-            <Dot c={suEstado.dot} pulse={suEstado.pulse} />{suEstado.txt}
-          </div>
-        </div>
-      </div>
-
-      {/* Racha compartida */}
-      <div style={{ marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
-        {bothReading ? (
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: C.accent, letterSpacing: 0.3 }}>
-            ✨ Sesión sincronizada · leyendo juntos
+        {/* PARCERO o AGREGAR */}
+        {connected ? (
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+            <Av name={partner} sz={46} C={C} color={C.blueMid} photoURL={partnerPhotoURL}
+              style={{ margin: '0 auto', border: `2px solid ${partnerReading ? C.accent : C.bg}` }} />
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{partner}</div>
+            <div style={{ fontSize: 9.5, color: C.textMuted, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+              <Dot c={suEstado.dot} pulse={suEstado.pulse} />{suEstado.txt}
+            </div>
           </div>
         ) : (
-          <div style={{ fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6,
-            color: (yourSealed && theirSealed) ? C.tealMid : yourSealed ? C.textMid : '#E8A34A' }}>
-            <PkIc n="flame" s={14} c={(yourSealed && theirSealed) ? C.tealMid : '#E8A34A'} />
-            {shared > 0 ? `${shared} día${shared !== 1 ? 's' : ''} leyendo juntos` : 'Empiecen su racha juntos'}
-            {!yourSealed && shared >= 0 && <span style={{ color: C.accent, fontWeight: 800 }}> · ¡séllala!</span>}
+          <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+            <button onClick={() => setShowConnect(s => !s)} style={{ width: 46, height: 46, borderRadius: '50%', margin: '0 auto', cursor: 'pointer',
+              background: 'transparent', border: `2px dashed ${C.accent}66`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PkIc n="people" s={22} c={C.accent} />
+            </button>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginTop: 8 }}>Agregar parcero</div>
           </div>
         )}
       </div>
+
+      {/* Estado de sesión sincronizada (sin racha) */}
+      {connected && bothReading && (
+        <div style={{ marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: C.accent, letterSpacing: 0.3 }}>✨ Sesión sincronizada · leyendo juntos</div>
+        </div>
+      )}
+
+      {/* Vincular parcero por código */}
+      {!connected && showConnect && (
+        <div style={{ marginTop: 13, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
+            Comparte tu código o pega el de tu parcero para sincronizarse de verdad.
+          </div>
+          <button onClick={copyCode} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10,
+            background: `${C.accent}12`, border: `1px solid ${C.accent}33`, borderRadius: 10, padding: '9px', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 1 }}>TU CÓDIGO</span>
+            <span style={{ fontSize: 15, fontWeight: 900, color: C.accent, letterSpacing: 2 }}>{user?.code}</span>
+            <span style={{ fontSize: 10, color: copied ? C.tealMid : C.textMuted, fontWeight: 700 }}>{copied ? '¡copiado!' : 'copiar'}</span>
+          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={pcode} onChange={e => setPcode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} placeholder="Código del parcero" maxLength={10}
+              onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+              style={{ flex: 1, fontSize: 14, fontWeight: 700, letterSpacing: 1.5, padding: '11px 13px', borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontFamily: 'inherit', textTransform: 'uppercase' }} />
+            <button onClick={submit} disabled={loading || !pcode} style={{ flexShrink: 0, padding: '0 18px', borderRadius: 11, border: 'none', cursor: (loading || !pcode) ? 'default' : 'pointer',
+              background: (loading || !pcode) ? C.border : C.accent, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 800 }}>{loading ? '…' : 'Vincular'}</button>
+          </div>
+          {err && <div style={{ fontSize: 11, color: '#EF4444', marginTop: 8, fontWeight: 600 }}>{err}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -4549,45 +4606,33 @@ function LibroHero({ C, book, pct, dimmed }) {
         filter: 'drop-shadow(0 12px 34px rgba(0,0,0,0.6))' }}>
         <BookCover book={book} size="lg" />
       </div>
-      {/* Contenido */}
-      <div style={{ position: 'absolute', bottom: 16, left: 18, right: 18 }}>
-        <div className="serif" style={{ fontSize: 21, fontWeight: 800, color: pal.text || '#fff', lineHeight: 1.15,
-          textShadow: '0 2px 12px rgba(0,0,0,0.6)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-          {book.title}
-        </div>
-        <div style={{ fontSize: 12.5, color: pal.text ? pal.text + 'B0' : 'rgba(255,255,255,0.7)', marginTop: 3 }}>{book.author || 'Autor desconocido'}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
-          {book.genre && (
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.4, color: pal.spine, background: `${pal.spine}26`,
-              border: `1px solid ${pal.spine}45`, borderRadius: 6, padding: '3px 9px' }}>{book.genre.toUpperCase()}</span>
-          )}
-          <span style={{ fontSize: 11, fontWeight: 800, color: pal.text || '#fff' }}>{pct}% completado</span>
+      {/* Contenido: solo temática + porcentaje (el título vive en la portada) */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, right: 20, left: '48%', display: 'flex',
+        flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', gap: 10, textAlign: 'right' }}>
+        {book.genre && (
+          <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.4, color: pal.spine, background: `${pal.spine}26`,
+            border: `1px solid ${pal.spine}45`, borderRadius: 6, padding: '4px 10px' }}>{book.genre.toUpperCase()}</span>
+        )}
+        <div>
+          <div style={{ fontSize: 40, fontWeight: 900, color: pal.text || '#fff', lineHeight: 1, textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>{pct}%</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: pal.text ? pal.text + 'B0' : 'rgba(255,255,255,0.7)', letterSpacing: 1.5, marginTop: 3 }}>COMPLETADO</div>
         </div>
       </div>
     </div>
   );
 }
 
-// ── Sección 2b: Progreso épico + sellar pergamino ──
-function ProgresoLibro({ C, appState, setAppState, book, onSeal }) {
+// ── Sección 2b: Progreso épico del libro ──
+function ProgresoLibro({ C, appState, setAppState, book }) {
   const pal = getPalette(book?.genre);
   const tChap = book?.totalChapters || 10;
   const tPage = book?.totalPages || 0;
   const cChap = appState.currentChapter || 1;
   const cPage = appState.currentPage || 1;
   const [expanded, setExpanded] = useState(false);
-  const [wax, setWax] = useState(false);
-  const sealed = appState.yourConfirmed;
   const segCount = Math.min(tChap, 16);
 
   const chapFrac = tPage > 0 ? (cPage / tPage) : 0;
-
-  const doSeal = () => {
-    if (sealed) return;
-    setWax(true);
-    setTimeout(() => setWax(false), 1400);
-    onSeal?.();
-  };
 
   return (
     <div style={{ marginTop: 14 }}>
@@ -4643,26 +4688,6 @@ function ProgresoLibro({ C, appState, setAppState, book, onSeal }) {
             style={{ width: '100%', accentColor: pal.spine, cursor: 'pointer' }} />
         </div>
       )}
-
-      {/* Sellar pergamino */}
-      <div style={{ position: 'relative', marginTop: 16 }}>
-        {wax && (
-          <div style={{ position: 'absolute', top: -4, left: '50%', width: 44, height: 44, borderRadius: '50%', zIndex: 3,
-            background: 'radial-gradient(circle at 35% 30%, #E8743A, #A0341A)', border: '2px solid #7A2410',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'selloDrop 1.2s cubic-bezier(0.34,1.4,0.6,1) both',
-            boxShadow: '0 6px 18px rgba(0,0,0,0.5)' }}>
-            <PkIc n="flame" s={18} c="#FFD9B0" />
-          </div>
-        )}
-        <button onClick={doSeal} disabled={sealed} style={{ width: '100%', height: 52, borderRadius: 14, cursor: sealed ? 'default' : 'pointer',
-          fontFamily: 'inherit', fontSize: 14, fontWeight: 800, border: 'none',
-          background: sealed ? 'rgba(52,211,153,0.16)' : `linear-gradient(135deg, ${pal.spine}, ${pal.spine}CC)`,
-          color: sealed ? '#34D399' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          boxShadow: sealed ? 'none' : `0 8px 22px ${pal.spine}44` }}>
-          <PkIc n={sealed ? 'check' : 'flame'} s={16} c={sealed ? '#34D399' : '#fff'} />
-          {sealed ? 'Pergamino sellado · Racha +1' : 'Sellar pergamino de hoy'}
-        </button>
-      </div>
     </div>
   );
 }
@@ -4920,10 +4945,8 @@ function LibroParcero({ C, isLight, appState, partner, partnerOnline, partnerPho
       <div style={{ borderRadius: 18, padding: '14px 16px', background: C.bgAlt, border: `1px solid ${C.border}` }}>
         {theirBook ? (
           <>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <div style={{ flexShrink: 0, width: 44, height: 62, borderRadius: 6, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.35)' }}>
-                <BookCover book={theirBook} size="sm" />
-              </div>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <BookCover book={theirBook} size="sm" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{theirBook.title}</div>
                 <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>{theirBook.author}</div>
@@ -5295,7 +5318,7 @@ function NotasColapsable({ C, isLight, notes, user, appState, partnerPhotoURL, n
 // ═════════════════════════════════════════════════════════════
 //  PERGAMINOS TAB — El Sanctuario del Lector (orquestador)
 // ═════════════════════════════════════════════════════════════
-function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBooks, onAddBook, onConfirm, partnerOnline, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, notes, noteText, setNoteText, onAddNote, onReactNote, onRemindPartner }) {
+function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBooks, onAddBook, onConfirm, partnerOnline, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, notes, noteText, setNoteText, onAddNote, onReactNote, onRemindPartner, onConnectPartner }) {
   const [showAdd, setShowAdd] = useState(false);
   const [nb, setNb] = useState({ title: '', author: '', totalChapters: 10, totalPages: 0, genre: 'Ficción' });
   const [myReading, setMyReading] = useState(false);
@@ -5325,7 +5348,7 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* 1. Dúo de lectura activa */}
-        <DuoReadingHeader C={C} user={user} partner={partner} appState={appState} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} myReading={myReading} />
+        <DuoReadingHeader C={C} user={user} partner={partner} appState={appState} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} myReading={myReading} onConnectPartner={onConnectPartner} />
 
         {/* 2. Tu libro */}
         <div>
@@ -5378,7 +5401,7 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
             <>
               <LibroHero C={C} book={currentBook} pct={myPct} dimmed={myReading} />
               <div style={{ marginTop: -2, borderRadius: '0 0 20px 20px', background: 'rgba(0,0,0,0.28)', border: `1px solid ${C.border}`, borderTop: 'none', padding: '4px 18px 20px', marginLeft: 2, marginRight: 2 }}>
-                <ProgresoLibro C={C} appState={appState} setAppState={setAppState} book={currentBook} onSeal={onConfirm} />
+                <ProgresoLibro C={C} appState={appState} setAppState={setAppState} book={currentBook} />
               </div>
             </>
           )}
