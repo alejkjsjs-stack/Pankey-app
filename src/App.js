@@ -2676,6 +2676,8 @@ export default function App() {
   const [perfilStartView, setPerfilStartView] = useState('profile'); // a qué vista abrir el Perfil
   const [perfilNav, setPerfilNav] = useState(0); // nonce: fuerza re-sync de la vista del Perfil
   const [identityMenu, setIdentityMenu] = useState(false); // menú desplegable de identidad (estilo Duolingo)
+  const [myRankPos, setMyRankPos] = useState(null);        // posición en el ranking (badge del header)
+  const headerEmp = useCountUp(appState.ryo || 0, 900);    // empanadas del header con conteo animado (hook antes de returns condicionales)
 const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la misma noti
   // ✅ NEW: Animation states
   const [coinBurst, setCoinBurst]         = useState(null); // { amount, key }
@@ -2857,6 +2859,21 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       });
     }
   }, [fbLoaded, user?.code]);
+
+  // Posición en el ranking (para el escudo del header)
+  useEffect(() => {
+    if (!fbLoaded || !user?.code) return;
+    FB().get(FB().ref(FB().db, 'users')).then(snap => {
+      if (!snap.exists()) return;
+      const ranked = Object.values(snap.val())
+        .map(u => ({ code: u.code, ghost: (u.appState?.ghostUntil || 0) > Date.now(),
+          correctas: (u.appState?.icfesHistory || []).reduce((s, r) => s + (r.correct || 0), 0) }))
+        .filter(u => u.code === user.code || !u.ghost)
+        .sort((a, b) => b.correctas - a.correctas);
+      const idx = ranked.findIndex(u => u.code === user.code);
+      if (idx >= 0) setMyRankPos(idx + 1);
+    }).catch(() => {});
+  }, [fbLoaded, user?.code, appState.icfesHistory]);
 
   // Reset diario + chequeo de racha rompible (con protección del Kodachi de Hielo)
   useEffect(() => {
@@ -3170,17 +3187,30 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         <button onClick={() => setIdentityMenu(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%' }}>
           <Av name={user?.name || '?'} sz={38} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame} />
         </button>
-        {/* Recursos: monedas + nivel */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 12, padding: '6px 12px' }}>
-            <PkIc n="empanada" s={15} c={C.amberMid} />
-            <span style={{ fontSize: 13.5, fontWeight: 900, color: C.text }}>{(appState.ryo || 0).toLocaleString()}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: `${C.accent}18`, border: `1px solid ${C.accent}40`, borderRadius: 12, padding: '4px 11px 4px 5px' }}>
-            <div style={{ width: 24, height: 24, borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent}, ${C.accentMid || C.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#fff', boxShadow: `0 2px 8px ${C.accent}60` }}>{computeLevel(appState.xp || 0).level}</div>
-            <span style={{ fontSize: 11, fontWeight: 800, color: C.accent }}>Nivel</span>
-          </div>
-        </div>
+        {/* Recursos: empanadas count-up + nivel con anillo + escudo de ranking */}
+        {(() => {
+          const lvlH = computeLevel(appState.xp || 0);
+          const R = 14, CIRC = 2 * Math.PI * R;
+          return (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {/* Empanadas con count-up */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 12, padding: '6px 11px' }}>
+                <PkIc n="empanada" s={14} c={C.amberMid} />
+                <span style={{ fontSize: 13, fontWeight: 900, color: C.amberMid, fontVariantNumeric: 'tabular-nums' }}>{headerEmp.toLocaleString()}</span>
+              </div>
+              {/* Nivel con anillo de progreso */}
+              <div style={{ position: 'relative', width: 34, height: 34 }}>
+                <svg width="34" height="34" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="17" cy="17" r={R} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3"/>
+                  <circle cx="17" cy="17" r={R} fill="none" stroke={C.accent} strokeWidth="3" strokeLinecap="round"
+                    strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - lvlH.pct / 100)}
+                    style={{ transition: 'stroke-dashoffset 1s ease', filter: lvlH.pct > 80 ? `drop-shadow(0 0 4px ${C.accent})` : 'none' }}/>
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: C.accent }}>{lvlH.level}</div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Menú de identidad desplegable (estilo Duolingo) */}
@@ -3286,9 +3316,6 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
                   }} />
                 )}
               </div>
-              <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? C.accent : C.textMuted, letterSpacing: 0.5 }}>
-                {label}
-              </span>
             </button>
           );
         })}
@@ -5763,13 +5790,14 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
   const potActual = BASE * MULTS[nivel];          // lo que ganas si aciertas ESTA pregunta
   const potAcumulado = nivel > 0 ? BASE * MULTS[nivel - 1] : 0; // lo que ya tienes en la mesa
 
-  // Ticks de casino que arrancan rápido y se van frenando con la rueda
+  // Ticks de casino sincronizados con el giro: rápidos al arrancar y
+  // frenando al final, terminando justo cuando la rueda para (~3.35s de 3.5s).
   const sonarTicks = () => {
     tickTimers.current.forEach(clearTimeout); tickTimers.current = [];
-    let t = 0, gap = 65;
-    for (let k = 0; k < 26; k++) {
-      t += gap; gap = Math.min(gap * 1.16, 420);
-      tickTimers.current.push(setTimeout(() => FX.play('tick'), t));
+    const DUR = 3350, N = 20;
+    for (let k = 1; k <= N; k++) {
+      const t = Math.round(DUR * Math.pow(k / N, 1.8)); // ease-in: gaps chicos al inicio, grandes al final
+      tickTimers.current.push(setTimeout(() => { if (girandoRef.current) FX.play('tick'); }, t));
     }
   };
 
@@ -7694,11 +7722,11 @@ const fireLevelFor = (streak) => FIRE_LEVELS.find(l => streak >= l.min) || FIRE_
 
 // Niveles del Cofre de la Racha
 const CHEST_LEVELS = [
-  { min: 30, id: 'tumbaga', name: 'Cofre de Tumbaga', c1: '#FFE9A8', c2: '#D4AF37', c3: '#7A5A10', emp: [500, 900], xp: [300, 500], rarezaItem: 'épico',      itemChance: 0.30 },
-  { min: 14, id: 'oro',     name: 'Cofre de Oro',     c1: '#FFE082', c2: '#E8B428', c3: '#8A6212', emp: [200, 400], xp: [150, 300], rarezaItem: 'raro',       itemChance: 0.20 },
-  { min: 7,  id: 'plata',   name: 'Cofre de Plata',   c1: '#E8ECEF', c2: '#AEB8C2', c3: '#525E6A', emp: [80, 150],  xp: [80, 150],  rarezaItem: 'poco común', itemChance: 0.12 },
-  { min: 3,  id: 'bronce',  name: 'Cofre de Bronce',  c1: '#E8A05C', c2: '#B06A2E', c3: '#5E3512', emp: [30, 50],   xp: [40, 80],   rarezaItem: null,         itemChance: 0 },
-  { min: 0,  id: 'madera',  name: 'Cofre de Madera',  c1: '#B08050', c2: '#7A4E28', c3: '#42280F', emp: [10, 20],   xp: [15, 30],   rarezaItem: null,         itemChance: 0 },
+  { min: 30, id: 'tumbaga', name: 'Cofre de Tumbaga', c1: '#FFE9A8', c2: '#D4AF37', c3: '#7A5A10', emp: [1200, 2400], xp: [600, 1000], rarezaItem: 'legendario', itemChance: 0.55 },
+  { min: 14, id: 'oro',     name: 'Cofre de Oro',     c1: '#FFE082', c2: '#E8B428', c3: '#8A6212', emp: [600, 1100],  xp: [300, 600],  rarezaItem: 'épico',      itemChance: 0.42 },
+  { min: 7,  id: 'plata',   name: 'Cofre de Plata',   c1: '#E8ECEF', c2: '#AEB8C2', c3: '#525E6A', emp: [280, 500],   xp: [160, 320],  rarezaItem: 'raro',       itemChance: 0.30 },
+  { min: 3,  id: 'bronce',  name: 'Cofre de Bronce',  c1: '#E8A05C', c2: '#B06A2E', c3: '#5E3512', emp: [120, 220],   xp: [90, 160],   rarezaItem: 'poco común', itemChance: 0.20 },
+  { min: 0,  id: 'madera',  name: 'Cofre de Madera',  c1: '#B08050', c2: '#7A4E28', c3: '#42280F', emp: [50, 110],    xp: [40, 90],    rarezaItem: null,         itemChance: 0 },
 ];
 const chestLevelFor = (streak) => CHEST_LEVELS.find(l => streak >= l.min) || CHEST_LEVELS[CHEST_LEVELS.length - 1];
 
@@ -8237,6 +8265,7 @@ function ChestShopShow({ chest, premio, onClose }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
+    <Portal>
     <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99997,
       background: 'rgba(2,4,8,0.94)', backdropFilter: 'blur(14px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
@@ -8328,6 +8357,7 @@ function ChestShopShow({ chest, premio, onClose }) {
         )}
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -8512,8 +8542,9 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
       </div>
 
 
-      {/* ── Overlay de apertura ── */}
+      {/* ── Overlay de apertura (Portal → escapa del stacking context del Inicio) ── */}
       {modal && (
+        <Portal>
         <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99995,
           background: 'rgba(2,4,8,0.94)', backdropFilter: 'blur(14px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
@@ -8654,6 +8685,7 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
             )}
           </div>
         </div>
+        </Portal>
       )}
     </>
   );
@@ -9287,6 +9319,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     setPhase('result');
     onConfirm?.();  // completar el duelo sella la racha del día
     fireBoost();
+    otorgarBotinSesion(appState, setAppState, pushNotif, onMissionReward);
   };
 
   useEffect(() => {
@@ -9698,6 +9731,9 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     return () => clearTimeout(t);
   }, [modoSel]);
 
+  // Salvaguarda: si se abre un overlay, el botón JUGAR no puede quedar "pegado"
+  useEffect(() => { if (modo || flashOpen || retoOpen) setJugarPress(false); }, [modo, flashOpen, retoOpen]);
+
   // ── Ranking social ──
   useEffect(() => {
     if (!fbOK() || !user?.code) return;
@@ -9760,6 +9796,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     });
     if (emp > 0) onCoinBurst?.(emp);
     onConfirm?.(); fireBoost();
+    otorgarBotinSesion(appState, setAppState, pushNotif, onCoinBurst);
   };
 
   // ── Reto del Día ──
@@ -9875,36 +9912,24 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
                 {appState.equipped?.title?.name || 'Iniciado'}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-              {rankInfo && (
-                <div style={{ position: 'relative', width: 30, height: 33, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  animation: rankInfo.pos === 1 ? 'coronaShine 4s ease-in-out infinite' : 'none' }}>
-                  <svg viewBox="0 0 24 26" width="30" height="33">
-                    <path d="M12 1 L22 5 L22 13 Q22 22 12 25 Q2 22 2 13 L2 5 Z"
-                      fill={rankInfo.pos === 1 ? '#3A2A08' : '#1A2333'}
-                      stroke={rankInfo.pos === 1 ? '#FFD75E' : '#AEB8C2'} strokeWidth="1.5"/>
-                  </svg>
-                  <span style={{ position: 'absolute', fontSize: 11, fontWeight: 900, color: rankInfo.pos === 1 ? '#FFD75E' : '#E5E9F0' }}>{rankInfo.pos}</span>
-                  {rankInfo.pos === 1 && <span style={{ position: 'absolute', top: -7, fontSize: 11 }}>👑</span>}
-                </div>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 11, padding: '5px 9px' }}>
-                <PkIc n="empanada" s={13} c={C.amberMid}/>
-                <span style={{ fontSize: 12, fontWeight: 900, color: C.amberMid, fontVariantNumeric: 'tabular-nums' }}>{empanadasCount.toLocaleString()}</span>
-              </div>
-              <div style={{ position: 'relative', width: 34, height: 34 }}>
-                <svg width="34" height="34" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="17" cy="17" r="14" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3"/>
-                  <circle cx="17" cy="17" r="14" fill="none" stroke={C.accent} strokeWidth="3" strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 14} strokeDashoffset={2 * Math.PI * 14 * (1 - lvl.pct / 100)}
-                    style={{ transition: 'stroke-dashoffset 1s ease', filter: lvl.pct > 80 ? `drop-shadow(0 0 4px ${C.accent})` : 'none' }}/>
+            {/* El escudo del combo, al costado derecho */}
+            {rankInfo && (
+              <button onClick={() => onGoTab('friends')} style={{ position: 'relative', width: 34, height: 37, flexShrink: 0,
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: rankInfo.pos === 1 ? 'coronaShine 4s ease-in-out infinite' : 'none' }}>
+                <svg viewBox="0 0 24 26" width="34" height="37">
+                  <path d="M12 1 L22 5 L22 13 Q22 22 12 25 Q2 22 2 13 L2 5 Z"
+                    fill={rankInfo.pos === 1 ? '#3A2A08' : '#1A2333'}
+                    stroke={rankInfo.pos === 1 ? '#FFD75E' : '#AEB8C2'} strokeWidth="1.5"/>
                 </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: C.accent }}>{lvl.level}</div>
-              </div>
-            </div>
+                <span style={{ position: 'absolute', fontSize: 12.5, fontWeight: 900, color: rankInfo.pos === 1 ? '#FFD75E' : '#E5E9F0' }}>{rankInfo.pos}</span>
+                {rankInfo.pos === 1 && <span style={{ position: 'absolute', top: -7, fontSize: 12 }}>👑</span>}
+              </button>
+            )}
           </div>
           <div style={{ fontSize: 11.5, fontWeight: 600, marginTop: 7, marginLeft: 2,
-            color: enPeligro ? '#EF4444' : C.textMid, animation: enPeligro ? 'presenceBlink 1.6s ease-in-out infinite' : 'fadeIn 0.6s ease both' }}>
+            color: enPeligro ? '#EF4444' : C.textMid, animation: enPeligro ? 'luzRespira 1.6s ease-in-out infinite' : 'fadeIn 0.6s ease both' }}>
             {saludo}
           </div>
         </div>
@@ -9933,15 +9958,6 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
               '--dx': `${p.dx}px`, '--dy': `${p.dy}px`,
               animation: `dustFloat ${p.dur}s ease-in-out infinite ${p.del}s` }}/>
           ))}
-          {/* Alerta: mini llama parpadeando al lado del altar */}
-          {!sealed && streak > 0 && (
-            <div style={{ position: 'absolute', bottom: 46, left: 'calc(50% - 128px)', display: 'flex',
-              alignItems: 'center', gap: 5, pointerEvents: 'none',
-              animation: 'presenceBlink 1.4s ease-in-out infinite' }}>
-              <PkIc n="flame" s={13} c="#E8743A"/>
-              <span style={{ fontSize: 9, fontWeight: 800, color: '#E8743A', maxWidth: 74, lineHeight: 1.25 }}>Sella hoy o se apaga</span>
-            </div>
-          )}
           {/* Panel de stats (long-press) */}
           {fuegoStats && (
             <div className="fi" style={{ position: 'absolute', inset: 0, borderRadius: 20, zIndex: 5,
@@ -10076,13 +10092,6 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           </div>
         </div>
 
-        {/* ── 8. EVOLUCIÓN compacta (solo con historial) ── */}
-        {icfesHist.length > 3 && (
-          <div style={{ animation: 'staggerRise 0.5s ease 0.44s both' }}>
-            <EvolucionChart C={C} history={icfesHist}/>
-          </div>
-        )}
-
         {/* Empuja el botón JUGAR al fondo cuando hay poco contenido */}
         <div style={{ flex: 1 }}/>
 
@@ -10095,7 +10104,8 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
             onPointerDown={() => setJugarPress(true)}
             onPointerUp={() => setJugarPress(false)}
             onPointerLeave={() => setJugarPress(false)}
-            onClick={() => { FX.play('duelStart'); FX.vibrate('heavy'); lanzarModo(sel.id); }}
+            onPointerCancel={() => setJugarPress(false)}
+            onClick={() => { setJugarPress(false); FX.play('duelStart'); FX.vibrate('heavy'); lanzarModo(sel.id); }}
             style={{
               position: 'relative', width: '100%', height: 62, border: 'none', borderRadius: 18, cursor: 'pointer',
               fontFamily: 'inherit', overflow: 'hidden',
@@ -10470,6 +10480,7 @@ function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, o
     if (emp > 0) onCoinBurst?.(emp);
     onConfirm?.();  // completar cualquier modo activa la racha (igual que el simulacro)
     fireBoost();
+    otorgarBotinSesion(appState, setAppState, pushNotif, onCoinBurst);
   };
 const SABIO_HYPE = [
     '¡Está finísimo, no pare!',
@@ -10786,12 +10797,12 @@ const CHEST_SHOP_COLORS = {
 
 const SHOP_ITEMS = [
   // ── COFRES (recompensa aleatoria según tipo) ─────────────────
-  { id:'c_wooden',    type:'chest', name:'Cofre de Madera',   desc:'Recompensa modesta pero segura.',                 rarity:'común',      price:100,  rewards: { minRyo: 10,   maxRyo: 50,   xpBonus: 20,   itemChance: 0 } },
-  { id:'c_bronze',    type:'chest', name:'Cofre de Bronce',   desc:'Algo bueno puede salir de aquí...',               rarity:'poco común', price:300,  rewards: { minRyo: 30,   maxRyo: 150,  xpBonus: 50,   itemChance: 0.1 } },
-  { id:'c_silver',    type:'chest', name:'Cofre de Plata',    desc:'La suerte empieza a brillar.',                    rarity:'raro',       price:600,  rewards: { minRyo: 80,   maxRyo: 300,  xpBonus: 100,  itemChance: 0.2 } },
-  { id:'c_gold',      type:'chest', name:'Cofre de Oro',      desc:'Fortuna de verdad. Casi siempre cae algo bueno.', rarity:'épico',      price:1200, rewards: { minRyo: 200,  maxRyo: 600,  xpBonus: 200,  itemChance: 0.4 } },
-  { id:'c_tumbaga',   type:'chest', name:'Cofre de Tumbaga',  desc:'Reliquia ancestral. Aquí viene algo legendario.', rarity:'legendario', price:3000, rewards: { minRyo: 500,  maxRyo: 1500, xpBonus: 500,  itemChance: 0.7 } },
-  { id:'c_ancestral', type:'chest', name:'Cofre Ancestral',   desc:'Los dioses Muiscas bendicen al que lo abre.',     rarity:'mítico',     price:8000, rewards: { minRyo: 1000, maxRyo: 5000, xpBonus: 1000, itemChance: 0.95 } },
+  { id:'c_wooden',    type:'chest', name:'Cofre de Madera',   desc:'Recompensa modesta pero segura.',                 rarity:'común',      price:100,  rewards: { minRyo: 60,   maxRyo: 180,   xpBonus: 40,   itemChance: 0 } },
+  { id:'c_bronze',    type:'chest', name:'Cofre de Bronce',   desc:'Algo bueno puede salir de aquí...',               rarity:'poco común', price:300,  rewards: { minRyo: 220,  maxRyo: 480,   xpBonus: 90,   itemChance: 0.22 } },
+  { id:'c_silver',    type:'chest', name:'Cofre de Plata',    desc:'La suerte empieza a brillar.',                    rarity:'raro',       price:600,  rewards: { minRyo: 480,  maxRyo: 980,   xpBonus: 180,  itemChance: 0.35 } },
+  { id:'c_gold',      type:'chest', name:'Cofre de Oro',      desc:'Fortuna de verdad. Casi siempre cae algo bueno.', rarity:'épico',      price:1200, rewards: { minRyo: 950,  maxRyo: 2100,  xpBonus: 380,  itemChance: 0.55 } },
+  { id:'c_tumbaga',   type:'chest', name:'Cofre de Tumbaga',  desc:'Reliquia ancestral. Aquí viene algo legendario.', rarity:'legendario', price:3000, rewards: { minRyo: 2400, maxRyo: 5200,  xpBonus: 800,  itemChance: 0.8 } },
+  { id:'c_ancestral', type:'chest', name:'Cofre Ancestral',   desc:'Los dioses Muiscas bendicen al que lo abre.',     rarity:'mítico',     price:8000, rewards: { minRyo: 6500, maxRyo: 14000, xpBonus: 1600, itemChance: 0.98 } },
   // ── TÍTULOS ──────────────────────────────────────────────────
   { id:'t_iniciado',   type:'title',  name:'Iniciado',                    desc:'Apenas cogiendo el ritmo...',                      rarity:'común',      price:0    },
   { id:'t_pergamino',  type:'title',  name:'Portador del Pergamino',     desc:'Forjando tu primer pergamino...',                  rarity:'poco común', price:400  },
@@ -10919,6 +10930,37 @@ const PODER_ACTIVO = {
   i_ghost:   s => (s.ghostUntil || 0) > Date.now(),
   i_comodin: s => !!s.comodinActive,
 };
+
+// Botín aleatorio al terminar una sesión de juego (empanadas extra siempre;
+// a veces un poder gratis o un "cofre sorpresa" con recompensa gorda).
+function otorgarBotinSesion(appState, setAppState, pushNotif, onCoinBurst) {
+  const r = Math.random();
+  const extra = 25 + Math.floor(Math.random() * 75);
+  let ryoExtra = extra, xpExtra = 0, poderId = null;
+  let mensaje = `Botín de sesión: +${extra} empanadas`;
+  if (r < 0.16) {
+    const cand = ['i_tinto', 'i_repaso', 'i_arepa', 'i_comodin', 'i_boost']
+      .filter(id => !(PODER_ACTIVO[id] && PODER_ACTIVO[id](appState)));
+    if (cand.length) {
+      poderId = cand[Math.floor(Math.random() * cand.length)];
+      const it = SHOP_ITEMS.find(x => x.id === poderId);
+      mensaje = `¡Botín! Ganaste el poder «${it?.name}» + ${extra} empanadas`;
+    }
+  } else if (r < 0.22) {
+    const bonus = 250 + Math.floor(Math.random() * 500);
+    ryoExtra += bonus; xpExtra = 100 + Math.floor(Math.random() * 200);
+    mensaje = `¡Cofre sorpresa! +${ryoExtra} empanadas y +${xpExtra} XP`;
+  }
+  // Pequeño retraso para que el botín no encime su suma/sonido con el 'coin' de la recompensa base
+  setTimeout(() => {
+    setAppState(s => {
+      let upd = { ...s, ryo: (s.ryo || 0) + ryoExtra, xp: (s.xp || 0) + xpExtra };
+      if (poderId) upd = { ...upd, ...(ITEM_EFFECTS[poderId]?.(upd) || {}) };
+      return upd;
+    });
+    pushNotif?.(mensaje);   // el toast anuncia el botín; sin sonido de coin extra (evita el triple)
+  }, 900);
+}
 
 // Ítems bloqueados por logro: candado visible + precio reducido al desbloquear
 const SHOP_UNLOCKS = {
