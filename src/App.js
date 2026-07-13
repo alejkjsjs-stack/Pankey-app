@@ -302,6 +302,13 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes ctaPulse { 0%,85%,100%{transform:scale(1);}90%{transform:scale(1.015);}95%{transform:scale(1.008);} }
 @keyframes logGlow { 0%,100%{opacity:0.6;}50%{opacity:1;} }
 @keyframes breathe { 0%,100%{transform:translateY(0px);}50%{transform:translateY(-2px);} }
+@keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.35;transform:scale(0.7);} }
+@keyframes threadFlow { to { stroke-dashoffset:-40; } }
+@keyframes liquidWave { 0%{transform:translateX(0);}100%{transform:translateX(-50%);} }
+@keyframes selloDrop { 0%{transform:translate(-50%,-150px) rotate(-45deg) scale(1.5);opacity:0;} 55%{opacity:1;} 78%{transform:translate(-50%,6px) rotate(8deg) scale(1);} 100%{transform:translate(-50%,0) rotate(0) scale(1);opacity:1;} }
+@keyframes plantPop { 0%{transform:scale(1);}45%{transform:scale(1.18);}100%{transform:scale(1);} }
+@keyframes syncGlow { 0%,100%{box-shadow:0 0 0 1px rgba(74,158,255,0.28),0 0 16px rgba(74,158,255,0.12);} 50%{box-shadow:0 0 0 1px rgba(74,158,255,0.6),0 0 32px rgba(74,158,255,0.4);} }
+@keyframes jardinFloat { 0%{transform:translateY(0) scale(1);opacity:0;} 20%{opacity:0.9;} 100%{transform:translateY(-40px) scale(0.4);opacity:0;} }
 @keyframes moonGlowPulse { 0%,100%{opacity:0.88;} 50%{opacity:1;} }
 @keyframes emberFloat { 0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0.95;} 100%{transform:translateY(-85px) translateX(16px) rotate(200deg);opacity:0;} }
 @keyframes groundFlicker { 0%,100%{opacity:0.52;} 50%{opacity:0.82;} }
@@ -1115,6 +1122,10 @@ const freshState = () => ({
   theirPage: 1,
   yourConfirmed: false,
   theirConfirmed: false,
+  theirTimerActive: false,   // el parcero tiene el Cafetal corriendo
+  habits: [],                // Sanctuario de Hábitos
+  habitsDate: null,          // fecha del último reset diario de hábitos
+  lastReminderSent: {},      // rate-limit de "echarle memoria" al parcero
   readingMinutesToday: 0,
   totalMinutesRead: 0,
   completedBooks: 0,
@@ -2670,6 +2681,7 @@ export default function App() {
   const [showNotif, setShowNotif] = useState(false);
   const [toast, setToast]         = useState(null);
   const [partnerOnline, setPartnerOnline] = useState(false);
+  const nudgeSeenRef = useRef(0);
   const [partnerPhotoURL, setPartnerPhotoURL] = useState(null);
   const [fbLoaded, setFbLoaded]   = useState(false);
   const [ambientOn, setAmbientOn] = useState(saved?.ambientOn || false); // ✅ NEW: ambientación de fondo
@@ -2909,6 +2921,19 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     });
   }, []);
 
+  // Reset diario del jardín de hábitos: al pasar el día, lo no completado corta racha
+  useEffect(() => {
+    const today = todayStr();
+    if (appState.habitsDate === today) return;
+    setAppState(s => {
+      if (!s.habits || !s.habits.length) return { ...s, habitsDate: today };
+      return {
+        ...s, habitsDate: today,
+        habits: s.habits.map(h => ({ ...h, streak: h.completedToday ? h.streak : 0, completedToday: false })),
+      };
+    });
+  }, []);
+
   // Firebase listener (sesión compartida)
   useEffect(() => {
     if (!user?.sessionId || !fbLoaded) return;
@@ -2920,6 +2945,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       const amI1 = snap.val().user1Code === user.code;
       const myOnlineRef = ref(db, `sessions/${user.sessionId}/${amI1 ? 'user1Online' : 'user2Online'}`);
       onDisconnect(myOnlineRef).set(false);
+      onDisconnect(ref(db, `sessions/${user.sessionId}/${amI1 ? 'user1TimerActive' : 'user2TimerActive'}`)).set(false);
       update(sessionRef, { [amI1 ? 'user1Online' : 'user2Online']: true });
     });
 
@@ -2934,6 +2960,13 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       const theirOnl   = amI1 ? !!d.user2Online   : !!d.user1Online;
       const theirPhoto = amI1 ? d.user2PhotoURL   : d.user1PhotoURL;
       const theirBook  = amI1 ? d.user2Book       : d.user1Book;
+      const theirTimer = amI1 ? !!d.user2TimerActive : !!d.user1TimerActive;
+
+      // Recordatorio del parcero ("echarle memoria")
+      if (d.nudge && d.nudge.to === user.code && d.nudge.ts && d.nudge.ts !== nudgeSeenRef.current) {
+        nudgeSeenRef.current = d.nudge.ts;
+        if (Date.now() - d.nudge.ts < 90000) pushNotif(`${user.partner || 'Tu parcero'} te recuerda leer hoy`);
+      }
 
       setPartnerOnline(theirOnl);
       if (theirPhoto !== undefined) setPartnerPhotoURL(theirPhoto || null);
@@ -2948,6 +2981,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           theirProgress:  theirProg ?? s.theirProgress,
           theirPage:      theirPg   ?? s.theirPage,
           theirBook:      theirBook || null,
+          theirTimerActive: theirTimer,
         };
       });
     });
@@ -3052,16 +3086,41 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     setStreakCelebration(newStreak); // ✅ ¡El momentazo!
 
     if (fbOK() && user?.sessionId) {
-      const snap = await FB().get(FB().ref(FB().db, `sessions/${user.sessionId}`));
-      const amI1 = snap.exists() ? snap.val().user1Code === user.code : true;
-      await FB().update(FB().ref(FB().db, `sessions/${user.sessionId}`), {
-        [amI1 ? 'user1Confirmed' : 'user2Confirmed']: true,
-        [amI1 ? 'user1Progress'  : 'user2Progress']:  pct,
-        [amI1 ? 'user1Page'      : 'user2Page']:      cPage,
-        lastActivity: Date.now(),
-      });
+      try {
+        const snap = await FB().get(FB().ref(FB().db, `sessions/${user.sessionId}`));
+        const amI1 = snap.exists() ? snap.val().user1Code === user.code : true;
+        await FB().update(FB().ref(FB().db, `sessions/${user.sessionId}`), {
+          [amI1 ? 'user1Confirmed' : 'user2Confirmed']: true,
+          [amI1 ? 'user1Progress'  : 'user2Progress']:  pct,
+          [amI1 ? 'user1Page'      : 'user2Page']:      cPage,
+          lastActivity: Date.now(),
+        });
+      } catch (e) {}
     }
     pushNotif(`¡Racha de ${newStreak} día${newStreak > 1 ? 's' : ''}! +${confirmRyo} empanadas`);
+  };
+
+  const handleReactNote = (noteId, emoji) => {
+    if (!fbOK() || !user?.sessionId) return;
+    try { FB().set(FB().ref(FB().db, `sessions/${user.sessionId}/notes/${noteId}/reactions/${emoji}`), true).catch(() => {}); } catch (e) {}
+  };
+
+  const handleRemindPartner = () => {
+    const code = user?.partnerCode || user?.partner || 'parcero';
+    const today = todayStr();
+    if ((appState.lastReminderSent || {})[code] === today) { pushNotif('Ya le echaste memoria hoy'); return; }
+    if (fbOK() && user?.sessionId) {
+      try {
+        FB().get(FB().ref(FB().db, `sessions/${user.sessionId}`)).then(snap => {
+          if (!snap.exists()) return;
+          const amI1 = snap.val().user1Code === user.code;
+          const to = amI1 ? snap.val().user2Code : snap.val().user1Code;
+          FB().update(FB().ref(FB().db, `sessions/${user.sessionId}`), { nudge: { from: user.code, to, ts: Date.now() } }).catch(() => {});
+        }).catch(() => {});
+      } catch (e) {}
+    }
+    setAppState(s => ({ ...s, lastReminderSent: { ...(s.lastReminderSent || {}), [code]: today } }));
+    pushNotif(`Le echaste memoria a ${user?.partner || 'tu parcero'}`);
   };
 
   const handleAddNote = async () => {
@@ -3258,7 +3317,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} />
         </div>
         <div style={{ display: tab === 'books' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} />
+          <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} />
         </div>
         <div style={{ display: tab === 'friends' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <FriendsView C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} pushNotif={pushNotif} onBack={() => setTab('books')} />
@@ -4328,13 +4387,928 @@ const GENRES = ['Ficción', 'Romance', 'Misterio', 'Fantasía', 'Terror', 'Cienc
 // ─────────────────────────────────────────────
 //  PERGAMINOS TAB — Libro actual + biblioteca + añadir
 // ─────────────────────────────────────────────
-function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBooks, onAddBook, partnerOnline, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement }) {
-  const [showAdd, setShowAdd]   = useState(false);
-  const [nb, setNb]             = useState({ title: '', author: '', totalChapters: 10, totalPages: 0, genre: 'Ficción' });
-  const partner     = user?.partner || 'Pareja';
+// ═════════════════════════════════════════════════════════════
+//  EL SANCTUARIO DEL LECTOR — PergaminosTab v2
+//  Un espacio íntimo: presencia del parcero, libro inmersivo,
+//  ritual del cafetal, jardín de hábitos y notas del libro.
+// ═════════════════════════════════════════════════════════════
+
+// ── Planta generativa del jardín de hábitos (SVG puro, evoluciona con la racha) ──
+function PlantSVG({ streak = 0, color = '#4A7EB8', done = false, size = 56 }) {
+  const st = streak >= 14 ? 4 : streak >= 6 ? 3 : streak >= 3 ? 2 : streak >= 1 ? 1 : 0;
+  const leaf = done ? color : `${color}CC`;
+  return (
+    <svg width={size} height={size * 72 / 64} viewBox="0 0 64 72"
+      style={{ display: 'block', filter: done ? `drop-shadow(0 0 8px ${color}88)` : 'none',
+        opacity: done ? 1 : 0.82, transition: 'filter 0.4s, opacity 0.4s' }}>
+      {/* Maceta */}
+      <ellipse cx="32" cy="67" rx="18" ry="3.5" fill="rgba(0,0,0,0.28)" />
+      <path d="M19 55 h26 l-2.6 12.5 a2 2 0 0 1-2 1.6 h-16.8 a2 2 0 0 1-2-1.6 z" fill="#6B4A2B" />
+      <rect x="16.5" y="51" width="31" height="6" rx="2.5" fill="#7C5836" />
+      <ellipse cx="32" cy="53.5" rx="13" ry="2.6" fill="#3A2716" />
+      {st === 0 && <circle cx="32" cy="52" r="1.6" fill={`${color}99`} />}
+      {/* Brote */}
+      {st >= 1 && (
+        <>
+          <path d={st >= 2 ? "M32 53 q-1 -14 0 -24" : "M32 53 q-1 -7 0 -13"} stroke={leaf}
+            strokeWidth="2.6" fill="none" strokeLinecap="round" />
+          <ellipse cx="26" cy={st >= 2 ? 42 : 44} rx="5.2" ry="3" fill={leaf} transform={`rotate(-32 26 ${st >= 2 ? 42 : 44})`} />
+          <ellipse cx="38" cy={st >= 2 ? 40 : 42} rx="5.2" ry="3" fill={leaf} transform={`rotate(32 38 ${st >= 2 ? 40 : 42})`} />
+        </>
+      )}
+      {/* Planta mediana: 2 hojas más */}
+      {st >= 2 && (
+        <>
+          <ellipse cx="24" cy="33" rx="6" ry="3.4" fill={leaf} transform="rotate(-28 24 33)" />
+          <ellipse cx="40" cy="31" rx="6" ry="3.4" fill={leaf} transform="rotate(28 40 31)" />
+        </>
+      )}
+      {/* Flor */}
+      {st === 3 && (
+        <g transform="translate(32 24)">
+          {[0, 60, 120, 180, 240, 300].map(a => (
+            <ellipse key={a} cx="0" cy="-7" rx="3.2" ry="5.5" fill={color} transform={`rotate(${a})`} />
+          ))}
+          <circle cx="0" cy="0" r="3.6" fill="#FFD75E" />
+        </g>
+      )}
+      {/* Árbol: copa con florecitas */}
+      {st >= 4 && (
+        <>
+          <path d="M31 53 q-1 -12 0 -20" stroke="#6B4A2B" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+          <circle cx="32" cy="24" r="15" fill={leaf} />
+          <circle cx="22" cy="20" r="8" fill={color} />
+          <circle cx="42" cy="21" r="8" fill={color} />
+          {[[26, 20], [37, 18], [32, 27], [40, 27], [24, 28]].map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r="2.1" fill="#FFD75E" />
+          ))}
+        </>
+      )}
+    </svg>
+  );
+}
+
+// ── Sección 1: El Dúo de Lectura Activa ──
+function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPhotoURL, myReading }) {
+  const partnerReading = !!appState.theirTimerActive && partnerOnline;
+  const bothReading = myReading && partnerReading;
+  const yourSealed = appState.yourConfirmed;
+  const theirSealed = appState.theirConfirmed;
+  const shared = appState.streakDays || 0;
+
+  const miEstado = myReading
+    ? { txt: 'Leyendo ahora', dot: C.tealMid, pulse: true }
+    : yourSealed ? { txt: 'Leído hoy', dot: C.tealMid, pulse: false }
+    : { txt: 'Sin leer hoy', dot: C.border, pulse: false };
+  const suEstado = !user?.partnerConnected ? { txt: 'Sin parcero', dot: C.border, pulse: false }
+    : partnerReading ? { txt: 'Leyendo ahora', dot: C.accent, pulse: true }
+    : partnerOnline ? { txt: theirSealed ? 'Leyó hoy' : 'En línea', dot: C.tealMid, pulse: true }
+    : { txt: 'Desconectado', dot: C.border, pulse: false };
+
+  const Dot = ({ c, pulse }) => (
+    <span style={{ width: 7, height: 7, borderRadius: '50%', background: c, display: 'inline-block', flexShrink: 0,
+      boxShadow: pulse ? `0 0 6px ${c}` : 'none', animation: pulse ? 'dotPulse 1.6s ease-in-out infinite' : 'none' }} />
+  );
+
+  return (
+    <div style={{ position: 'relative', borderRadius: 22, padding: '15px 16px',
+      background: `linear-gradient(135deg, ${C.accent}14 0%, rgba(255,255,255,0.02) 100%)`,
+      border: `1px solid ${bothReading ? C.accent + '66' : C.accent + '2E'}`,
+      animation: bothReading ? 'syncGlow 2.2s ease-in-out infinite' : 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* TÚ */}
+        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+          <Av name={user?.name || 'Tú'} sz={46} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}
+            style={{ margin: '0 auto', border: `2px solid ${myReading ? C.tealMid : C.bg}` }} />
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'Tú'}</div>
+          <div style={{ fontSize: 9.5, color: C.textMuted, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+            <Dot c={miEstado.dot} pulse={miEstado.pulse} />{miEstado.txt}
+          </div>
+        </div>
+        {/* HILO */}
+        <div style={{ width: 54, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="54" height="24" viewBox="0 0 54 24" style={{ display: 'block' }}>
+            <path d="M2 12 H52" fill="none" stroke={bothReading ? C.accent : (myReading || partnerReading ? `${C.accent}88` : C.border)}
+              strokeWidth={bothReading ? 2.4 : 1.6} strokeLinecap="round"
+              strokeDasharray={bothReading ? '6 5' : (myReading || partnerReading ? 'none' : '2 4')}
+              style={{ animation: bothReading ? 'threadFlow 0.9s linear infinite' : 'none',
+                filter: bothReading ? `drop-shadow(0 0 3px ${C.accent})` : 'none' }} />
+            <circle cx="2" cy="12" r="2.6" fill={myReading ? C.tealMid : C.border} />
+            <circle cx="52" cy="12" r="2.6" fill={partnerReading ? C.accent : C.border} />
+          </svg>
+        </div>
+        {/* PARCERO */}
+        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+          <Av name={partner} sz={46} C={C} color={C.blueMid} photoURL={partnerPhotoURL}
+            style={{ margin: '0 auto', border: `2px solid ${partnerReading ? C.accent : C.bg}` }} />
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.partnerConnected ? partner : '—'}</div>
+          <div style={{ fontSize: 9.5, color: C.textMuted, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+            <Dot c={suEstado.dot} pulse={suEstado.pulse} />{suEstado.txt}
+          </div>
+        </div>
+      </div>
+
+      {/* Racha compartida */}
+      <div style={{ marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
+        {bothReading ? (
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: C.accent, letterSpacing: 0.3 }}>
+            ✨ Sesión sincronizada · leyendo juntos
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6,
+            color: (yourSealed && theirSealed) ? C.tealMid : yourSealed ? C.textMid : '#E8A34A' }}>
+            <PkIc n="flame" s={14} c={(yourSealed && theirSealed) ? C.tealMid : '#E8A34A'} />
+            {shared > 0 ? `${shared} día${shared !== 1 ? 's' : ''} leyendo juntos` : 'Empiecen su racha juntos'}
+            {!yourSealed && shared >= 0 && <span style={{ color: C.accent, fontWeight: 800 }}> · ¡séllala!</span>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Sección 2a: Hero inmersivo del libro ──
+function LibroHero({ C, book, pct, dimmed }) {
+  const pal = getPalette(book?.genre);
+  return (
+    <div style={{ position: 'relative', height: 200, borderRadius: 24, overflow: 'hidden',
+      opacity: dimmed ? 0.55 : 1, transition: 'opacity 0.5s ease',
+      boxShadow: `0 16px 44px ${pal.spine}22, 0 6px 26px rgba(0,0,0,0.5)` }}>
+      {/* Fondo: gradiente dominante del género */}
+      <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(155deg, ${pal.from} 0%, ${pal.to} 100%)` }} />
+      {/* Copia difuminada de la portada (color dominante estilo Spotify) */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transform: 'scale(1.6)', filter: 'blur(26px) saturate(1.35)', opacity: 0.55, pointerEvents: 'none' }}>
+        <BookCover book={book} size="lg" />
+      </div>
+      {/* Gradiente de legibilidad */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: `linear-gradient(to bottom, transparent 0%, ${pal.from}66 58%, ${pal.from}F2 100%)` }} />
+      {/* Portada flotante */}
+      <div style={{ position: 'absolute', top: 22, left: 20, animation: 'coverFloat 4s ease-in-out infinite',
+        filter: 'drop-shadow(0 12px 34px rgba(0,0,0,0.6))' }}>
+        <BookCover book={book} size="lg" />
+      </div>
+      {/* Contenido */}
+      <div style={{ position: 'absolute', bottom: 16, left: 18, right: 18 }}>
+        <div className="serif" style={{ fontSize: 21, fontWeight: 800, color: pal.text || '#fff', lineHeight: 1.15,
+          textShadow: '0 2px 12px rgba(0,0,0,0.6)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          {book.title}
+        </div>
+        <div style={{ fontSize: 12.5, color: pal.text ? pal.text + 'B0' : 'rgba(255,255,255,0.7)', marginTop: 3 }}>{book.author || 'Autor desconocido'}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
+          {book.genre && (
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.4, color: pal.spine, background: `${pal.spine}26`,
+              border: `1px solid ${pal.spine}45`, borderRadius: 6, padding: '3px 9px' }}>{book.genre.toUpperCase()}</span>
+          )}
+          <span style={{ fontSize: 11, fontWeight: 800, color: pal.text || '#fff' }}>{pct}% completado</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sección 2b: Progreso épico + sellar pergamino ──
+function ProgresoLibro({ C, appState, setAppState, book, onSeal }) {
+  const pal = getPalette(book?.genre);
+  const tChap = book?.totalChapters || 10;
+  const tPage = book?.totalPages || 0;
+  const cChap = appState.currentChapter || 1;
+  const cPage = appState.currentPage || 1;
+  const [expanded, setExpanded] = useState(false);
+  const [wax, setWax] = useState(false);
+  const sealed = appState.yourConfirmed;
+  const segCount = Math.min(tChap, 16);
+
+  const chapFrac = tPage > 0 ? (cPage / tPage) : 0;
+
+  const doSeal = () => {
+    if (sealed) return;
+    setWax(true);
+    setTimeout(() => setWax(false), 1400);
+    onSeal?.();
+  };
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      {/* Barra por capítulos */}
+      <div onClick={() => setExpanded(e => !e)} style={{ display: 'flex', gap: 3, height: expanded ? 24 : 12,
+        transition: 'height 0.3s ease', cursor: 'pointer', alignItems: 'stretch' }}>
+        {Array.from({ length: segCount }).map((_, i) => {
+          const isDone = i < cChap - 1;
+          const isCurrent = i === cChap - 1;
+          const fill = isDone ? 1 : isCurrent ? Math.max(0.12, chapFrac || 0.5) : 0;
+          return (
+            <div key={i} style={{ flex: 1, borderRadius: 4, background: 'rgba(255,255,255,0.10)',
+              border: `1px solid ${isCurrent ? pal.spine + '99' : 'rgba(255,255,255,0.08)'}`, overflow: 'hidden', position: 'relative',
+              display: 'flex', alignItems: 'flex-end' }}>
+              <div style={{ width: '100%', height: `${fill * 100}%`, background: isDone ? pal.spine : `linear-gradient(0deg, ${pal.spine}, ${pal.spine}AA)`,
+                transition: 'height 0.4s ease' }} />
+              {expanded && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 8, fontWeight: 800, color: isDone ? '#0A0A0A' : 'rgba(255,255,255,0.65)' }}>{i + 1}</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: 600, marginTop: 8, textAlign: 'center' }}>
+        Capítulo {cChap}{tPage > 0 ? ` · Página ${cPage} de ${tPage}` : ` de ${tChap}`}
+      </div>
+
+      {/* Controles de capítulo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+        <button onClick={() => setAppState(s => ({ ...s, currentChapter: Math.max(1, cChap - 1), currentPage: 1 }))}
+          style={{ flex: 1, height: 50, borderRadius: 14, background: `${pal.spine}22`, border: `1px solid ${pal.spine}44`,
+            color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <PkIc n="left" s={15} c="#fff" /> Cap.
+        </button>
+        <div style={{ minWidth: 54, textAlign: 'center' }}>
+          <div style={{ fontSize: 32, fontWeight: 900, color: pal.spine, lineHeight: 1 }}>{cChap}</div>
+          <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: 1 }}>DE {tChap}</div>
+        </div>
+        <button onClick={() => setAppState(s => ({ ...s, currentChapter: Math.min(tChap, cChap + 1), currentPage: 1 }))}
+          style={{ flex: 1, height: 50, borderRadius: 14, background: `${pal.spine}22`, border: `1px solid ${pal.spine}44`,
+            color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          Cap. <PkIc n="right" s={15} c="#fff" />
+        </button>
+      </div>
+
+      {/* Slider de páginas */}
+      {tPage > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700, marginBottom: 6 }}>
+            <span>PÁGINA</span><span style={{ color: pal.spine, fontSize: 12 }}>{cPage}</span>
+          </div>
+          <input type="range" min={1} max={tPage} value={cPage}
+            onChange={e => setAppState(s => ({ ...s, currentPage: parseInt(e.target.value) }))}
+            style={{ width: '100%', accentColor: pal.spine, cursor: 'pointer' }} />
+        </div>
+      )}
+
+      {/* Sellar pergamino */}
+      <div style={{ position: 'relative', marginTop: 16 }}>
+        {wax && (
+          <div style={{ position: 'absolute', top: -4, left: '50%', width: 44, height: 44, borderRadius: '50%', zIndex: 3,
+            background: 'radial-gradient(circle at 35% 30%, #E8743A, #A0341A)', border: '2px solid #7A2410',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'selloDrop 1.2s cubic-bezier(0.34,1.4,0.6,1) both',
+            boxShadow: '0 6px 18px rgba(0,0,0,0.5)' }}>
+            <PkIc n="flame" s={18} c="#FFD9B0" />
+          </div>
+        )}
+        <button onClick={doSeal} disabled={sealed} style={{ width: '100%', height: 52, borderRadius: 14, cursor: sealed ? 'default' : 'pointer',
+          fontFamily: 'inherit', fontSize: 14, fontWeight: 800, border: 'none',
+          background: sealed ? 'rgba(52,211,153,0.16)' : `linear-gradient(135deg, ${pal.spine}, ${pal.spine}CC)`,
+          color: sealed ? '#34D399' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          boxShadow: sealed ? 'none' : `0 8px 22px ${pal.spine}44` }}>
+          <PkIc n={sealed ? 'check' : 'flame'} s={16} c={sealed ? '#34D399' : '#fff'} />
+          {sealed ? 'Pergamino sellado · Racha +1' : 'Sellar pergamino de hoy'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Sección 3: Cafetal de Enfoque como ritual ──
+function CafetalRitual({ C, appState, setAppState, pushNotif, currentBook, setBooks, onCoinBurst, onAchievement, user, onReadingChange, partnerName, partnerPhoto }) {
+  const [running, setRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [goalMins, setGoalMins] = useState(appState.dailyGoal || 20);
+  const [result, setResult] = useState(null);
+  const intervalRef = useRef(null);
+  const partnerReading = !!appState.theirTimerActive;
+
+  const syncTimer = (active) => {
+    onReadingChange?.(active);
+    if (!fbOK() || !user?.sessionId) return;
+    try {
+      FB().get(FB().ref(FB().db, `sessions/${user.sessionId}`)).then(snap => {
+        if (!snap.exists()) return;
+        const amI1 = snap.val().user1Code === user.code;
+        FB().update(FB().ref(FB().db, `sessions/${user.sessionId}`), { [amI1 ? 'user1TimerActive' : 'user2TimerActive']: active }).catch(() => {});
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    if (running && !paused) {
+      intervalRef.current = setInterval(() => {
+        setSeconds(s => {
+          if (s + 1 === goalMins * 60) { try { playAlarm(); } catch (e) {} sendPushNotif('¡Sesión cumplida!', `Leíste ${goalMins} minutos.`, 'pankey-timer'); pushNotif('¡Meta cumplida! 🎉'); }
+          return s + 1;
+        });
+      }, 1000);
+    } else clearInterval(intervalRef.current);
+    return () => clearInterval(intervalRef.current);
+  }, [running, paused, goalMins]);
+
+  const start = () => { FX.play('success'); setSeconds(0); setRunning(true); setPaused(false); syncTimer(true); };
+  const togglePause = () => { const np = !paused; setPaused(np); FX.play('tap'); if (np) syncTimer(false); else syncTimer(true); };
+  const restart = () => { FX.play('tap'); setSeconds(0); setPaused(false); };
+  const abandon = () => { setRunning(false); setPaused(false); setSeconds(0); syncTimer(false); };
+
+  const finish = () => {
+    syncTimer(false);
+    if (seconds < 30) { abandon(); return; }
+    const mins = Math.max(1, Math.round(seconds / 60));
+    const earnedRyo = mins;
+    const tintoDoble = !!appState.xpBoostActive;
+    const earnedXp = mins * 3 * (tintoDoble ? 2 : 1);
+    const metaOk = mins >= goalMins;
+
+    setAppState(s => {
+      const newTotal = s.totalMinutesRead + mins;
+      const newSessions = s.totalSessions + 1;
+      const newAchievements = (s.achievements || []).map(a => {
+        if (a.unlocked) return a;
+        if (a.id === 4 && newTotal >= 100) return { ...a, unlocked: true, date: 'hoy' };
+        if (a.id === 7 && mins >= 60) return { ...a, unlocked: true, date: 'hoy' };
+        if (a.id === 11 && newSessions >= 100) return { ...a, unlocked: true, date: 'hoy' };
+        if (a.id === 12 && newTotal >= 1000) return { ...a, unlocked: true, date: 'hoy' };
+        return a;
+      });
+      const prevIds = (s.achievements || []).filter(a => a.unlocked).map(a => a.id);
+      const newly = newAchievements.filter(a => a.unlocked && !prevIds.includes(a.id));
+      newly.forEach(a => onAchievement?.(a));
+      // Hábito de lectura se auto-marca con sesiones de 20+ min
+      let habits = s.habits || [];
+      if (mins >= 20 && habits.length) {
+        habits = habits.map(h => (h.type === 'daily' && /le[ei]r|lectura|leí/i.test(h.name) && !h.completedToday)
+          ? { ...h, completedToday: true, streak: (h.streak || 0) + 1, completedDates: [...(h.completedDates || []), todayStr()] } : h);
+      }
+      return {
+        ...s,
+        ryo: (s.ryo || 0) + earnedRyo + newly.reduce((x, a) => x + (a.ryo || 0), 0),
+        xp: (s.xp || 0) + earnedXp + newly.reduce((x, a) => x + (a.xp || 0), 0),
+        xpBoostActive: tintoDoble ? false : s.xpBoostActive,
+        readingMinutesToday: s.readingMinutesToday + mins,
+        totalMinutesRead: newTotal, totalSessions: newSessions, achievements: newAchievements, habits,
+      };
+    });
+    if (currentBook) setBooks(p => p.map(b => b.id === currentBook.id ? { ...b, timeRead: (b.timeRead || 0) + mins } : b));
+    onCoinBurst?.(earnedRyo);
+    setRunning(false); setPaused(false); setSeconds(0);
+    setResult({ mins, earnedRyo, earnedXp, metaOk, goal: goalMins });
+  };
+
+  const m = Math.floor(seconds / 60), sec = seconds % 60;
+  const pct = Math.min((seconds / (goalMins * 60)) * 100, 100);
+  const mm = String(m).padStart(2, '0'), ss = String(sec).padStart(2, '0');
+
+  const Steam = ({ n = 3 }) => (
+    <div style={{ position: 'absolute', top: -18, left: 0, right: 0, height: 22, pointerEvents: 'none' }}>
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} style={{ position: 'absolute', left: `${35 + i * 15}%`, bottom: 0, width: 3, height: 16, borderRadius: 3,
+          background: 'linear-gradient(0deg, rgba(255,255,255,0.4), transparent)',
+          animation: `steamRise ${1.8 + i * 0.4}s ease-in-out ${i * 0.5}s infinite` }} />
+      ))}
+    </div>
+  );
+
+  // ── IDLE ──
+  if (!running) {
+    return (
+      <div style={{ borderRadius: 20, padding: '22px 18px', textAlign: 'center',
+        background: 'linear-gradient(160deg, rgba(124,61,20,0.16), rgba(124,61,20,0.04))', border: `1px solid ${C.amberMid}2E` }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: C.amberMid, display: 'flex', alignItems: 'center', gap: 7, justifyContent: 'center' }}>
+          <PkIc n="coffee" s={16} c={C.amberMid} /> CAFETAL DE ENFOQUE
+        </div>
+        {/* Taza SVG con vapor */}
+        <div style={{ position: 'relative', width: 78, height: 74, margin: '16px auto 12px' }}>
+          <Steam n={3} />
+          <svg width="78" height="74" viewBox="0 0 78 74">
+            <path d="M14 26 h44 v20 a20 20 0 0 1-44 0 z" fill="#7C3D14" stroke="#A85A28" strokeWidth="2" />
+            <path d="M58 30 h8 a9 9 0 0 1 0 18 h-8" fill="none" stroke="#A85A28" strokeWidth="3" />
+            <ellipse cx="36" cy="26" rx="22" ry="5" fill="#5A2C0E" />
+            <ellipse cx="36" cy="25" rx="17" ry="3.4" fill="#3A1C08" />
+            <rect x="10" y="60" width="58" height="6" rx="3" fill="#5A2C0E" />
+          </svg>
+        </div>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text, marginBottom: 14 }}>¿Cuánto tiempo le das al libro hoy?</div>
+        <div style={{ display: 'flex', gap: 7, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+          {[10, 20, 30, 45].map(mn => (
+            <button key={mn} onClick={() => { FX.play('tap'); setGoalMins(mn); }} style={{ padding: '8px 15px', borderRadius: 99, fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+              background: goalMins === mn ? C.amberMid : 'rgba(255,255,255,0.05)', color: goalMins === mn ? '#1A1206' : C.textMuted,
+              border: `1px solid ${goalMins === mn ? C.amberMid : C.border}`, boxShadow: goalMins === mn ? `0 4px 12px ${C.amberMid}44` : 'none', transition: 'all 0.2s' }}>{mn} min</button>
+          ))}
+        </div>
+        <button onClick={start} style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+          fontSize: 14, fontWeight: 800, color: '#1A1206', background: `linear-gradient(135deg, #E8A34A, ${C.amberMid})`,
+          boxShadow: `0 8px 22px ${C.amberMid}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <PkIc n="play" s={16} c="#1A1206" /> Iniciar sesión de lectura
+        </button>
+        {result && <ResultSheet C={C} result={result} appState={appState} setAppState={setAppState} onSeal={null} onClose={() => setResult(null)} />}
+      </div>
+    );
+  }
+
+  // ── RUNNING / PAUSED ──
+  return (
+    <div style={{ borderRadius: 20, padding: '20px 18px', textAlign: 'center',
+      background: 'linear-gradient(160deg, rgba(124,61,20,0.16), rgba(124,61,20,0.04))', border: `1px solid ${C.amberMid}2E` }}>
+      {/* Reloj de café con liquid fill */}
+      <div style={{ position: 'relative', width: 190, height: 190, margin: '4px auto 8px', borderRadius: '50%',
+        overflow: 'hidden', border: `3px solid ${paused ? C.border : C.amberMid + '66'}`, background: 'rgba(0,0,0,0.3)',
+        boxShadow: paused ? 'none' : `0 0 30px ${C.amberMid}33, inset 0 0 30px rgba(0,0,0,0.4)` }}>
+        {/* Café que sube */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${pct}%`,
+          background: paused ? 'linear-gradient(0deg, #4A5568, #2D3748)' : 'linear-gradient(0deg, #7C3D14, #A85A28)',
+          transition: 'height 1s linear' }}>
+          {/* Onda superior */}
+          <div style={{ position: 'absolute', top: -6, left: 0, width: '200%', height: 12, opacity: paused ? 0.3 : 0.9,
+            animation: paused ? 'none' : 'liquidWave 2.4s linear infinite' }}>
+            <svg width="100%" height="12" viewBox="0 0 120 12" preserveAspectRatio="none">
+              <path d="M0 6 Q15 0 30 6 T60 6 T90 6 T120 6 V12 H0 Z" fill={paused ? '#4A5568' : '#A85A28'} />
+            </svg>
+          </div>
+        </div>
+        {/* Vapor */}
+        {!paused && <div style={{ position: 'absolute', top: 6, left: 0, right: 0, height: 30 }}><Steam n={4} /></div>}
+        {/* Número */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontSize: 46, fontWeight: 800, color: '#fff', letterSpacing: 2, fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>{mm}:{ss}</div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 700, letterSpacing: 1.5, marginTop: 2 }}>{paused ? 'PAUSADO' : `META ${goalMins} MIN`}</div>
+        </div>
+      </div>
+
+      {/* Estado */}
+      <div style={{ fontSize: 12, color: C.textMid, fontWeight: 600, marginTop: 4 }}>
+        {currentBook ? `Leyendo ${currentBook.title}` : 'Sesión de enfoque'}{currentBook ? ` · Cap. ${appState.currentChapter || 1}` : ''}
+      </div>
+      {partnerReading && (
+        <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginTop: 5, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Av name={partnerName || 'Parcero'} sz={18} C={C} color={C.blueMid} photoURL={partnerPhoto} />
+          {partnerName || 'Tu parcero'} también está leyendo
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.tealMid, animation: 'dotPulse 1.6s infinite' }} />
+        </div>
+      )}
+
+      {/* Controles */}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
+        <button onClick={togglePause} style={{ height: 44, padding: '0 16px', borderRadius: 12, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+          background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`, color: C.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <PkIc n={paused ? 'play' : 'pause'} s={15} c={C.text} /> {paused ? 'Continuar' : 'Pausar'}
+        </button>
+        <button onClick={finish} style={{ height: 44, padding: '0 18px', borderRadius: 12, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 800, cursor: 'pointer',
+          background: C.tealMid, border: 'none', color: '#06231C', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <PkIc n="check" s={15} c="#06231C" /> Terminar
+        </button>
+        {!paused && (
+          <button onClick={restart} style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PkIc n="refresh" s={15} c={C.textMuted} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Bottom sheet de resultado de sesión ──
+function ResultSheet({ C, result, appState, setAppState, onClose }) {
+  const minsUp = useCountUp(result.mins, 700);
+  return (
+    <Portal>
+      <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99995, background: 'rgba(2,4,8,0.86)', backdropFilter: 'blur(10px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 430, background: C.bgAlt, borderRadius: '26px 26px 0 0',
+          borderTop: `1px solid ${C.amberMid}44`, padding: '26px 22px calc(26px + env(safe-area-inset-bottom))', animation: 'slideUpIn 0.4s cubic-bezier(0.22,1,0.36,1) both' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: C.border, margin: '0 auto 20px' }} />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 48, fontWeight: 900, color: C.amberMid, lineHeight: 1 }}>{minsUp}<span style={{ fontSize: 20, color: C.textMuted }}> min</span></div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: result.metaOk ? C.tealMid : C.textMid, marginTop: 8 }}>
+              {result.metaOk ? '¡Meta cumplida! 🎉' : `${result.mins} de ${result.goal} min. La próxima llegas.`}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+            <div style={{ flex: 1, borderRadius: 14, padding: '14px', background: `${C.amberMid}14`, border: `1px solid ${C.amberMid}30`, textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: C.amberMid }}>+{result.earnedRyo}</div>
+              <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 1 }}>EMPANADAS</div>
+            </div>
+            <div style={{ flex: 1, borderRadius: 14, padding: '14px', background: `${C.accent}14`, border: `1px solid ${C.accent}30`, textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: C.accent }}>+{result.earnedXp}</div>
+              <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 1 }}>XP</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: '100%', height: 48, borderRadius: 14, marginTop: 18, border: `1px solid ${C.border}`,
+            background: 'transparent', color: C.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Cerrar</button>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
+// ── Sección 4: El libro del parcero ──
+function LibroParcero({ C, isLight, appState, partner, partnerOnline, partnerPhotoURL, myBook, notes, user, onRemind, onOpenChat }) {
+  const theirBook = appState.theirBook;
+  if (!user?.partnerConnected) return null;
+  const theirPct = appState.theirProgress || 0;
+  const myPct = (() => {
+    if (!myBook) return 0;
+    const tPage = myBook.totalPages || 0, cPage = appState.currentPage || 1;
+    const tChap = myBook.totalChapters || 10, cChap = appState.currentChapter || 1;
+    return tPage > 0 ? Math.min(100, Math.round((cPage / tPage) * 100)) : Math.min(100, Math.round((cChap / tChap) * 100));
+  })();
+  const theirSpine = theirBook ? getPalette(theirBook.genre).spine : C.accent;
+  const lastNotes = notes.slice(-2);
+  const canRemind = !appState.theirConfirmed && partnerOnline;
+
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10, fontWeight: 800, letterSpacing: 1.5, display: 'flex', alignItems: 'center', gap: 7 }}>
+        {partner.toUpperCase()} ESTÁ LEYENDO
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: partnerOnline ? C.tealMid : C.border, boxShadow: partnerOnline ? `0 0 6px ${C.tealMid}` : 'none' }} />
+      </div>
+      <div style={{ borderRadius: 18, padding: '14px 16px', background: C.bgAlt, border: `1px solid ${C.border}` }}>
+        {theirBook ? (
+          <>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ flexShrink: 0, width: 44, height: 62, borderRadius: 6, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.35)' }}>
+                <BookCover book={theirBook} size="sm" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{theirBook.title}</div>
+                <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>{theirBook.author}</div>
+                {theirBook.genre && <span style={{ display: 'inline-block', marginTop: 6, fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: theirSpine, background: `${theirSpine}1E`, border: `1px solid ${theirSpine}3A`, borderRadius: 5, padding: '2px 7px' }}>{theirBook.genre.toUpperCase()}</span>}
+              </div>
+            </div>
+            {/* Barras comparativas */}
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[{ l: 'TÚ', pct: myPct, c: C.accent }, { l: partner.slice(0, 8).toUpperCase(), pct: theirPct, c: theirSpine }].map((r, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: C.textMuted, width: 52, letterSpacing: 0.5 }}>{r.l}</span>
+                  <div style={{ flex: 1, height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 99, width: `${r.pct}%`, background: r.c, transition: 'width 0.6s ease' }} />
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: r.c, width: 34, textAlign: 'right' }}>{r.pct}%</span>
+                </div>
+              ))}
+            </div>
+            {myPct !== theirPct && (
+              <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 8, textAlign: 'center' }}>
+                {myPct > theirPct ? `Vas ${myPct - theirPct}% adelante 🏃` : `${partner} va ${theirPct - myPct}% adelante`}
+              </div>
+            )}
+            {/* Estado + recordar */}
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: appState.theirConfirmed ? C.tealMid : C.textMuted }}>
+                {appState.theirConfirmed ? `✓ ${partner} confirmó hoy · +1 racha` : `${partner} no ha leído hoy`}
+              </div>
+              {canRemind && (
+                <button onClick={onRemind} style={{ flexShrink: 0, background: `${C.accent}18`, border: `1px solid ${C.accent}40`, color: C.accent,
+                  borderRadius: 10, padding: '7px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Echarle memoria →</button>
+              )}
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 2px' }}>
+            <PkIc n="book" s={22} c={C.border} />
+            <div style={{ fontSize: 12.5, color: C.textMuted }}>{partner} aún no eligió un libro.</div>
+          </div>
+        )}
+
+        {/* Preview de notas */}
+        {lastNotes.length > 0 && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+            {lastNotes.map(n => {
+              const isMe = n.who === user?.code || n.who === 'you';
+              return (
+                <div key={n.id} style={{ fontSize: 11.5, color: C.textMid, marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <b style={{ color: isMe ? C.accent : C.tealMid }}>{isMe ? 'Tú' : (n.whoName || partner)}:</b> {n.text}
+                </div>
+              );
+            })}
+            <button onClick={onOpenChat} style={{ background: 'none', border: 'none', color: C.accent, fontSize: 11.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', padding: '4px 0 0' }}>Ver conversación →</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Sección 5: Sanctuario de Hábitos ──
+const HABIT_ICONS = ['book', 'timer', 'rana', 'check', 'flame', 'coffee', 'people', 'leaf', 'flower', 'target', 'sabio', 'msg'];
+const HABIT_COLORS = ['#4A7EB8', '#34D399', '#F472B6', '#FBBF24', '#A78BFA', '#38BDF8', '#E8743A', '#5EC26A'];
+
+function AddHabitModal({ C, onAdd, onClose }) {
+  const [step, setStep] = useState(1);
+  const [type, setType] = useState('daily');
+  const [name, setName] = useState('');
+  const [icon, setIcon] = useState('book');
+  const [color, setColor] = useState('#4A7EB8');
+  const [time, setTime] = useState('07:00');
+  const [dueDate, setDueDate] = useState('');
+
+  const create = () => {
+    if (!name.trim()) return;
+    onAdd({ id: 'h' + Date.now(), name: name.trim(), type, icon, color,
+      streak: 0, completedToday: false, completedDates: [],
+      time: type === 'routine' ? time : null, dueDate: type === 'task' ? (dueDate || null) : null,
+      xpReward: 20, createdAt: Date.now() });
+    onClose();
+  };
+
+  return (
+    <Portal>
+      <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99995, background: 'rgba(2,4,8,0.86)', backdropFilter: 'blur(10px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 430, maxHeight: '82vh', overflowY: 'auto', background: C.bgAlt,
+          borderRadius: '26px 26px 0 0', borderTop: `1px solid ${C.accent}44`, padding: '22px 20px calc(24px + env(safe-area-inset-bottom))',
+          animation: 'slideUpIn 0.4s cubic-bezier(0.22,1,0.36,1) both' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: C.border, margin: '0 auto 18px' }} />
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 4 }}>Nuevo hábito</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 18 }}>Paso {step} de 2</div>
+
+          {step === 1 ? (
+            <>
+              {[{ id: 'daily', t: 'Hábito diario', d: 'Se marca cada día · construye racha' },
+                { id: 'task', t: 'Tarea', d: 'Con fecha límite · desaparece al terminar' },
+                { id: 'routine', t: 'Rutina con hora', d: 'Aparece en tu línea del día' }].map(o => (
+                <button key={o.id} onClick={() => { FX.play('tap'); setType(o.id); }} style={{ width: '100%', textAlign: 'left', marginBottom: 10, padding: '15px 16px', borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit',
+                  background: type === o.id ? `${C.accent}18` : 'transparent', border: `1.5px solid ${type === o.id ? C.accent : C.border}` }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: type === o.id ? C.accent : C.text }}>{o.t}</div>
+                  <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 3 }}>{o.d}</div>
+                </button>
+              ))}
+              <button onClick={() => setStep(2)} style={{ width: '100%', height: 50, borderRadius: 14, marginTop: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 14, fontWeight: 800, color: '#fff', background: C.accent }}>Continuar →</button>
+            </>
+          ) : (
+            <>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del hábito…" maxLength={40}
+                style={{ width: '100%', fontSize: 15, fontWeight: 600, padding: '12px 14px', borderRadius: 12, marginBottom: 16,
+                  border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontFamily: 'inherit' }} />
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 1, marginBottom: 8 }}>ÍCONO</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 16 }}>
+                {HABIT_ICONS.map(ic => (
+                  <button key={ic} onClick={() => setIcon(ic)} style={{ aspectRatio: '1', borderRadius: 11, cursor: 'pointer',
+                    background: icon === ic ? `${color}22` : 'rgba(255,255,255,0.04)', border: `1.5px solid ${icon === ic ? color : C.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PkIc n={ic} s={18} c={icon === ic ? color : C.textMuted} />
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 1, marginBottom: 8 }}>COLOR</div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                {HABIT_COLORS.map(cc => (
+                  <button key={cc} onClick={() => setColor(cc)} style={{ width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
+                    background: cc, border: color === cc ? '3px solid #fff' : '2px solid rgba(255,255,255,0.15)', boxShadow: color === cc ? `0 0 10px ${cc}` : 'none' }} />
+                ))}
+              </div>
+              {type === 'routine' && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 1, marginBottom: 8 }}>HORA</div>
+                  <input type="time" value={time} onChange={e => setTime(e.target.value)}
+                    style={{ fontSize: 15, padding: '10px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontFamily: 'inherit', colorScheme: 'dark' }} />
+                </div>
+              )}
+              {type === 'task' && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 1, marginBottom: 8 }}>FECHA LÍMITE</div>
+                  <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                    style={{ fontSize: 15, padding: '10px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontFamily: 'inherit', colorScheme: 'dark' }} />
+                </div>
+              )}
+              {/* Preview */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, marginBottom: 18 }}>
+                <PlantSVG streak={0} color={color} size={40} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <PkIc n={icon} s={14} c={color} />{name || 'Tu hábito'}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 2 }}>Así se verá tu maceta</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setStep(1)} style={{ width: 88, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
+                  background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted }}>← Atrás</button>
+                <button onClick={create} disabled={!name.trim()} style={{ flex: 1, height: 50, borderRadius: 14, border: 'none', cursor: name.trim() ? 'pointer' : 'default', fontFamily: 'inherit',
+                  fontSize: 14, fontWeight: 800, color: '#fff', background: name.trim() ? C.accent : C.border, opacity: name.trim() ? 1 : 0.6 }}>Crear hábito</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
+function HabitCard({ C, habit, onToggle }) {
+  const [pop, setPop] = useState(false);
+  const done = habit.completedToday;
+  const toggle = () => {
+    if (!done) { setPop(true); setTimeout(() => setPop(false), 600); FX.play('success'); FX.vibrate('light'); }
+    else FX.play('tap');
+    onToggle(habit.id);
+  };
+  return (
+    <button onClick={toggle} style={{ position: 'relative', borderRadius: 16, padding: '12px 8px 10px', cursor: 'pointer', fontFamily: 'inherit',
+      background: done ? `${habit.color}14` : 'rgba(255,255,255,0.03)', border: `1.5px solid ${done ? habit.color + '55' : C.border}`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+      {/* Sparkles al completar */}
+      {pop && [0, 1, 2].map(k => (
+        <span key={k} style={{ position: 'absolute', top: '30%', left: `${28 + k * 22}%`, fontSize: 12, animation: `jardinFloat 0.7s ease-out ${k * 0.08}s both`, pointerEvents: 'none' }}>✨</span>
+      ))}
+      <div style={{ animation: pop ? 'plantPop 0.6s ease' : 'none' }}>
+        <PlantSVG streak={habit.streak} color={habit.color} done={done} size={50} />
+      </div>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: done ? C.text : C.textMid, textAlign: 'center', lineHeight: 1.2, minHeight: 26,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', width: '100%' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '100%' }}><PkIc n={habit.icon} s={11} c={habit.color} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span></span>
+      </div>
+      {habit.streak > 0 && (
+        <div style={{ fontSize: 9.5, fontWeight: 800, color: habit.color, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <PkIc n="flame" s={10} c={habit.color} />{habit.streak}
+        </div>
+      )}
+    </button>
+  );
+}
+
+function SanctuarioHabitos({ C, appState, setAppState, pushNotif, onCoinBurst }) {
+  const [subTab, setSubTab] = useState('habitos');
+  const [showAdd, setShowAdd] = useState(false);
+  const habits = appState.habits || [];
+  const dailies = habits.filter(h => h.type !== 'task' || !h.done);
+  const routines = habits.filter(h => h.type === 'routine' && h.time).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const allDone = dailies.length > 0 && dailies.every(h => h.completedToday);
+
+  const addHabit = (h) => setAppState(s => ({ ...s, habits: [...(s.habits || []), h] }));
+
+  const toggleHabit = (id) => setAppState(s => {
+    const before = (s.habits || []).filter(h => h.type !== 'task').every(h => h.completedToday);
+    let bonusFired = false;
+    const habits = (s.habits || []).map(h => {
+      if (h.id !== id) return h;
+      const now = !h.completedToday;
+      return { ...h, completedToday: now,
+        streak: now ? (h.streak || 0) + 1 : Math.max(0, (h.streak || 0) - 1),
+        completedDates: now ? [...(h.completedDates || []), todayStr()] : (h.completedDates || []).filter(d => d !== todayStr()) };
+    });
+    const toggled = habits.find(h => h.id === id);
+    // Recompensa por racha de 7 en un hábito
+    let extraRyo = 0;
+    if (toggled && toggled.completedToday && toggled.streak > 0 && toggled.streak % 7 === 0) {
+      extraRyo = 60; bonusFired = true;
+      setTimeout(() => { pushNotif?.(`🌳 ¡${toggled.name} lleva ${toggled.streak} días! Cofre pequeño: +60 empanadas`); onCoinBurst?.(60); }, 300);
+    }
+    // Día perfecto (todos completados)
+    const afterAll = habits.filter(h => h.type !== 'task').length > 0 && habits.filter(h => h.type !== 'task').every(h => h.completedToday);
+    let xpBonus = 0;
+    if (afterAll && !before) { xpBonus = 50; setTimeout(() => pushNotif?.('¡Día perfecto! +50 XP · todos tus hábitos completados'), bonusFired ? 900 : 300); }
+    return { ...s, habits, ryo: (s.ryo || 0) + extraRyo, xp: (s.xp || 0) + xpBonus };
+  });
+
+  const nowHM = (() => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; })();
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ flex: 1, fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5 }}>SANCTUARIO DE HÁBITOS</div>
+        <button onClick={() => { FX.play('tap'); setShowAdd(true); }} style={{ background: `${C.accent}18`, border: `1px solid ${C.accent}40`, color: C.accent,
+          borderRadius: 10, padding: '7px 13px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+          + Agregar
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        {[{ id: 'habitos', t: '🌱 Mis Hábitos' }, { id: 'rutina', t: '📋 Mi Rutina' }].map(t => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} style={{ flex: 1, padding: '9px 0', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700,
+            background: subTab === t.id ? C.accent : 'rgba(255,255,255,0.04)', color: subTab === t.id ? '#fff' : C.textMuted, border: `1px solid ${subTab === t.id ? C.accent : C.border}` }}>{t.t}</button>
+        ))}
+      </div>
+
+      {habits.length === 0 ? (
+        <div style={{ borderRadius: 18, padding: '30px 20px', textAlign: 'center', border: `1px dashed ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <PlantSVG streak={3} color={C.accent} size={54} />
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textMid }}>Tu jardín está vacío</div>
+          <div style={{ fontSize: 12, color: C.textMuted, maxWidth: 220, lineHeight: 1.5 }}>Crea tu primer hábito y míralo crecer cada día que lo cumplas.</div>
+          <button onClick={() => setShowAdd(true)} style={{ marginTop: 4, background: C.accent, border: 'none', color: '#fff', borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Crear hábito</button>
+        </div>
+      ) : subTab === 'habitos' ? (
+        <div style={{ position: 'relative' }}>
+          {allDone && [0, 1, 2, 3, 4].map(k => (
+            <span key={k} style={{ position: 'absolute', top: '10%', left: `${12 + k * 19}%`, fontSize: 10, pointerEvents: 'none', animation: `jardinFloat ${2 + k * 0.4}s ease-out ${k * 0.5}s infinite` }}>✨</span>
+          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {dailies.map(h => <HabitCard key={h.id} C={C} habit={h} onToggle={toggleHabit} />)}
+          </div>
+          {allDone && <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: C.tealMid, marginTop: 12 }}>🌟 Jardín completo · ¡día perfecto!</div>}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {routines.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: C.textMuted, textAlign: 'center', padding: '24px 0' }}>Sin rutinas con hora. Agrega una del tipo "Rutina con hora".</div>
+          ) : routines.map((h, i) => {
+            const isCurrent = !h.completedToday && (i === routines.length - 1 || routines[i + 1].time > nowHM) && h.time <= nowHM;
+            const isPast = h.completedToday;
+            return (
+              <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12,
+                background: isPast ? `${C.tealMid}12` : isCurrent ? `${h.color}12` : 'transparent',
+                border: isCurrent ? `1.5px solid ${h.color}55` : '1px solid transparent',
+                animation: isCurrent ? 'syncGlow 2.4s ease-in-out infinite' : 'none' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, width: 44, fontVariantNumeric: 'tabular-nums' }}>{h.time}</div>
+                <div style={{ width: 30, height: 30, borderRadius: 9, background: `${h.color}1E`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <PkIc n={h.icon} s={15} c={h.color} />
+                </div>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: isPast ? C.textMuted : C.text, textDecoration: isPast ? 'line-through' : 'none' }}>{h.name}</div>
+                <button onClick={() => toggleHabit(h.id)} style={{ width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
+                  background: isPast ? C.tealMid : 'transparent', border: `1.5px solid ${isPast ? C.tealMid : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {isPast && <PkIc n="check" s={13} c="#06231C" />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showAdd && <AddHabitModal C={C} onAdd={addHabit} onClose={() => setShowAdd(false)} />}
+    </div>
+  );
+}
+
+// ── Sección 6: Notas del libro (colapsable) ──
+function NotasColapsable({ C, isLight, notes, user, appState, partnerPhotoURL, noteText, setNoteText, onAddNote, onReactNote, forceOpen, onConsumeForceOpen }) {
+  const recent = notes.length && (Date.now() - (notes[notes.length - 1].ts || 0) < 7200000);
+  const [open, setOpen] = useState(notes.length >= 5 || recent);
+  const scrollRef = useRef(null);
+  useEffect(() => { if (forceOpen) { setOpen(true); onConsumeForceOpen?.(); setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); } }, [forceOpen]);
+  const shown = notes.slice(-8);
+  const REACTIONS = ['❤️', '😮', '💡', '🔥', '👏'];
+  const [pickerFor, setPickerFor] = useState(null);
+
+  return (
+    <div ref={scrollRef}>
+      <button onClick={() => setOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 2px' }}>
+        <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5, flex: 1, textAlign: 'left' }}>
+          NOTAS DEL LIBRO {notes.length > 0 && <span style={{ color: C.accent }}>· {notes.length}</span>}
+        </span>
+        <PkIc n={open ? 'left' : 'right'} s={14} c={C.textMuted} sw={2} />
+      </button>
+      <div style={{ maxHeight: open ? 460 : 0, overflow: 'hidden', transition: 'max-height 0.4s ease' }}>
+        <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 2px', WebkitOverflowScrolling: 'touch' }}>
+          {shown.length === 0 ? (
+            <div style={{ textAlign: 'center', color: C.textMuted, fontSize: 12.5, padding: '20px 0' }}>Aún no hay notas. Escribe la primera ✍️</div>
+          ) : shown.map(n => {
+            const isMe = n.who === user?.code || n.who === 'you';
+            const reactions = n.reactions || {};
+            const reactKeys = Object.keys(reactions).filter(k => reactions[k]);
+            return (
+              <div key={n.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8 }}>
+                <Av name={n.whoName || (isMe ? user?.name : '?')} sz={26} C={C} color={isMe ? C.accent : C.blueMid} photoURL={isMe ? appState.photoURL : partnerPhotoURL} style={{ flexShrink: 0 }} />
+                <div style={{ maxWidth: '76%', position: 'relative' }}>
+                  <div onClick={() => setPickerFor(pickerFor === n.id ? null : n.id)} style={{ cursor: 'pointer',
+                    background: isMe ? `${C.accent}1E` : 'rgba(255,255,255,0.05)', border: `1px solid ${isMe ? C.accent + '2E' : C.border}`,
+                    borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px', padding: '9px 12px' }}>
+                    <div style={{ fontSize: 13, lineHeight: 1.5, color: C.text }}>{n.text}</div>
+                  </div>
+                  {reactKeys.length > 0 && (
+                    <div style={{ display: 'flex', gap: 3, marginTop: 3, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                      {reactKeys.map(k => <span key={k} style={{ fontSize: 11, background: C.bgAlt, borderRadius: 8, padding: '1px 5px', border: `1px solid ${C.border}` }}>{k}</span>)}
+                    </div>
+                  )}
+                  {pickerFor === n.id && (
+                    <div style={{ position: 'absolute', bottom: '100%', [isMe ? 'right' : 'left']: 0, marginBottom: 4, display: 'flex', gap: 2, background: C.bgAlt,
+                      border: `1px solid ${C.border}`, borderRadius: 99, padding: '4px 6px', zIndex: 5, boxShadow: '0 6px 18px rgba(0,0,0,0.4)' }}>
+                      {REACTIONS.map(e => (
+                        <button key={e} onClick={() => { onReactNote?.(n.id, e); setPickerFor(null); FX.play('tap'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 3px' }}>{e}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Input compacto */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+          <input value={noteText} onChange={e => setNoteText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') onAddNote(); }}
+            placeholder="Escribe una nota…" style={{ flex: 1, fontSize: 13.5, padding: '11px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontFamily: 'inherit' }} />
+          <button onClick={onAddNote} style={{ width: 44, height: 44, borderRadius: 12, background: C.accent, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <PkIc n="right" s={18} c="#fff" sw={2.4} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════
+//  PERGAMINOS TAB — El Sanctuario del Lector (orquestador)
+// ═════════════════════════════════════════════════════════════
+function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBooks, onAddBook, onConfirm, partnerOnline, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, notes, noteText, setNoteText, onAddNote, onReactNote, onRemindPartner }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [nb, setNb] = useState({ title: '', author: '', totalChapters: 10, totalPages: 0, genre: 'Ficción' });
+  const [myReading, setMyReading] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const partner = user?.partner || 'Parcero';
   const currentBook = books.find(b => b.id === appState.currentBookId) || null;
-  const otherBooks  = books.filter(b => b.id !== appState.currentBookId);
-  const pal         = getPalette(currentBook?.genre);
+  const otherBooks = books.filter(b => b.id !== appState.currentBookId);
+  const myPct = (() => {
+    if (!currentBook) return 0;
+    const tPage = currentBook.totalPages || 0, cPage = appState.currentPage || 1;
+    const tChap = currentBook.totalChapters || 10, cChap = appState.currentChapter || 1;
+    return tPage > 0 ? Math.min(100, Math.round((cPage / tPage) * 100)) : Math.min(100, Math.round((cChap / tChap) * 100));
+  })();
 
   const doAdd = () => {
     if (!nb.title.trim()) return;
@@ -4344,195 +5318,110 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
   };
 
   return (
-    <div className="fi su" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header con avatares */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ position: 'relative', width: 54, height: 42, flexShrink: 0 }}>
-            {user?.partner && (
-              <div style={{ position: 'absolute', left: 18, top: 2, zIndex: 1 }}>
-                <Av name={partner} sz={34} C={C} color={C.blueMid} photoURL={partnerPhotoURL}
-                  style={{ border: `2px solid ${C.bg}`, boxShadow: `0 2px 10px rgba(0,0,0,0.25)` }} />
-              </div>
-            )}
-            <div style={{ position: 'absolute', left: 0, top: 0, zIndex: 2 }}>
-              <Av name={user?.name || '?'} sz={40} C={C} photoURL={appState.photoURL}
-                style={{ border: `2px solid ${C.bg}`, boxShadow: `0 2px 14px ${C.accent}28` }} />
-            </div>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.name || 'Tú'}{user?.partner ? ` & ${partner}` : ''}
-            </div>
-            <div style={{ fontSize: 11, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              {user?.partnerConnected ? (
-                <>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: partnerOnline ? C.tealMid : C.border, boxShadow: partnerOnline ? `0 0 6px ${C.tealMid}` : 'none' }} />
-                  {partnerOnline ? 'en línea' : 'desconectado/a'}
-                </>
-              ) : 'Solo/a por ahora'}
-            </div>
-          </div>
-        </div>
-        <button onClick={() => setShowAdd(v => !v)} style={{
-          background: showAdd ? C.bgAlt : C.accent, color: showAdd ? C.textMuted : '#fff',
-          border: showAdd ? `1px solid ${C.border}` : 'none',
-          borderRadius: 12, padding: '9px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-        }}>
-          {showAdd ? 'Cancelar' : '+ Añadir'}
-        </button>
-      </div>
+    <div className="fi su" style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }}>
+      {/* Atmósfera de biblioteca nocturna */}
+      <div style={{ position: 'absolute', top: -20, left: -20, right: -20, height: 320, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse 100% 50% at 50% 0%, rgba(74,158,255,0.07) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 20% 100%, rgba(34,197,94,0.05) 0%, transparent 55%)' }} />
 
-      {/* Formulario añadir libro */}
-      {showAdd && (
-        <Card C={C} isLight={isLight} style={{ padding: '22px 20px', animation: 'fadeUp 0.3s ease both' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-            <BookCover book={{ ...nb, title: nb.title || 'Nuevo Libro', author: nb.author || 'Autor' }} size="md" />
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
-            {GENRES.map(g => (
-              <button key={g} onClick={() => setNb(b => ({ ...b, genre: g }))} style={{
-                padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                border: `1px solid ${nb.genre === g ? C.accent : C.border}`,
-                background: nb.genre === g ? C.accent + '18' : 'transparent',
-                color: nb.genre === g ? C.accent : C.textMuted,
-              }}>{g}</button>
-            ))}
-          </div>
-          {[
-            { label: 'TÍTULO *', key: 'title', ph: 'Nombre del libro...' },
-            { label: 'AUTOR',    key: 'author', ph: 'Nombre del autor...' },
-          ].map(({ label, key, ph }) => (
-            <div key={key} style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 700, letterSpacing: 1.2 }}>{label}</div>
-              <input value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))} placeholder={ph}
-                style={{ width: '100%', fontSize: 15, fontWeight: 500, padding: '10px 0', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text }} />
-            </div>
-          ))}
-          <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-            {[
-              { label: 'CAPÍTULOS', key: 'totalChapters' },
-              { label: 'PÁGINAS (0=sin límite)', key: 'totalPages' },
-            ].map(({ label, key }) => (
-              <div key={key} style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 700, letterSpacing: 1.1 }}>{label}</div>
-                <input type="number" value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))}
-                  style={{ width: '100%', fontSize: 20, fontWeight: 700, padding: '8px 0', textAlign: 'center', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text }} />
-              </div>
-            ))}
-          </div>
-          <PrimaryBtn C={C} onClick={doAdd}>Guardar en los Pergaminos</PrimaryBtn>
-        </Card>
-      )}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* 1. Dúo de lectura activa */}
+        <DuoReadingHeader C={C} user={user} partner={partner} appState={appState} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} myReading={myReading} />
 
-      {/* LIBRO ACTUAL */}
-      <div>
-        <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 12, fontWeight: 700, letterSpacing: 1.5 }}>
-          LECTURA ACTIVA
-        </div>
-        {!currentBook ? (
-          <Card C={C} isLight={isLight} style={{ padding: '36px 24px', textAlign: 'center', border: `1px dashed ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-            <PkIc n="book" s={32} c={C.textMuted} />
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.textMid }}>Sin libro activo</div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>Usa el botón "Añadir" para empezar</div>
-          </Card>
-        ) : (
-          <div style={{ borderRadius: 24, overflow: 'hidden', background: `linear-gradient(155deg, ${pal.from} 0%, ${pal.to} 100%)`, boxShadow: `0 20px 56px ${pal.spine}22, 0 8px 32px rgba(0,0,0,0.5)`, position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `radial-gradient(ellipse at 68% 18%, ${pal.spine}18 0%, transparent 52%)` }} />
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${pal.spine}90, transparent)` }} />
-            
-            <div style={{ padding: '26px 22px 22px', display: 'flex', gap: 18, alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
-              <BookCover book={currentBook} size="lg" floating={true} />
-              <div style={{ flex: 1, paddingTop: 4 }}>
-                <div className="serif" style={{ fontSize: 21, fontWeight: 700, color: pal.text || '#fff', lineHeight: 1.22, marginBottom: 6, textShadow: '0 1px 10px rgba(0,0,0,0.4)' }}>
-                  {currentBook.title}
+        {/* 2. Tu libro */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ flex: 1, fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5 }}>TU LIBRO</div>
+            <button onClick={() => setShowAdd(v => !v)} style={{ background: showAdd ? 'transparent' : `${C.accent}18`, color: showAdd ? C.textMuted : C.accent,
+              border: `1px solid ${showAdd ? C.border : C.accent + '40'}`, borderRadius: 10, padding: '6px 13px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {showAdd ? 'Cancelar' : '+ Añadir'}
+            </button>
+          </div>
+
+          {showAdd && (
+            <div style={{ borderRadius: 18, padding: '20px 18px', background: C.bgAlt, border: `1px solid ${C.border}`, marginBottom: 16, animation: 'fadeUp 0.3s ease both' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+                <BookCover book={{ ...nb, title: nb.title || 'Nuevo Libro', author: nb.author || 'Autor' }} size="md" />
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+                {GENRES.map(g => (
+                  <button key={g} onClick={() => setNb(b => ({ ...b, genre: g }))} style={{ padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    border: `1px solid ${nb.genre === g ? C.accent : C.border}`, background: nb.genre === g ? `${C.accent}18` : 'transparent', color: nb.genre === g ? C.accent : C.textMuted, fontFamily: 'inherit' }}>{g}</button>
+                ))}
+              </div>
+              {[{ label: 'TÍTULO *', key: 'title', ph: 'Nombre del libro…' }, { label: 'AUTOR', key: 'author', ph: 'Nombre del autor…' }].map(({ label, key, ph }) => (
+                <div key={key} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 800, letterSpacing: 1.2 }}>{label}</div>
+                  <input value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))} placeholder={ph}
+                    style={{ width: '100%', fontSize: 15, padding: '10px 0', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontFamily: 'inherit' }} />
                 </div>
-                <div style={{ fontSize: 12, marginBottom: 14, color: pal.text ? pal.text + 'AA' : 'rgba(255,255,255,0.6)' }}>
-                  {currentBook.author}
-                </div>
-                {currentBook.genre && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: pal.spine, background: `${pal.spine}22`, border: `1px solid ${pal.spine}35`, borderRadius: 6, padding: '3px 9px' }}>
-                    {currentBook.genre.toUpperCase()}
+              ))}
+              <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+                {[{ label: 'CAPÍTULOS', key: 'totalChapters' }, { label: 'PÁGINAS (0=sin límite)', key: 'totalPages' }].map(({ label, key }) => (
+                  <div key={key} style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 800, letterSpacing: 1.1 }}>{label}</div>
+                    <input type="number" value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))}
+                      style={{ width: '100%', fontSize: 20, fontWeight: 700, padding: '8px 0', textAlign: 'center', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontFamily: 'inherit' }} />
                   </div>
-                )}
+                ))}
               </div>
+              <PrimaryBtn C={C} onClick={doAdd}>Guardar en los Pergaminos</PrimaryBtn>
             </div>
+          )}
 
-            <div style={{ background: 'rgba(0,0,0,0.32)', padding: '16px 22px 22px', position: 'relative', zIndex: 1 }}>
-              {/* Barra de progreso */}
-              <ProgressStepper
-                C={{ ...C, bgAlt:'rgba(255,255,255,0.09)', text:'#fff', textMuted:'rgba(255,255,255,0.48)', accent: pal.spine }}
-                isLight={false} appState={appState} setAppState={setAppState} currentBook={currentBook}
-              />
-              
-              {/* Cafetal de Enfoque incrustado */}
-              <div style={{ marginTop:20, paddingTop:18, borderTop:'1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
-                  <PkIc n="coffee" s={16} c="rgba(255,255,255,0.7)" />
-                  <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,0.7)', letterSpacing:1.5 }}>
-                    CAFETAL DE ENFOQUE
-                  </span>
-                </div>
-                <CafetalTimer
-                  C={C} isLight={false} appState={appState} setAppState={setAppState}
-                  pushNotif={pushNotif} currentBook={currentBook} setBooks={setBooks}
-                  onCoinBurst={onCoinBurst} onAchievement={onAchievement}
-                />
+          {!currentBook ? (
+            <div style={{ borderRadius: 20, padding: '36px 24px', textAlign: 'center', border: `1px dashed ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <PkIc n="book" s={32} c={C.textMuted} />
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.textMid }}>Sin libro activo</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>Usa "+ Añadir" para empezar tu lectura</div>
+            </div>
+          ) : (
+            <>
+              <LibroHero C={C} book={currentBook} pct={myPct} dimmed={myReading} />
+              <div style={{ marginTop: -2, borderRadius: '0 0 20px 20px', background: 'rgba(0,0,0,0.28)', border: `1px solid ${C.border}`, borderTop: 'none', padding: '4px 18px 20px', marginLeft: 2, marginRight: 2 }}>
+                <ProgresoLibro C={C} appState={appState} setAppState={setAppState} book={currentBook} onSeal={onConfirm} />
               </div>
+            </>
+          )}
+        </div>
+
+        {/* 3. Cafetal de Enfoque */}
+        {currentBook && (
+          <CafetalRitual C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif} currentBook={currentBook} setBooks={setBooks}
+            onCoinBurst={onCoinBurst} onAchievement={onAchievement} user={user} onReadingChange={setMyReading} partnerName={partner} partnerPhoto={partnerPhotoURL} />
+        )}
+
+        {/* 4. El libro del parcero */}
+        <LibroParcero C={C} isLight={isLight} appState={appState} partner={partner} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL}
+          myBook={currentBook} notes={notes} user={user} onRemind={onRemindPartner} onOpenChat={() => setChatOpen(true)} />
+
+        {/* 5. Sanctuario de hábitos */}
+        <SanctuarioHabitos C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif} onCoinBurst={onCoinBurst} />
+
+        {/* Biblioteca (otros libros) */}
+        {otherBooks.length > 0 && (
+          <div>
+            <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10, fontWeight: 800, letterSpacing: 1.5 }}>EN LA BIBLIOTECA · {otherBooks.length}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {otherBooks.map(book => (
+                <button key={book.id} onClick={() => setAppState(s => ({ ...s, currentBookId: book.id, currentChapter: 1, currentPage: 1, yourProgress: 0 }))}
+                  style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderRadius: 14, background: C.bgAlt, border: `1px solid ${C.border}`, fontFamily: 'inherit', textAlign: 'left' }}>
+                  <BookCover book={book} size="sm" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</div>
+                    <div style={{ fontSize: 11.5, color: C.textMuted }}>{book.author || 'Autor desconocido'}</div>
+                  </div>
+                  <PkIc n="right" s={14} c={C.border} />
+                </button>
+              ))}
             </div>
           </div>
         )}
+
+        {/* 6. Notas del libro (colapsable) */}
+        <NotasColapsable C={C} isLight={isLight} notes={notes} user={user} appState={appState} partnerPhotoURL={partnerPhotoURL}
+          noteText={noteText} setNoteText={setNoteText} onAddNote={onAddNote} onReactNote={onReactNote}
+          forceOpen={chatOpen} onConsumeForceOpen={() => setChatOpen(false)} />
       </div>
-
-      {/* LIBRO DE LA PAREJA */}
-      {user?.partner && appState.theirBook && (
-        <div>
-          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10, fontWeight: 700, letterSpacing: 1.5 }}>
-            {partner.toUpperCase()} ESTÁ LEYENDO
-          </div>
-          <Card C={C} isLight={isLight} style={{ padding: '14px 18px', display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div style={{ flexShrink: 0, width: 42, height: 60, borderRadius: 6, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
-              <BookCover book={appState.theirBook} size="sm" />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{appState.theirBook.title}</div>
-              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{appState.theirBook.author}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <div style={{ flex: 1, height: 3, borderRadius: 99, background: C.border }}>
-                  <div style={{ height: '100%', borderRadius: 99, width: `${appState.theirProgress || 0}%`, background: getPalette(appState.theirBook.genre).spine }} />
-                </div>
-                <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 600 }}>{appState.theirProgress || 0}%</span>
-              </div>
-              <div style={{ fontSize: 10, color: appState.theirConfirmed ? C.tealMid : C.textMuted, marginTop: 5, fontWeight: 600 }}>
-                {appState.theirConfirmed ? '✓ Confirmó hoy' : 'Sin confirmar hoy'}
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* OTROS LIBROS */}
-      {otherBooks.length > 0 && (
-        <div>
-          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 12, fontWeight: 700, letterSpacing: 1.5 }}>
-            EN LA BIBLIOTECA · {otherBooks.length}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {otherBooks.map(book => (
-              <Card key={book.id} C={C} isLight={isLight}
-                onClick={() => setAppState(s => ({ ...s, currentBookId: book.id, currentChapter: 1, currentPage: 1, yourProgress: 0 }))}
-                style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                <BookCover book={book} size="sm" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted }}>{book.author || 'Autor desconocido'}</div>
-                </div>
-                <PkIc n="right" s={14} c={C.border} />
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
