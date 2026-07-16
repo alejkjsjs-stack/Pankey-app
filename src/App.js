@@ -9134,7 +9134,7 @@ function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false, fireCol
   }) : [];
 
   return (
-    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4, filter: skinFilter, transition: 'filter 0.4s ease' }}>
       {/* Tinte dorado del fondo (Legendario+) */}
       {legendary && (
         <div style={{ position: 'absolute', inset: -28, borderRadius: 32, pointerEvents: 'none',
@@ -9142,10 +9142,9 @@ function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false, fireCol
           animation: 'goldTint 4s ease-in-out infinite' }}/>
       )}
 
-      {/* Escenario del fuego (tocable) — el filtro de skin Pro tiñe la llama */}
+      {/* Escenario del fuego (tocable) */}
       <div onClick={tocarFuego} style={{ position: 'relative', width: 170, height: lvl.h + 34, cursor: 'pointer',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
-        filter: skinFilter, transition: 'filter 0.4s ease' }}>
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
 
         {/* El Altar del Templo bajo la llama */}
         {enAltar && <AltarDelTemplo lvl={lvl} off={off}/>}
@@ -11014,6 +11013,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const logrosRef = useRef([]);
   logrosRef.current = appState.logrosSecretos || [];
   const lpTimer = useRef(null);
+  const fuegoLong = useRef(false); // true si el toque fue long-press (abre stats), no cambio de skin
   const primeraSel = useRef(true);
   const today = todayStr();
   const dk    = dateKeyISO();
@@ -11052,6 +11052,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
 
   const streak = appState.streakDays || 0;
   const fire   = fireLevelFor(streak);
+  const fireSkin = fireSkinFilter(appState.fireColor); // filtro de la skin Pro (tiñe toda la escena del fuego)
   const sealed = appState.yourConfirmed ||
     (appState.icfesHistory || []).some(r => r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
   const last7 = Array.from({ length: 7 }, (_, i) => {
@@ -11139,8 +11140,24 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const sel = MODOS[modoSel];
 
   // Long-press del fuego → panel de stats
-  const fuegoDown = () => { lpTimer.current = setTimeout(() => { setFuegoStats(true); FX.vibrate('medium'); }, 380); };
-  const fuegoUp = () => { clearTimeout(lpTimer.current); setFuegoStats(false); };
+  const fuegoDown = () => { fuegoLong.current = false; lpTimer.current = setTimeout(() => { fuegoLong.current = true; setFuegoStats(true); FX.vibrate('medium'); }, 380); };
+  const fuegoCancel = () => { clearTimeout(lpTimer.current); setFuegoStats(false); fuegoLong.current = true; };
+  const fuegoUp = () => {
+    clearTimeout(lpTimer.current); setFuegoStats(false);
+    // Tap corto en el fuego → cambia la skin (beneficio Pankey Pro)
+    if (!fuegoLong.current && streak > 0) {
+      if (appState.isPro) {
+        const ids = Object.keys(FIRE_SKINS);
+        const nextId = ids[(ids.indexOf(appState.fireColor || 'default') + 1) % ids.length];
+        FX.play('sparks'); FX.vibrate('light');
+        setAppState(s => ({ ...s, fireColor: nextId === 'default' ? null : nextId }));
+        pushNotif(`Fuego ${FIRE_SKINS[nextId].name}`);
+      } else {
+        FX.play('tap');
+        pushNotif('🔥 Toca para cambiar el color del fuego con Pankey Pro');
+      }
+    }
+  };
 
   // ── Atmósfera: estrellas, niebla y polvo (deterministas, estables) ──
   const estrellas = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
@@ -11188,6 +11205,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       {fire.id > 0 && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, height: 130, pointerEvents: 'none', zIndex: 0,
           background: `radial-gradient(ellipse 300px 100px at 50% 100%, ${fire.halo} 0%, transparent 60%)`,
+          filter: fireSkin, transition: 'filter 0.4s ease',
           animation: `luzRespira ${fire.id >= 5 ? 2 : 3}s ease-in-out infinite` }}/>
       )}
 
@@ -11238,13 +11256,14 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
         </div>
 
         {/* ── 3. LA LLAMA SOBRE EL ALTAR ── */}
-        <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoUp}
+        <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoCancel}
           style={{ position: 'relative', animation: 'staggerRise 0.6s ease 0.16s both', margin: '0 0 2px' }}>
           {/* Luz primaria: la llama ilumina hacia arriba */}
           {fire.id > 0 && (
             <div style={{ position: 'absolute', top: '-8%', left: '50%', transform: 'translateX(-50%)',
               width: 240, height: 300, pointerEvents: 'none',
               background: `radial-gradient(ellipse 200px 300px at 50% 45%, ${fire.halo} 0%, transparent 70%)`,
+              filter: fireSkin, transition: 'filter 0.4s ease',
               animation: `luzRespira ${fire.id >= 5 ? 2 : 3}s ease-in-out infinite` }}/>
           )}
           <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight} enAltar fireColor={appState.fireColor}/>
@@ -11278,25 +11297,12 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           )}
         </div>
 
-        {/* Selector del Fuego (beneficio Pankey Pro) */}
-        {streak > 0 && (appState.isPro ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, margin: '0 0 6px', animation: 'staggerRise 0.5s ease 0.2s both' }}>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,255,255,0.4)' }}>TU FUEGO</span>
-            {Object.entries(FIRE_SKINS).map(([id, sk]) => {
-              const active = (appState.fireColor || 'default') === id;
-              return (
-                <button key={id} onClick={() => { FX.play('tap'); FX.vibrate('light'); setAppState(s => ({ ...s, fireColor: id === 'default' ? null : id })); }}
-                  title={sk.name} style={{ width: 22, height: 22, borderRadius: '50%', cursor: 'pointer', padding: 0, background: sk.swatch,
-                    border: active ? '2px solid #fff' : '2px solid rgba(255,255,255,0.2)', boxShadow: active ? `0 0 8px ${sk.swatch}` : 'none' }} />
-              );
-            })}
+        {/* Pista sutil: el fuego se cambia tocándolo (Pro) */}
+        {streak > 0 && appState.isPro && (
+          <div style={{ textAlign: 'center', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, color: 'rgba(255,255,255,0.32)', margin: '0 0 6px' }}>
+            Toca el fuego para cambiar su color
           </div>
-        ) : (
-          <button onClick={() => { FX.play('tap'); pushNotif('🔥 Personaliza el color de tu fuego con Pankey Pro'); }}
-            style={{ display: 'block', margin: '0 auto 6px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700, color: '#A78BFA' }}>
-            🔒 Fuego de color exclusivo con Pankey Pro
-          </button>
-        ))}
+        )}
 
         {/* ── 4. PANEL DE STATS (recursos del templo) ── */}
         <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: 16, overflow: 'hidden',
