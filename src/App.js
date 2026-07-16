@@ -1226,6 +1226,9 @@ const freshState = () => ({
   isPro: false,                 // suscripción Pankey Pro (Módulo 3)
   energy: ENERGY_MAX,           // energía de simulacros (usuarios gratuitos)
   energyLastRefill: null,       // timestamp de la última recarga completa
+  cofreOpensDate: null,         // fecha del contador de cofres abiertos hoy
+  cofreOpensCount: 0,           // cofres abiertos hoy (Pro: hasta 2)
+  fireColor: null,              // skin del fuego de racha (beneficio Pro)
   currentBookId: null,
   currentChapter: 1,
   currentPage: 1,
@@ -3406,7 +3409,9 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
   // ¿Hay cofre de racha pendiente de abrir? (badge del tab Tienda)
   const _hoyStr = todayStr();
   const _sealedHoy = appState.yourConfirmed || (appState.icfesHistory || []).some(r => r.date === _hoyStr || (r.ts && new Date(r.ts).toDateString() === _hoyStr));
-  const cofrePendiente = _sealedHoy && appState.cofreLastOpened !== dateKeyISO();
+  const _maxOpens = appState.isPro ? 2 : 1;
+  const _opensToday = appState.cofreOpensDate === dateKeyISO() ? (appState.cofreOpensCount || 0) : 0;
+  const cofrePendiente = _sealedHoy && _opensToday < _maxOpens;
 
   return (
     <>
@@ -5951,6 +5956,14 @@ function detectarDebilidad(appState) {
   return { subject, nivel, pct: peor.pct };
 }
 
+// Materias más débiles del usuario (para el Repaso Inteligente de Pankey Pro)
+function materiasDebiles(appState) {
+  const dom = dominioPorMateria(appState);
+  const conDatos = Object.entries(dom).filter(([, v]) => (v.t || 0) >= 4);
+  if (!conDatos.length) return Object.keys(SUBJECT_META).slice(0, 3);
+  return conDatos.sort((a, b) => a[1].pct - b[1].pct).slice(0, 3).map(([s]) => s);
+}
+
 // Predicción del Sabio: promedio reciente + tendencia
 function prediccionSabio(history) {
   if (!history || history.length < 2) return null;
@@ -7740,6 +7753,33 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
         </div>
       ) : null}
 
+      {/* ══ REPASO INTELIGENTE (beneficio Pankey Pro) ══ */}
+      {appState.isPro ? (
+        <button onClick={() => { FX.play('duel'); FX.vibrate('medium'); onPracticeWeak?.(materiasDebiles(appState)); }} style={{
+          width: '100%', textAlign: 'left', borderRadius: 18, padding: '15px 17px', cursor: 'pointer', fontFamily: 'inherit',
+          background: 'linear-gradient(135deg, rgba(167,139,250,0.14), transparent)', border: '1px solid rgba(167,139,250,0.35)', borderLeft: '4px solid #A78BFA' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <PkIc n="target" s={14} c="#A78BFA"/>
+            <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: '#A78BFA' }}>REPASO INTELIGENTE · PRO</span>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 3 }}>Simulacro con tus puntos débiles</div>
+          <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>
+            El Sabio arma 10 preguntas con las materias donde más fallas: {materiasDebiles(appState).map(s => SUBJECT_META[s]?.short || s).join(' · ')}.
+          </div>
+          <div style={{ marginTop: 10, fontSize: 12.5, fontWeight: 900, color: '#A78BFA' }}>Empezar repaso →</div>
+        </button>
+      ) : (
+        <button onClick={() => { FX.play('tap'); onGoShop?.(); }} style={{
+          width: '100%', textAlign: 'left', borderRadius: 18, padding: '15px 17px', cursor: 'pointer', fontFamily: 'inherit',
+          background: 'rgba(167,139,250,0.06)', border: '1px dashed rgba(167,139,250,0.4)', display: 'flex', alignItems: 'center', gap: 11 }}>
+          <span style={{ fontSize: 18 }}>🔒</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#A78BFA' }}>Repaso Inteligente</div>
+            <div style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 1.4 }}>Simulacros hechos con tus puntos débiles · exclusivo de Pankey Pro</div>
+          </div>
+        </button>
+      )}
+
       {/* ══ 5. EVOLUCIÓN ══ */}
       <EvolucionChart C={C} history={history}/>
 
@@ -9041,8 +9081,20 @@ function AltarDelTemplo({ lvl, off }) {
 // ─────────────────────────────────────────────
 //  CAPA 5 — FUEGO DE RACHA (CSS puro, evoluciona)
 // ─────────────────────────────────────────────
-function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false }) {
+// Skins exclusivos del fuego de racha (beneficio Pankey Pro) — filtros CSS
+const FIRE_SKINS = {
+  default:   { name: 'Fuego',     filter: 'none',                            swatch: '#F0902B', pro: false },
+  morado:    { name: 'Morado',    filter: 'hue-rotate(255deg) saturate(1.4)', swatch: '#A78BFA', pro: true },
+  esmeralda: { name: 'Esmeralda', filter: 'hue-rotate(115deg) saturate(1.25)',swatch: '#34D399', pro: true },
+  rosa:      { name: 'Rosa',      filter: 'hue-rotate(310deg) saturate(1.3)', swatch: '#F472B6', pro: true },
+  cian:      { name: 'Cian',      filter: 'hue-rotate(165deg) saturate(1.35)',swatch: '#38BDF8', pro: true },
+  carmesi:   { name: 'Carmesí',   filter: 'hue-rotate(-30deg) saturate(1.5)', swatch: '#F43F5E', pro: true },
+};
+const fireSkinFilter = (id) => (FIRE_SKINS[id] || FIRE_SKINS.default).filter;
+
+function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false, fireColor = null }) {
   const lvl = fireLevelFor(streak);
+  const skinFilter = fireSkinFilter(fireColor);
   const off = lvl.id === 0;
   const spark = lvl.id === 1;
   const legendary = lvl.id >= 5;   // Legendario y Ancestral
@@ -9090,9 +9142,10 @@ function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false }) {
           animation: 'goldTint 4s ease-in-out infinite' }}/>
       )}
 
-      {/* Escenario del fuego (tocable) */}
+      {/* Escenario del fuego (tocable) — el filtro de skin Pro tiñe la llama */}
       <div onClick={tocarFuego} style={{ position: 'relative', width: 170, height: lvl.h + 34, cursor: 'pointer',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center', WebkitTapHighlightColor: 'transparent' }}>
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
+        filter: skinFilter, transition: 'filter 0.4s ease' }}>
 
         {/* El Altar del Templo bajo la llama */}
         {enAltar && <AltarDelTemplo lvl={lvl} off={off}/>}
@@ -9601,8 +9654,11 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
   const lv = chestLevelFor(streak);
   const sealed = appState.yourConfirmed ||
     (appState.icfesHistory || []).some(r => r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
-  const openedToday = appState.cofreLastOpened === dk;
+  const maxOpens = appState.isPro ? 2 : 1;   // Pankey Pro: cofre diario doble
+  const opensToday = appState.cofreOpensDate === dk ? (appState.cofreOpensCount || 0) : 0;
+  const openedToday = opensToday >= maxOpens;
   const canOpen = sealed && !openedToday;
+  const cofresRestantes = Math.max(0, maxOpens - opensToday);
 
   const [modal, setModal]   = useState(false);
   const [stage, setStage]   = useState('closed'); // closed | crack | explode | open
@@ -9643,13 +9699,18 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
     setTimeout(() => {
       setStage('open');
       FX.play(item ? 'levelUp' : 'success');
-      setAppState(s => ({
-        ...s,
-        ryo: (s.ryo || 0) + emp,
-        xp:  (s.xp || 0) + xp,
-        cofreLastOpened: dk,
-        inventory: item ? [...(s.inventory || []), item.id] : (s.inventory || []),
-      }));
+      setAppState(s => {
+        const prev = s.cofreOpensDate === dk ? (s.cofreOpensCount || 0) : 0;
+        return {
+          ...s,
+          ryo: (s.ryo || 0) + emp,
+          xp:  (s.xp || 0) + xp,
+          cofreLastOpened: dk,
+          cofreOpensDate: dk,
+          cofreOpensCount: prev + 1,
+          inventory: item ? [...(s.inventory || []), item.id] : (s.inventory || []),
+        };
+      });
       onMissionReward?.(emp);
       fireBoost();
     }, 1450);
@@ -9753,7 +9814,11 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
         <div style={{ marginTop: 8 }}>
           {openedToday ? (
             <div style={{ fontSize: 10, color: C.textMuted, textAlign: 'center' }}>
-              {premio ? `Hoy salieron +${premio.emp} empanadas · vuelve mañana` : 'Ya abriste el cofre de hoy · vuelve mañana'}
+              {appState.isPro ? `Abriste tus ${maxOpens} cofres Pro de hoy · vuelven mañana` : (premio ? `Hoy salieron +${premio.emp} empanadas · vuelve mañana` : 'Ya abriste el cofre de hoy · vuelve mañana')}
+            </div>
+          ) : (canOpen && appState.isPro && cofresRestantes < maxOpens) ? (
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#A78BFA', textAlign: 'center' }}>
+              ✨ Pro: te queda {cofresRestantes} cofre más hoy
             </div>
           ) : !sealed ? (
             <div style={{ fontSize: 10, color: C.textMuted, textAlign: 'center' }}>
@@ -11182,7 +11247,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
               background: `radial-gradient(ellipse 200px 300px at 50% 45%, ${fire.halo} 0%, transparent 70%)`,
               animation: `luzRespira ${fire.id >= 5 ? 2 : 3}s ease-in-out infinite` }}/>
           )}
-          <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight} enAltar/>
+          <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight} enAltar fireColor={appState.fireColor}/>
           {/* Polvo de oro cuando la racha está sellada */}
           {streak > 0 && sealed && polvo.map((p, i) => (
             <div key={i} style={{ position: 'absolute', left: `${p.left}%`, top: `${p.top}%`,
@@ -11212,6 +11277,26 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
             </div>
           )}
         </div>
+
+        {/* Selector del Fuego (beneficio Pankey Pro) */}
+        {streak > 0 && (appState.isPro ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, margin: '0 0 6px', animation: 'staggerRise 0.5s ease 0.2s both' }}>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,255,255,0.4)' }}>TU FUEGO</span>
+            {Object.entries(FIRE_SKINS).map(([id, sk]) => {
+              const active = (appState.fireColor || 'default') === id;
+              return (
+                <button key={id} onClick={() => { FX.play('tap'); FX.vibrate('light'); setAppState(s => ({ ...s, fireColor: id === 'default' ? null : id })); }}
+                  title={sk.name} style={{ width: 22, height: 22, borderRadius: '50%', cursor: 'pointer', padding: 0, background: sk.swatch,
+                    border: active ? '2px solid #fff' : '2px solid rgba(255,255,255,0.2)', boxShadow: active ? `0 0 8px ${sk.swatch}` : 'none' }} />
+              );
+            })}
+          </div>
+        ) : (
+          <button onClick={() => { FX.play('tap'); pushNotif('🔥 Personaliza el color de tu fuego con Pankey Pro'); }}
+            style={{ display: 'block', margin: '0 auto 6px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700, color: '#A78BFA' }}>
+            🔒 Fuego de color exclusivo con Pankey Pro
+          </button>
+        ))}
 
         {/* ── 4. PANEL DE STATS (recursos del templo) ── */}
         <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: 16, overflow: 'hidden',
@@ -12346,7 +12431,10 @@ function AdminPanel({ C, appState, setAppState, pushNotif }) {
         {[
           { txt: '+1.000 emp', fn: s => ({ ryo: (s.ryo || 0) + 1000 }) },
           { txt: '+1.000 XP', fn: s => ({ xp: (s.xp || 0) + 1000 }) },
-          { txt: 'Recargar cofre del día', fn: s => ({ cofreLastOpened: null, yourConfirmed: true, lastConfirmedDate: todayStr() }) },
+          { txt: 'Activar Pankey Pro ⚡', fn: () => ({ isPro: true }) },
+          { txt: 'Quitar Pankey Pro', fn: () => ({ isPro: false, fireColor: null }) },
+          { txt: 'Recargar energía', fn: () => ({ energy: ENERGY_MAX, energyLastRefill: Date.now() }) },
+          { txt: 'Recargar cofre del día', fn: s => ({ cofreLastOpened: null, cofreOpensDate: null, cofreOpensCount: 0, yourConfirmed: true, lastConfirmedDate: todayStr() }) },
           { txt: 'Reset misiones de hoy', fn: () => ({ missionsRewarded: [] }) },
           { txt: 'Desbloquear TODA la tienda', fn: s => ({ inventory: [...new Set([...(s.inventory || []), ...SHOP_ITEMS.filter(i => i.type !== 'chest' && i.type !== 'item').map(i => i.id)])] }) },
           { txt: 'Vaciar inventario', fn: () => ({ inventory: ['t_iniciado'], equipped: { title: null, frame: null, banner: null } }) },
@@ -13468,6 +13556,11 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
                     <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                       <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
                         {u.name} {isMe && <span style={{ fontSize: 9, background: C.accent, color: '#000', padding: '2px 6px', borderRadius: 4, fontWeight: 900 }}>TÚ</span>}
+                        {u.appState?.isPro && (() => {
+                          const sk = FIRE_SKINS[u.appState?.fireColor] || FIRE_SKINS.morado;
+                          return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 900, padding: '2px 6px', borderRadius: 4,
+                            background: `${sk.swatch}22`, color: sk.swatch, border: `1px solid ${sk.swatch}55` }}><PkIc n="flame" s={9} c={sk.swatch}/> PRO</span>;
+                        })()}
                       </div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         @{u.code} {u.age ? `· ${u.age} años` : ''} {institution ? `· 🎓 ${institution}` : ''}
