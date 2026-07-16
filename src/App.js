@@ -1202,11 +1202,16 @@ function TiendaReal({ C, appState, onClose, onBuyPro, onBuyPack }) {
                 ✨ Ya eres Pro · ¡gracias!
               </div>
             ) : (
-              <button onClick={onBuyPro} style={{ width: '100%', height: 52, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 15, fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #A78BFA, #7C5CD6)', boxShadow: '0 8px 24px rgba(167,139,250,0.45)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                Suscribirme · {PRO_PRICE}
-              </button>
+              <>
+                <button onClick={onBuyPro} style={{ width: '100%', height: 52, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 15, fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #A78BFA, #7C5CD6)', boxShadow: '0 8px 24px rgba(167,139,250,0.45)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  Suscribirme · Plan Gratuito (Beta)
+                </button>
+                <div style={{ textAlign: 'center', fontSize: 10.5, color: C.textMuted, marginTop: 8 }}>
+                  Gratis durante la beta · después {PRO_PRICE}
+                </div>
+              </>
             )}
           </div>
 
@@ -3449,10 +3454,14 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
   // ── Compras (Módulo 4). El cobro REAL va con pasarela + verificación en servidor (Módulo 5).
   //    Por ahora no acreditamos nada en el cliente: sería falso e inseguro. ──
   const handleBuyPro = () => {
-    pushNotif('El pago de Pankey Pro se activa al conectar la pasarela (Wompi/Bold). Próximamente.');
+    // BETA: Pankey Pro gratis por ahora. Cuando conectemos Wompi (Módulo 5) esto pasará por el pago.
+    setAppState(s => ({ ...s, isPro: true }));
+    setTiendaRealOpen(false);
+    triggerCoinBurst(0);
+    pushNotif('🎉 ¡Pankey Pro activado! Gratis durante la beta.');
   };
   const handleBuyPack = (pack) => {
-    pushNotif(`«${pack?.name}» (${pack?.price}) — el pago real se habilita con la pasarela. Próximamente.`);
+    pushNotif(`«${pack?.name}» (${pack?.price}) — las recargas se habilitan al conectar Wompi. Próximamente.`);
   };
 
   const handleAddNote = async () => {
@@ -4817,54 +4826,66 @@ const GENRES = ['Ficción', 'Romance', 'Misterio', 'Fantasía', 'Terror', 'Cienc
 // ── Planta generativa del jardín de hábitos (SVG puro, evoluciona con la racha) ──
 function PlantSVG({ streak = 0, color = '#4A7EB8', done = false, size = 56 }) {
   const st = streak >= 14 ? 4 : streak >= 6 ? 3 : streak >= 3 ? 2 : streak >= 1 ? 1 : 0;
-  const leaf = done ? color : `${color}CC`;
+  const leaf = done ? color : `${color}D8`;
+  const stem = done ? color : `${color}C0`;
+  // Hoja tipo gota reutilizable (se posiciona con translate/rotate/scale)
+  const Leaf = ({ x, y, r, s = 1 }) => (
+    <path d="M0 0 C -6.5 -2.5 -6.5 -12 0 -17 C 6.5 -12 6.5 -2.5 0 0 Z"
+      fill={leaf} transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`} />
+  );
   return (
-    <svg width={size} height={size * 72 / 64} viewBox="0 0 64 72"
-      style={{ display: 'block', filter: done ? `drop-shadow(0 0 8px ${color}88)` : 'none',
-        opacity: done ? 1 : 0.82, transition: 'filter 0.4s, opacity 0.4s' }}>
-      {/* Maceta */}
-      <ellipse cx="32" cy="67" rx="18" ry="3.5" fill="rgba(0,0,0,0.28)" />
-      <path d="M19 55 h26 l-2.6 12.5 a2 2 0 0 1-2 1.6 h-16.8 a2 2 0 0 1-2-1.6 z" fill="#6B4A2B" />
-      <rect x="16.5" y="51" width="31" height="6" rx="2.5" fill="#7C5836" />
-      <ellipse cx="32" cy="53.5" rx="13" ry="2.6" fill="#3A2716" />
-      {st === 0 && <circle cx="32" cy="52" r="1.6" fill={`${color}99`} />}
-      {/* Brote */}
-      {st >= 1 && (
-        <>
-          <path d={st >= 2 ? "M32 53 q-1 -14 0 -24" : "M32 53 q-1 -7 0 -13"} stroke={leaf}
-            strokeWidth="2.6" fill="none" strokeLinecap="round" />
-          <ellipse cx="26" cy={st >= 2 ? 42 : 44} rx="5.2" ry="3" fill={leaf} transform={`rotate(-32 26 ${st >= 2 ? 42 : 44})`} />
-          <ellipse cx="38" cy={st >= 2 ? 40 : 42} rx="5.2" ry="3" fill={leaf} transform={`rotate(32 38 ${st >= 2 ? 40 : 42})`} />
-        </>
+    <svg width={size} height={size * 80 / 64} viewBox="0 0 64 80"
+      style={{ display: 'block', overflow: 'visible', transition: 'opacity 0.4s ease, filter 0.4s ease',
+        opacity: done ? 1 : 0.86, filter: done ? `drop-shadow(0 2px 7px ${color}55)` : 'none' }}>
+      {/* Sombra bajo la maceta */}
+      <ellipse cx="32" cy="75" rx="16" ry="2.8" fill="rgba(0,0,0,0.22)" />
+
+      {/* ── Tallo / tronco ── */}
+      {st >= 1 && st < 4 && (
+        <path d={st >= 3 ? "M32 56 Q29.5 42 32 28" : st === 2 ? "M32 56 Q29.5 44 32 31" : "M32 56 Q30.5 50 32 44"}
+          stroke={stem} strokeWidth="2.6" fill="none" strokeLinecap="round" />
       )}
-      {/* Planta mediana: 2 hojas más */}
-      {st >= 2 && (
-        <>
-          <ellipse cx="24" cy="33" rx="6" ry="3.4" fill={leaf} transform="rotate(-28 24 33)" />
-          <ellipse cx="40" cy="31" rx="6" ry="3.4" fill={leaf} transform="rotate(28 40 31)" />
-        </>
-      )}
-      {/* Flor */}
-      {st === 3 && (
-        <g transform="translate(32 24)">
-          {[0, 60, 120, 180, 240, 300].map(a => (
-            <ellipse key={a} cx="0" cy="-7" rx="3.2" ry="5.5" fill={color} transform={`rotate(${a})`} />
-          ))}
-          <circle cx="0" cy="0" r="3.6" fill="#FFD75E" />
-        </g>
-      )}
-      {/* Árbol: copa con florecitas */}
       {st >= 4 && (
-        <>
-          <path d="M31 53 q-1 -12 0 -20" stroke="#6B4A2B" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-          <circle cx="32" cy="24" r="15" fill={leaf} />
-          <circle cx="22" cy="20" r="8" fill={color} />
-          <circle cx="42" cy="21" r="8" fill={color} />
-          {[[26, 20], [37, 18], [32, 27], [40, 27], [24, 28]].map(([x, y], i) => (
-            <circle key={i} cx={x} cy={y} r="2.1" fill="#FFD75E" />
-          ))}
-        </>
+        <path d="M32 56 Q29.5 46 32 37" stroke={done ? color : `${color}C0`} strokeWidth="4.2" fill="none" strokeLinecap="round" />
       )}
+
+      {/* ── Brote (1+) ── */}
+      {st === 1 && (<><Leaf x={26} y={46} r={-40} s={0.7} /><Leaf x={38} y={45} r={40} s={0.7} /></>)}
+
+      {/* ── Planta (2) ── */}
+      {st === 2 && (<>
+        <Leaf x={24} y={46} r={-42} s={0.9} /><Leaf x={40} y={45} r={42} s={0.9} />
+        <Leaf x={26} y={35} r={-30} s={0.72} /><Leaf x={38} y={34} r={30} s={0.72} />
+      </>)}
+
+      {/* ── Con flor (3) ── */}
+      {st === 3 && (<>
+        <Leaf x={24} y={47} r={-42} s={0.92} /><Leaf x={40} y={46} r={42} s={0.92} />
+        <Leaf x={26} y={37} r={-30} s={0.72} /><Leaf x={38} y={36} r={30} s={0.72} />
+        <g transform="translate(32 23)">
+          {[0, 72, 144, 216, 288].map(a => (
+            <ellipse key={a} cx="0" cy="-6.2" rx="3.1" ry="5.4" fill={color} transform={`rotate(${a})`} />
+          ))}
+          <circle cx="0" cy="0" r="3.4" fill="#FFD877" />
+        </g>
+      </>)}
+
+      {/* ── Árbol (4): copa cohesiva + florecitas ── */}
+      {st >= 4 && (<>
+        <path d="M32 12 C 20 12 15 21 19.5 28.5 C 13.5 30.5 14 40 23 40 L 41 40 C 50 40 50.5 30.5 44.5 28.5 C 49 21 44 12 32 12 Z"
+          fill={leaf} />
+        <path d="M32 12 C 24 12 20 17 20.5 23 C 22 18 26 15 32 15 Z" fill="rgba(255,255,255,0.14)" />
+        {[[26, 24], [38, 22], [32, 30], [40, 31], [24, 32]].map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="1.9" fill="#FFD877" />
+        ))}
+      </>)}
+
+      {/* ── Maceta de terracota (siempre encima de la base del tallo) ── */}
+      <path d="M20 57 h24 l-2 13.5 a2.4 2.4 0 0 1 -2.4 2 h-13.2 a2.4 2.4 0 0 1 -2.4 -2 z" fill="#B5714A" />
+      <path d="M20 57 h24 l-0.5 3.6 h-23 z" fill="#9A5C39" />
+      <rect x="17" y="52.5" width="30" height="5.6" rx="2.6" fill="#C67F53" />
+      <ellipse cx="32" cy="55" rx="12.5" ry="2.2" fill="#5A3A22" />
+      {st === 0 && <><ellipse cx="32" cy="53.6" rx="9" ry="1.6" fill="#3A2716" /><circle cx="32" cy="52.5" r="1.8" fill={`${color}AA`} /></>}
     </svg>
   );
 }
@@ -5560,12 +5581,13 @@ function HabitCard({ C, habit, onToggle }) {
     <button onClick={toggle} style={{ position: 'relative', borderRadius: 16, padding: '12px 8px 10px', cursor: 'pointer', fontFamily: 'inherit',
       background: done ? `${habit.color}14` : 'rgba(255,255,255,0.03)', border: `1.5px solid ${done ? habit.color + '55' : C.border}`,
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-      {/* Sparkles al completar */}
-      {pop && [0, 1, 2].map(k => (
-        <span key={k} style={{ position: 'absolute', top: '30%', left: `${28 + k * 22}%`, fontSize: 12, animation: `jardinFloat 0.7s ease-out ${k * 0.08}s both`, pointerEvents: 'none' }}>✨</span>
+      {/* Partículas al completar (color del hábito, sin emojis) */}
+      {pop && [0, 1, 2, 3].map(k => (
+        <span key={k} style={{ position: 'absolute', top: `${26 + (k % 2) * 8}%`, left: `${24 + k * 16}%`, width: 5, height: 5, borderRadius: '50%',
+          background: habit.color, boxShadow: `0 0 6px ${habit.color}`, animation: `jardinFloat 0.75s ease-out ${k * 0.07}s both`, pointerEvents: 'none' }} />
       ))}
-      <div style={{ animation: pop ? 'plantPop 0.6s ease' : 'none' }}>
-        <PlantSVG streak={habit.streak} color={habit.color} done={done} size={50} />
+      <div style={{ animation: pop ? 'plantPop 0.6s ease' : 'none', padding: '2px 0' }}>
+        <PlantSVG streak={habit.streak} color={habit.color} done={done} size={52} />
       </div>
       <div style={{ fontSize: 10.5, fontWeight: 700, color: done ? C.text : C.textMid, textAlign: 'center', lineHeight: 1.2, minHeight: 26,
         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', width: '100%' }}>
@@ -5628,9 +5650,12 @@ function SanctuarioHabitos({ C, appState, setAppState, pushNotif, onCoinBurst })
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        {[{ id: 'habitos', t: '🌱 Mis Hábitos' }, { id: 'rutina', t: '📋 Mi Rutina' }].map(t => (
+        {[{ id: 'habitos', t: 'Mis Hábitos', ic: 'leaf' }, { id: 'rutina', t: 'Mi Rutina', ic: 'timer' }].map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} style={{ flex: 1, padding: '9px 0', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700,
-            background: subTab === t.id ? C.accent : 'rgba(255,255,255,0.04)', color: subTab === t.id ? '#fff' : C.textMuted, border: `1px solid ${subTab === t.id ? C.accent : C.border}` }}>{t.t}</button>
+            background: subTab === t.id ? C.accent : 'rgba(255,255,255,0.04)', color: subTab === t.id ? '#fff' : C.textMuted, border: `1px solid ${subTab === t.id ? C.accent : C.border}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <PkIc n={t.ic} s={13} c={subTab === t.id ? '#fff' : C.textMuted} />{t.t}
+          </button>
         ))}
       </div>
 
@@ -5644,12 +5669,17 @@ function SanctuarioHabitos({ C, appState, setAppState, pushNotif, onCoinBurst })
       ) : subTab === 'habitos' ? (
         <div style={{ position: 'relative' }}>
           {allDone && [0, 1, 2, 3, 4].map(k => (
-            <span key={k} style={{ position: 'absolute', top: '10%', left: `${12 + k * 19}%`, fontSize: 10, pointerEvents: 'none', animation: `jardinFloat ${2 + k * 0.4}s ease-out ${k * 0.5}s infinite` }}>✨</span>
+            <span key={k} style={{ position: 'absolute', top: '8%', left: `${12 + k * 19}%`, width: 5, height: 5, borderRadius: '50%', background: '#FFD877',
+              boxShadow: '0 0 7px #FFD877', pointerEvents: 'none', animation: `jardinFloat ${2.2 + k * 0.4}s ease-out ${k * 0.5}s infinite` }} />
           ))}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {dailies.map(h => <HabitCard key={h.id} C={C} habit={h} onToggle={toggleHabit} />)}
           </div>
-          {allDone && <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: C.tealMid, marginTop: 12 }}>🌟 Jardín completo · ¡día perfecto!</div>}
+          {allDone && (
+            <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: C.tealMid, marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <PkIc n="check" s={13} c={C.tealMid} /> Jardín completo · ¡día perfecto!
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -9092,13 +9122,13 @@ const RETO_NOMBRES = ['Calentamiento', 'El Corchazo', 'El Jefe Final'];
 
 // Niveles del Fuego de Racha (efecto CSS puro) — evoluciona de NATURALEZA, no solo de tamaño
 const FIRE_LEVELS = [
-  { min: 50, id: 6, name: 'Fuego Ancestral',  frase: 'Tumbaga eterna',  main: '#FFF8DC', deep: '#D4AF37', halo: 'rgba(255,235,160,0.60)', h: 104, parts: 12, glowR: 130 },
-  { min: 30, id: 5, name: 'Fuego Legendario', frase: 'Inmortal',        main: '#FFE9A8', deep: '#D4AF37', halo: 'rgba(255,215,94,0.50)',  h: 96,  parts: 10, glowR: 120 },
-  { min: 14, id: 4, name: 'Hoguera',          frase: 'Imparable',       main: '#FBBF24', deep: '#D4AF37', halo: 'rgba(251,191,36,0.42)',  h: 82,  parts: 7,  glowR: 80 },
-  { min: 7,  id: 3, name: 'Fuego Estable',    frase: 'En candela',      main: '#FBBF24', deep: '#F59E0B', halo: 'rgba(245,158,11,0.35)',  h: 68,  parts: 5,  glowR: 60 },
-  { min: 3,  id: 2, name: 'Llama Joven',      frase: 'Va prendiendo',   main: '#F59E0B', deep: '#E8743A', halo: 'rgba(232,116,58,0.28)',  h: 52,  parts: 3,  glowR: 40 },
-  { min: 1,  id: 1, name: 'Chispa',           frase: 'Apenas prende',   main: '#E8743A', deep: '#B45309', halo: 'rgba(232,116,58,0.18)',  h: 30,  parts: 1,  glowR: 20 },
-  { min: 0,  id: 0, name: 'Ceniza Muerta',    frase: 'Prende esto ya',  main: '#6B7280', deep: '#374151', halo: 'rgba(107,114,128,0.08)', h: 26,  parts: 0,  glowR: 0 },
+  { min: 50, id: 6, name: 'Fuego Ancestral',  frase: 'Tumbaga eterna',  main: '#FFE3A0', deep: '#E6B84C', halo: 'rgba(255,220,140,0.42)', h: 80, parts: 6, glowR: 78 },
+  { min: 30, id: 5, name: 'Fuego Legendario', frase: 'Inmortal',        main: '#FFD36B', deep: '#E0A93E', halo: 'rgba(255,200,90,0.38)',  h: 72, parts: 5, glowR: 66 },
+  { min: 14, id: 4, name: 'Hoguera',          frase: 'Imparable',       main: '#FBB733', deep: '#E08A2A', halo: 'rgba(251,183,51,0.33)',  h: 63, parts: 4, glowR: 54 },
+  { min: 7,  id: 3, name: 'Fuego Estable',    frase: 'En candela',      main: '#F79A2B', deep: '#E0731E', halo: 'rgba(247,154,43,0.29)',  h: 54, parts: 3, glowR: 42 },
+  { min: 3,  id: 2, name: 'Llama Joven',      frase: 'Va prendiendo',   main: '#F0803A', deep: '#D65E24', halo: 'rgba(240,128,58,0.24)',  h: 44, parts: 2, glowR: 32 },
+  { min: 1,  id: 1, name: 'Chispa',           frase: 'Apenas prende',   main: '#E8743A', deep: '#B45309', halo: 'rgba(232,116,58,0.18)',  h: 33, parts: 1, glowR: 22 },
+  { min: 0,  id: 0, name: 'Ceniza Muerta',    frase: 'Prende esto ya',  main: '#6B7280', deep: '#374151', halo: 'rgba(107,114,128,0.08)', h: 26, parts: 0, glowR: 0 },
 ];
 const fireLevelFor = (streak) => FIRE_LEVELS.find(l => streak >= l.min) || FIRE_LEVELS[FIRE_LEVELS.length - 1];
 
@@ -9111,6 +9141,13 @@ const CHEST_LEVELS = [
   { min: 0,  id: 'madera',  name: 'Cofre de Madera',  c1: '#B08050', c2: '#7A4E28', c3: '#42280F', emp: [50, 110],    xp: [40, 90],    rarezaItem: null,         itemChance: 0 },
 ];
 const chestLevelFor = (streak) => CHEST_LEVELS.find(l => streak >= l.min) || CHEST_LEVELS[CHEST_LEVELS.length - 1];
+
+// Color por rareza (para las luces/explosión y vista previa del botín)
+const RARITY_COLORS = {
+  'común': '#9CA3AF', 'poco común': '#5EC26A', 'raro': '#4A9EFF',
+  'épico': '#C084FC', 'legendario': '#FBBF24', 'mítico': '#F472B6', 'ancestral': '#FF7A3C',
+};
+const rarityColor = (r) => RARITY_COLORS[r] || '#D4AF37';
 
 // Logros secretos — no se listan en ninguna parte: solo aparecen al caer
 const SECRET_LOGROS = {
@@ -9621,23 +9658,32 @@ function PresenciaViva({ C, user }) {
 function CofreSVG({ lv, open, size = 96 }) {
   return (
     <svg width={size} height={size * 0.84} viewBox="0 0 100 84" style={{ overflow: 'visible', display: 'block' }}>
+      {/* Interior oscuro del cofre (se ve al abrir la tapa) */}
+      <rect x="13" y="24" width="74" height="30" rx="5" fill="#180F04"/>
+      {open && <>
+        <ellipse cx="50" cy="34" rx="36" ry="18" fill="#FFE9A8" opacity="0.95" style={{ filter: 'blur(8px)' }}/>
+        <ellipse cx="50" cy="30" rx="20" ry="9" fill="#FFFFFF" opacity="0.9" style={{ filter: 'blur(4px)' }}/>
+      </>}
+      {/* Base del cofre */}
       <rect x="10" y="36" width="80" height="42" rx="7" fill={lv.c2}/>
       <rect x="13" y="39" width="74" height="36" rx="5" fill={lv.c3} opacity="0.38"/>
       <rect x="22" y="36" width="7" height="42" rx="2.5" fill={lv.c1} opacity="0.55"/>
       <rect x="71" y="36" width="7" height="42" rx="2.5" fill={lv.c1} opacity="0.55"/>
-      {open && <ellipse cx="50" cy="38" rx="32" ry="13" fill="#FFE9A8" opacity="0.9" style={{ filter: 'blur(6px)' }}/>}
-      <g style={{ transform: open ? 'rotate(-36deg)' : 'rotate(0deg)', transformOrigin: '10px 36px',
-        transition: 'transform 0.55s cubic-bezier(0.34,1.56,0.64,1)' }}>
+      {/* Cerradura (solo cerrado) */}
+      {!open && <>
+        <rect x="42" y="34" width="16" height="16" rx="4" fill={lv.c1}/>
+        <rect x="45.5" y="38" width="9" height="8.5" rx="2" fill={lv.c3}/>
+      </>}
+      {/* Tapa: bisagra trasera, abre hacia atrás con rotateX (no de lado) */}
+      <g style={{ transformBox: 'fill-box', transformOrigin: 'center bottom',
+        transform: open ? 'perspective(240px) rotateX(-122deg)' : 'perspective(240px) rotateX(0deg)',
+        transition: 'transform 0.6s cubic-bezier(0.34,1.45,0.5,1)' }}>
         <path d="M10 36 L10 26 Q10 10 30 10 L70 10 Q90 10 90 26 L90 36 Z" fill={lv.c1}/>
         <path d="M10 36 L10 26 Q10 10 30 10 L70 10 Q90 10 90 26 L90 36 Z" fill={lv.c2} opacity="0.42"/>
         <rect x="22" y="10" width="7" height="26" rx="2.5" fill={lv.c1}/>
         <rect x="71" y="10" width="7" height="26" rx="2.5" fill={lv.c1}/>
         <rect x="8" y="32" width="84" height="7" rx="3.5" fill={lv.c1}/>
       </g>
-      {!open && <>
-        <rect x="42" y="34" width="16" height="16" rx="4" fill={lv.c1}/>
-        <rect x="45.5" y="38" width="9" height="8.5" rx="2" fill={lv.c3}/>
-      </>}
     </svg>
   );
 }
@@ -9772,6 +9818,8 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
   const [stage, setStage]   = useState('closed'); // closed | crack | explode | open
   const [taps, setTaps]     = useState(0);        // golpes al cofre (3 para abrir)
   const [premio, setPremio] = useState(null);
+  const rarezaC = premio?.item ? rarityColor(premio.item.rarity) : null; // color de la rareza del botín
+  const luzC = rarezaC || lv.c1; // color de las luces de la explosión
   const next = [...CHEST_LEVELS].reverse().find(c => c.min > streak);
   const nivelesAsc = [...CHEST_LEVELS].reverse(); // madera → tumbaga
   const nivelIdx = nivelesAsc.findIndex(c => c.id === lv.id);
@@ -9959,7 +10007,7 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
 
             {(stage === 'open' || stage === 'explode') && (
               <div style={{ position: 'absolute', top: -60, left: '50%', width: 380, height: 380, marginLeft: -190,
-                background: `conic-gradient(from 0deg, transparent 0deg, ${lv.c2}30 12deg, transparent 26deg, transparent 50deg, ${lv.c2}24 64deg, transparent 78deg, transparent 104deg, ${lv.c2}30 118deg, transparent 132deg, transparent 158deg, ${lv.c2}26 172deg, transparent 186deg, transparent 212deg, ${lv.c2}30 226deg, transparent 240deg, transparent 268deg, ${lv.c2}24 282deg, transparent 296deg, transparent 322deg, ${lv.c2}28 336deg, transparent 350deg)`,
+                background: `conic-gradient(from 0deg, transparent 0deg, ${luzC}34 12deg, transparent 26deg, transparent 50deg, ${luzC}28 64deg, transparent 78deg, transparent 104deg, ${luzC}34 118deg, transparent 132deg, transparent 158deg, ${luzC}2A 172deg, transparent 186deg, transparent 212deg, ${luzC}34 226deg, transparent 240deg, transparent 268deg, ${luzC}28 282deg, transparent 296deg, transparent 322deg, ${luzC}30 336deg, transparent 350deg)`,
                 borderRadius: '50%', animation: 'raysSpin 10s linear infinite', pointerEvents: 'none' }}/>
             )}
 
@@ -10007,14 +10055,14 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
                   boxShadow: `0 0 26px #FFF3C4, 0 0 52px ${lv.c1}`, pointerEvents: 'none',
                   animation: 'crackExpand 0.7s cubic-bezier(0.22,1,0.36,1) both' }}/>
               )}
-              {/* EXPLOSIÓN de partículas (26 disparadas radialmente) */}
-              {(stage === 'explode' || stage === 'open') && Array.from({ length: 26 }, (_, i) => (
+              {/* EXPLOSIÓN de partículas (color de la rareza si cayó un objeto) */}
+              {(stage === 'explode' || stage === 'open') && Array.from({ length: 30 }, (_, i) => (
                 <div key={i} style={{
-                  position: 'absolute', top: '32%', left: '50%', width: i % 2 ? 4 : 7, height: i % 2 ? 4 : 7,
-                  borderRadius: '50%', background: i % 3 === 0 ? '#FFF3C4' : i % 3 === 1 ? lv.c1 : lv.c2,
-                  boxShadow: `0 0 9px ${lv.c1}`,
-                  '--sx': `${Math.round(Math.cos((i / 26) * Math.PI * 2) * (60 + (i % 5) * 26))}px`,
-                  '--sy': `${Math.round(Math.sin((i / 26) * Math.PI * 2) * (48 + (i % 4) * 24)) - 40}px`,
+                  position: 'absolute', top: '32%', left: '50%', width: i % 2 ? 4 : 8, height: i % 2 ? 4 : 8,
+                  borderRadius: '50%', background: i % 3 === 0 ? '#FFF6D8' : i % 3 === 1 ? luzC : lv.c2,
+                  boxShadow: `0 0 11px ${luzC}`,
+                  '--sx': `${Math.round(Math.cos((i / 30) * Math.PI * 2) * (62 + (i % 5) * 26))}px`,
+                  '--sy': `${Math.round(Math.sin((i / 30) * Math.PI * 2) * (50 + (i % 4) * 24)) - 40}px`,
                   animation: `sparkRise ${0.75 + (i % 5) * 0.16}s ease-out ${i * 0.02}s both`,
                   pointerEvents: 'none' }}/>
               ))}
@@ -10071,14 +10119,17 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
                   <span style={{ fontSize: 16, fontWeight: 800, color: '#A78BFA' }}>+{premio.xp} XP</span>
                 </div>
                 {premio.item && (
-                  <div style={{ margin: '0 auto 14px', maxWidth: 260, padding: '10px 16px', borderRadius: 14,
-                    background: 'rgba(212,175,55,0.10)', border: '1px solid rgba(212,175,55,0.4)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: '#D4AF37', marginBottom: 3 }}>
+                  <div style={{ margin: '0 auto 14px', maxWidth: 280, padding: '14px 16px', borderRadius: 16,
+                    background: `${rarezaC}14`, border: `1.5px solid ${rarezaC}66`, boxShadow: `0 0 28px ${rarezaC}44`,
+                    animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.35s both' }}>
+                    <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: rarezaC, marginBottom: 6 }}>
                       ¡CAYÓ UN TESORO!
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#F5F2EB' }}>{premio.item.name}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(245,242,235,0.6)', marginTop: 2 }}>
-                      {premio.item.rarity} · ya está en tu mochila
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#F5F2EB' }}>{premio.item.name}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 8 }}>
+                      <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', color: '#0A0A0A',
+                        background: rarezaC, borderRadius: 6, padding: '3px 9px' }}>{premio.item.rarity}</span>
+                      <span style={{ fontSize: 11, color: 'rgba(245,242,235,0.6)' }}>· en tu mochila</span>
                     </div>
                   </div>
                 )}
