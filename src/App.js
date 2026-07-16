@@ -1112,7 +1112,120 @@ function getMissionProgress(template, appState) {
 // ─────────────────────────────────────────────
 //  INITIAL STATE — FIX: ryo 100 (no 99999), add xp/level/icfes streak
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  SISTEMA DE ENERGÍA (Módulo 2)
+//  Cliente-primero: se guarda en appState + se espeja a Firebase.
+//  ⚠ Endurecer en el Módulo 5 con Cloud Functions (validación en servidor).
+// ─────────────────────────────────────────────
+const ENERGY_MAX = 5;
+const ENERGY_REFILL_MS = 24 * 60 * 60 * 1000; // recarga completa cada 24h
+
+// Energía efectiva considerando la recarga pendiente (por si el efecto aún no corre)
+function getEnergyNow(appState) {
+  const max = ENERGY_MAX;
+  if (appState?.isPro) return { energy: max, max, unlimited: true, msLeft: 0, willRefill: false };
+  const last = appState?.energyLastRefill || 0;
+  const willRefill = !last || (Date.now() - last) >= ENERGY_REFILL_MS;
+  if (willRefill) return { energy: max, max, unlimited: false, msLeft: 0, willRefill: true };
+  const energy = Math.max(0, Math.min(max, appState?.energy == null ? max : appState.energy));
+  return { energy, max, unlimited: false, msLeft: ENERGY_REFILL_MS - (Date.now() - last), willRefill: false };
+}
+
+function fmtEnergyCountdown(ms) {
+  if (ms <= 0) return 'ya mismo';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+const PRO_BENEFITS = [
+  ['flame', 'Energía ilimitada', 'Simulacros sin límite, todos los días'],
+  ['target', 'Repaso Inteligente', 'Simulacros hechos con tus puntos débiles'],
+  ['mochila', 'Cofre diario doble', '2 cofres gratis al día, en vez de 1'],
+  ['sabio', 'Fuego morado', 'Racha con color exclusivo en el ranking'],
+];
+const PRO_PRICE = '$14.900 COP / mes';
+
+// Modal de Energía + invitación a Pankey Pro (Módulo 2)
+function EnergiaModal({ C, appState, onClose, onOpenPro }) {
+  const info = getEnergyNow(appState);
+  const empty = !info.unlimited && info.energy <= 0;
+  return (
+    <Portal>
+      <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99995, background: 'rgba(2,4,8,0.86)', backdropFilter: 'blur(10px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 430, background: C.bgAlt, borderRadius: '26px 26px 0 0',
+          borderTop: `1px solid ${C.accent}44`, padding: '24px 20px calc(24px + env(safe-area-inset-bottom))', animation: 'slideUpIn 0.4s cubic-bezier(0.22,1,0.36,1) both' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: C.border, margin: '0 auto 18px' }} />
+
+          {info.unlimited ? (
+            <div style={{ textAlign: 'center', padding: '6px 0 18px' }}>
+              <div style={{ fontSize: 40, fontWeight: 900, color: '#A78BFA' }}>∞</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginTop: 4 }}>Energía ilimitada</div>
+              <div style={{ fontSize: 12.5, color: C.textMuted, marginTop: 4 }}>Eres Pankey Pro. Haz todos los simulacros que quieras.</div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill={empty ? '#EF4444' : C.accent}><path d="M13 2 L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text, flex: 1 }}>Energía de simulacros</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: empty ? '#EF4444' : C.accent }}>{info.energy}/{info.max}</div>
+              </div>
+              {/* Barra segmentada */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                {Array.from({ length: info.max }).map((_, i) => (
+                  <div key={i} style={{ flex: 1, height: 10, borderRadius: 6, background: i < info.energy ? C.accent : 'rgba(255,255,255,0.08)',
+                    boxShadow: i < info.energy ? `0 0 8px ${C.accent}66` : 'none', transition: 'background 0.3s' }} />
+                ))}
+              </div>
+              <div style={{ fontSize: 12.5, color: empty ? '#EF4444' : C.textMid, fontWeight: 600, marginBottom: 18, textAlign: 'center' }}>
+                {empty
+                  ? `¡Te quedaste sin energía! Vuelve en ${fmtEnergyCountdown(info.msLeft)} — o hazte Pro para no parar.`
+                  : `Cada simulacro gasta 1 ⚡. Se recarga por completo en ${fmtEnergyCountdown(info.msLeft)}.`}
+              </div>
+            </>
+          )}
+
+          {/* Invitación a Pankey Pro */}
+          {!info.unlimited && (
+            <div style={{ borderRadius: 18, padding: '16px', background: 'linear-gradient(150deg, rgba(167,139,250,0.16), rgba(167,139,250,0.04))', border: '1px solid rgba(167,139,250,0.35)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 2, color: '#A78BFA' }}>PANKEY PRO</div>
+                <div style={{ flex: 1, height: 1, background: 'rgba(167,139,250,0.25)' }} />
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{PRO_PRICE}</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 14 }}>
+                {PRO_BENEFITS.map(([icon, t, d]) => (
+                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(167,139,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <PkIc n={icon} s={15} c="#A78BFA" />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{t}</div>
+                      <div style={{ fontSize: 11, color: C.textMuted }}>{d}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={onOpenPro} style={{ width: '100%', height: 48, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 14, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #A78BFA, #7C5CD6)', boxShadow: '0 8px 22px rgba(167,139,250,0.4)' }}>
+                Conseguir Pankey Pro
+              </button>
+            </div>
+          )}
+
+          <button onClick={onClose} style={{ width: '100%', height: 46, borderRadius: 14, marginTop: 12, border: `1px solid ${C.border}`,
+            background: 'transparent', color: C.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Cerrar</button>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
 const freshState = () => ({
+  isPro: false,                 // suscripción Pankey Pro (Módulo 3)
+  energy: ENERGY_MAX,           // energía de simulacros (usuarios gratuitos)
+  energyLastRefill: null,       // timestamp de la última recarga completa
   currentBookId: null,
   currentChapter: 1,
   currentPage: 1,
@@ -2683,6 +2796,8 @@ export default function App() {
   const [partnerOnline, setPartnerOnline] = useState(false);
   const nudgeSeenRef = useRef(0);
   const [partnerReqs, setPartnerReqs] = useState([]); // solicitudes de unión de parcero entrantes
+  const [energyModalOpen, setEnergyModalOpen] = useState(false); // modal de energía / invitación a Pro
+  const [energyTick, setEnergyTick] = useState(0); // fuerza recomputar el contador de recarga
   const [partnerPhotoURL, setPartnerPhotoURL] = useState(null);
   const [fbLoaded, setFbLoaded]   = useState(false);
   const [ambientOn, setAmbientOn] = useState(saved?.ambientOn || false); // ✅ NEW: ambientación de fondo
@@ -2933,6 +3048,22 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         habits: s.habits.map(h => ({ ...h, streak: h.completedToday ? h.streak : 0, completedToday: false })),
       };
     });
+  }, []);
+
+  // Energía: recarga completa cada 24h + tick para el contador de "vuelve en Xh"
+  useEffect(() => {
+    const check = () => {
+      setEnergyTick(t => t + 1);
+      setAppState(s => {
+        const last = s.energyLastRefill || 0;
+        if (!last) return { ...s, energyLastRefill: Date.now(), energy: s.energy == null ? ENERGY_MAX : s.energy };
+        if (Date.now() - last >= ENERGY_REFILL_MS) return { ...s, energy: ENERGY_MAX, energyLastRefill: Date.now() };
+        return s;
+      });
+    };
+    check();
+    const iv = setInterval(check, 60000);
+    return () => clearInterval(iv);
   }, []);
 
   // Firebase listener (sesión compartida)
@@ -3194,6 +3325,26 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     try { await FB().set(FB().ref(FB().db, `partnerRequests/${user.code}/${fromCode}`), null); } catch (e) {}
   };
 
+  // ── Energía (Módulo 2): consume 1 al iniciar simulacro; false si está en 0 ──
+  const consumeEnergy = () => {
+    if (appState.isPro) return true; // Pankey Pro: energía ilimitada
+    const info = getEnergyNow(appState);
+    if (info.energy <= 0) return false; // bloqueado
+    setAppState(s => {
+      const last = s.energyLastRefill || 0;
+      const refill = !last || (Date.now() - last) >= ENERGY_REFILL_MS;
+      const base = refill ? ENERGY_MAX : (s.energy == null ? ENERGY_MAX : s.energy);
+      const next = Math.max(0, base - 1);
+      const stamp = refill ? Date.now() : (s.energyLastRefill || Date.now());
+      // La energía se persiste vía el espejo de appState → Firebase (efecto de persistencia).
+      return { ...s, energy: next, energyLastRefill: stamp };
+    });
+    return true;
+  };
+
+  // Placeholder: abrir Pankey Pro (se conectará a la TiendaReal en el Módulo 4)
+  const openPro = () => { setEnergyModalOpen(false); pushNotif('Pankey Pro llega en el próximo módulo ⚡'); };
+
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
     const note = {
@@ -3306,8 +3457,15 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         {(() => {
           const lvlH = computeLevel(appState.xp || 0);
           const R = 14, CIRC = 2 * Math.PI * R;
+          const eInfo = getEnergyNow(appState);
+          const enColor = eInfo.unlimited ? '#A78BFA' : eInfo.energy <= 1 ? '#EF4444' : C.accent;
           return (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {/* Energía (Módulo 2) → abre el modal de energía / Pro */}
+              <button onClick={() => setEnergyModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: `${enColor}18`, border: `1px solid ${enColor}40`, borderRadius: 12, padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill={enColor} style={{ display: 'block' }}><path d="M13 2 L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                <span style={{ fontSize: 13, fontWeight: 900, color: enColor, fontVariantNumeric: 'tabular-nums' }}>{eInfo.unlimited ? '∞' : eInfo.energy}</span>
+              </button>
               {/* Empanadas con count-up */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 12, padding: '6px 11px' }}>
                 <PkIc n="empanada" s={14} c={C.amberMid} />
@@ -3370,7 +3528,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} />
         </div>
         <div style={{ display: tab === 'icfes' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} />
+          <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} onConsumeEnergy={consumeEnergy} onEnergyBlocked={() => setEnergyModalOpen(true)} />
         </div>
         <div style={{ display: tab === 'books' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} partnerReqs={partnerReqs} onSendPartnerRequest={handleSendPartnerRequest} onAcceptPartnerRequest={handleAcceptPartnerRequest} onDeclinePartnerRequest={handleDeclinePartnerRequest} />
@@ -3385,6 +3543,8 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <SettingsTab startView="settings" C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={(url) => { setAppState(s => ({ ...s, photoURL: url })); if (fbOK() && user?.sessionId) { try { FB().get(FB().ref(FB().db, `sessions/${user.sessionId}`)).then(snap => { if (!snap.exists()) return; const amI1 = snap.val().user1Code === user.code; FB().update(FB().ref(FB().db, `sessions/${user.sessionId}`), { [amI1 ? 'user1PhotoURL' : 'user2PhotoURL']: url }); }); } catch(_) {} } }} onLogout={() => { localStorage.removeItem(SK); setUser(null); setAppState(freshState()); setBooks([]); setScreen('onboarding'); }} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} />
         </div>
       </div>
+
+      {energyModalOpen && <EnergiaModal C={C} appState={appState} onClose={() => setEnergyModalOpen(false)} onOpenPro={openPro} />}
 
       {/* Nav bar */}
       <div style={{
@@ -11504,7 +11664,7 @@ function ResultadosShow({ result, appState, onDetalle, onRetry, onBack }) {
   );
 }
 
-function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif }) {
+function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked }) {
   const [icfesScreen, setIcfesScreen] = useState('dashboard');
   const [activeQuestions, setActiveQuestions] = useState([]);
   const [currentQ, setCurrentQ]       = useState(0);
@@ -11576,6 +11736,8 @@ const SABIO_HYPE = [
     setTimeout(() => setSabioComment(null), 2600);
   };
   const handleBeginTest = async (subjects, count) => {
+    // Módulo 2 — Energía: cada simulacro gasta 1 ⚡ (Pro es ilimitado). Si está en 0, bloquea.
+    if (onConsumeEnergy && !onConsumeEnergy()) { FX.play('error'); onEnergyBlocked?.(); return; }
     setLoading(true);
     FX.play('conjure'); // El Sabio empieza a tejer las preguntas
     try {
