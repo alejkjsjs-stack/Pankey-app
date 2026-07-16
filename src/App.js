@@ -1146,6 +1146,103 @@ const PRO_BENEFITS = [
 ];
 const PRO_PRICE = '$14.900 COP / mes';
 
+// Paquetes de recarga de empanadas (dinero real — Módulo 4)
+const EMPANADA_PACKS = [
+  { id: 'antojo',   name: 'El Antojo',   emp: 500,  price: '$4.900',  cop: 4900,  emoji: '🫓' },
+  { id: 'fritanga', name: 'La Fritanga', emp: 1500, price: '$12.900', cop: 12900, emoji: '🍽️', best: true },
+  { id: 'patron',   name: 'El Patrón',   emp: 5000, price: '$35.000', cop: 35000, emoji: '👑' },
+];
+
+// Tienda Real: Pankey Pro + recargas de empanadas con dinero real (Módulo 4)
+function TiendaReal({ C, appState, onClose, onBuyPro, onBuyPack }) {
+  const isPro = !!appState.isPro;
+  return (
+    <Portal>
+      <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99996, background: 'rgba(2,4,8,0.88)', backdropFilter: 'blur(12px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 430, maxHeight: '90vh', overflowY: 'auto', background: C.bgAlt,
+          borderRadius: '26px 26px 0 0', borderTop: `1px solid ${C.amberMid}44`, padding: '20px 18px calc(24px + env(safe-area-inset-bottom))',
+          animation: 'slideUpIn 0.4s cubic-bezier(0.22,1,0.36,1) both', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: C.border, margin: '0 auto 16px' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <PkIc n="empanada" s={20} c={C.amberMid} />
+            <div style={{ fontSize: 18, fontWeight: 900, color: C.text, flex: 1 }}>Tienda</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 10, padding: '5px 10px' }}>
+              <PkIc n="empanada" s={12} c={C.amberMid} />
+              <span style={{ fontSize: 12, fontWeight: 900, color: C.amberMid }}>{(appState.ryo || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* ── Sección 1: Pankey Pro ── */}
+          <div style={{ borderRadius: 20, padding: '18px', marginBottom: 22, position: 'relative', overflow: 'hidden',
+            background: 'linear-gradient(150deg, rgba(167,139,250,0.2), rgba(124,92,214,0.06))', border: '1px solid rgba(167,139,250,0.4)' }}>
+            <div style={{ position: 'absolute', top: -30, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle, rgba(167,139,250,0.25), transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: 1.5, color: '#A78BFA' }}>PANKEY PRO</div>
+              {isPro && <span style={{ fontSize: 9, fontWeight: 900, color: '#1A1206', background: '#A78BFA', borderRadius: 5, padding: '2px 7px' }}>ACTIVO</span>}
+            </div>
+            <div style={{ fontSize: 12.5, color: C.textMid, marginBottom: 14, lineHeight: 1.5 }}>Desbloquea todo el poder del Templo.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {PRO_BENEFITS.map(([icon, t, d]) => (
+                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(167,139,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <PkIc n={icon} s={16} c="#A78BFA" />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>{t}</div>
+                    <div style={{ fontSize: 11, color: C.textMuted }}>{d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {isPro ? (
+              <div style={{ width: '100%', height: 50, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(167,139,250,0.14)', border: '1px solid rgba(167,139,250,0.4)', color: '#A78BFA', fontSize: 14, fontWeight: 800 }}>
+                ✨ Ya eres Pro · ¡gracias!
+              </div>
+            ) : (
+              <button onClick={onBuyPro} style={{ width: '100%', height: 52, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 15, fontWeight: 900, color: '#fff', background: 'linear-gradient(135deg, #A78BFA, #7C5CD6)', boxShadow: '0 8px 24px rgba(167,139,250,0.45)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                Suscribirme · {PRO_PRICE}
+              </button>
+            )}
+          </div>
+
+          {/* ── Sección 2: Recargas de empanadas ── */}
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, marginBottom: 12 }}>RECARGAS DE EMPANADAS</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {EMPANADA_PACKS.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 13, borderRadius: 16, padding: '13px 15px', position: 'relative',
+                background: p.best ? `${C.amberMid}12` : 'rgba(255,255,255,0.03)', border: `1px solid ${p.best ? C.amberMid + '55' : C.border}` }}>
+                {p.best && <span style={{ position: 'absolute', top: -9, left: 15, fontSize: 8.5, fontWeight: 900, letterSpacing: 1, color: '#1A1206', background: C.amberMid, borderRadius: 5, padding: '2px 8px' }}>MÁS POPULAR</span>}
+                <div style={{ fontSize: 30, flexShrink: 0 }}>{p.emoji}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: C.text }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: C.amberMid, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <PkIc n="empanada" s={12} c={C.amberMid} /> {p.emp.toLocaleString()} empanadas
+                  </div>
+                </div>
+                <button onClick={() => onBuyPack(p)} style={{ flexShrink: 0, padding: '11px 15px', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 13, fontWeight: 900, color: '#1A1206', background: `linear-gradient(135deg, #F5C542, ${C.amberMid})`, boxShadow: `0 6px 16px ${C.amberMid}40` }}>
+                  {p.price}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 10.5, color: C.textMuted, textAlign: 'center', margin: '16px 0 4px', lineHeight: 1.5 }}>
+            Pagos en pesos colombianos (COP). Las empanadas son moneda virtual sin valor fuera de la app.
+          </div>
+          <button onClick={onClose} style={{ width: '100%', height: 46, borderRadius: 14, marginTop: 10, border: `1px solid ${C.border}`,
+            background: 'transparent', color: C.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Cerrar</button>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
 // Modal de Energía + invitación a Pankey Pro (Módulo 2)
 function EnergiaModal({ C, appState, onClose, onOpenPro }) {
   const info = getEnergyNow(appState);
@@ -2801,6 +2898,7 @@ export default function App() {
   const [partnerReqs, setPartnerReqs] = useState([]); // solicitudes de unión de parcero entrantes
   const [energyModalOpen, setEnergyModalOpen] = useState(false); // modal de energía / invitación a Pro
   const [energyTick, setEnergyTick] = useState(0); // fuerza recomputar el contador de recarga
+  const [tiendaRealOpen, setTiendaRealOpen] = useState(false); // Tienda Real (Pro + recargas)
   const [partnerPhotoURL, setPartnerPhotoURL] = useState(null);
   const [fbLoaded, setFbLoaded]   = useState(false);
   const [ambientOn, setAmbientOn] = useState(saved?.ambientOn || false); // ✅ NEW: ambientación de fondo
@@ -3345,8 +3443,17 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     return true;
   };
 
-  // Placeholder: abrir Pankey Pro (se conectará a la TiendaReal en el Módulo 4)
-  const openPro = () => { setEnergyModalOpen(false); pushNotif('Pankey Pro llega en el próximo módulo ⚡'); };
+  // Abrir Pankey Pro → Tienda Real (Módulo 4)
+  const openPro = () => { setEnergyModalOpen(false); setTiendaRealOpen(true); };
+
+  // ── Compras (Módulo 4). El cobro REAL va con pasarela + verificación en servidor (Módulo 5).
+  //    Por ahora no acreditamos nada en el cliente: sería falso e inseguro. ──
+  const handleBuyPro = () => {
+    pushNotif('El pago de Pankey Pro se activa al conectar la pasarela (Wompi/Bold). Próximamente.');
+  };
+  const handleBuyPack = (pack) => {
+    pushNotif(`«${pack?.name}» (${pack?.price}) — el pago real se habilita con la pasarela. Próximamente.`);
+  };
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
@@ -3471,11 +3578,12 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
                 <svg width="13" height="13" viewBox="0 0 24 24" fill={enColor} style={{ display: 'block' }}><path d="M13 2 L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
                 <span style={{ fontSize: 13, fontWeight: 900, color: enColor, fontVariantNumeric: 'tabular-nums' }}>{eInfo.unlimited ? '∞' : eInfo.energy}</span>
               </button>
-              {/* Empanadas con count-up */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 12, padding: '6px 11px' }}>
+              {/* Empanadas con count-up → abre la Tienda Real */}
+              <button onClick={() => setTiendaRealOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 12, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>
                 <PkIc n="empanada" s={14} c={C.amberMid} />
                 <span style={{ fontSize: 13, fontWeight: 900, color: C.amberMid, fontVariantNumeric: 'tabular-nums' }}>{headerEmp.toLocaleString()}</span>
-              </div>
+                <span style={{ fontSize: 12, fontWeight: 900, color: C.amberMid, marginLeft: 1, opacity: 0.85 }}>+</span>
+              </button>
               {/* Nivel con anillo de progreso */}
               <div style={{ position: 'relative', width: 34, height: 34 }}>
                 <svg width="34" height="34" style={{ transform: 'rotate(-90deg)' }}>
@@ -3550,6 +3658,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       </div>
 
       {energyModalOpen && <EnergiaModal C={C} appState={appState} onClose={() => setEnergyModalOpen(false)} onOpenPro={openPro} />}
+      {tiendaRealOpen && <TiendaReal C={C} appState={appState} onClose={() => setTiendaRealOpen(false)} onBuyPro={handleBuyPro} onBuyPack={handleBuyPack} />}
 
       {/* Nav bar */}
       <div style={{
