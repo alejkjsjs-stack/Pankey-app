@@ -2682,6 +2682,7 @@ export default function App() {
   const [toast, setToast]         = useState(null);
   const [partnerOnline, setPartnerOnline] = useState(false);
   const nudgeSeenRef = useRef(0);
+  const [partnerReqs, setPartnerReqs] = useState([]); // solicitudes de unión de parcero entrantes
   const [partnerPhotoURL, setPartnerPhotoURL] = useState(null);
   const [fbLoaded, setFbLoaded]   = useState(false);
   const [ambientOn, setAmbientOn] = useState(saved?.ambientOn || false); // ✅ NEW: ambientación de fondo
@@ -2997,6 +2998,34 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     return () => { unsub(); unsubNotes(); };
   }, [user?.sessionId, fbLoaded]);
 
+  // Solicitudes de unión de parcero entrantes (Pergaminos)
+  useEffect(() => {
+    if (!fbLoaded || !user?.code) return;
+    const unsub = FB().onValue(FB().ref(FB().db, `partnerRequests/${user.code}`), snap => {
+      if (!snap.exists()) { setPartnerReqs([]); return; }
+      const arr = Object.entries(snap.val())
+        .filter(([, v]) => v && v.status === 'pending')
+        .map(([fromCode, v]) => ({ ...v, fromCode }))
+        .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      setPartnerReqs(arr);
+    });
+    return () => unsub();
+  }, [fbLoaded, user?.code]);
+
+  // Detecta cuando alguien acepta MI solicitud (me marcan como conectado en users/{code})
+  useEffect(() => {
+    if (!fbLoaded || !user?.code) return;
+    const unsub = FB().onValue(FB().ref(FB().db, `users/${user.code}`), snap => {
+      if (!snap.exists()) return;
+      const u = snap.val();
+      if (u.sessionId && u.partnerConnected && (u.sessionId !== user.sessionId || !user.partnerConnected)) {
+        setUser(prev => ({ ...prev, partner: u.partner, partnerCode: u.partnerCode, partnerConnected: true, sessionId: u.sessionId }));
+        pushNotif(`¡Te uniste con ${u.partner || 'tu parcero'}!`);
+      }
+    });
+    return () => unsub();
+  }, [fbLoaded, user?.code, user?.sessionId, user?.partnerConnected]);
+
   // Sync progreso libro en vivo
   useEffect(() => {
     if (fbLoaded && user?.sessionId) {
@@ -3123,27 +3152,46 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     pushNotif(`Le echaste memoria a ${user?.partner || 'tu parcero'}`);
   };
 
-  // Vincular parcero por código desde el Sanctuario (mismo flujo que el onboarding)
-  const handleLinkPartner = async (rawCode) => {
+  // ── Unión de parceros de lectura (Pergaminos): solicitud → aceptación ──
+  const handleSendPartnerRequest = async (rawCode) => {
     const code = (rawCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!code) return { ok: false, msg: 'Ingresa el código de tu parcero.' };
     if (code === user?.code) return { ok: false, msg: 'Ese es tu propio código.' };
+    if (user?.partnerConnected) return { ok: false, msg: 'Ya tienes un parcero unido.' };
     if (!fbOK()) return { ok: false, msg: 'Sin conexión ahora mismo.' };
     try {
       const snap = await FB().get(FB().ref(FB().db, `users/${code}`));
       if (!snap.exists()) return { ok: false, msg: 'No encontramos ese código.' };
-      const partner = snap.val();
-      const sid = [user.code, code].sort().join('_');
+      const target = snap.val();
+      if (target.partnerConnected) return { ok: false, msg: `@${code} ya tiene un parcero.` };
+      await FB().update(FB().ref(FB().db, `partnerRequests/${code}/${user.code}`), {
+        fromCode: user.code, fromName: user.name || 'Explorador', fromPhoto: appState.photoURL || null, ts: Date.now(), status: 'pending',
+      });
+      pushNotif(`Solicitud de unión enviada a ${target.name || '@' + code}`);
+      return { ok: true, toName: target.name || code };
+    } catch (e) { return { ok: false, msg: 'Error de red. Intenta de nuevo.' }; }
+  };
+
+  const handleAcceptPartnerRequest = async (fromCode, fromName) => {
+    if (!fbOK() || !user?.code || !fromCode) return;
+    try {
+      const pair = [user.code, fromCode].sort();
+      const sid = pair.join('_');
       await FB().update(FB().ref(FB().db, `sessions/${sid}`), {
-        user1Code: user.code, user2Code: code, user1Name: user.name, user2Name: partner.name,
+        user1Code: pair[0], user2Code: pair[1],
         user1Confirmed: false, user2Confirmed: false, user1Online: false, user2Online: false, created: Date.now(),
       });
-      await FB().update(FB().ref(FB().db, `users/${user.code}`), { partner: partner.name, partnerCode: code, sessionId: sid });
-      await FB().update(FB().ref(FB().db, `users/${code}`), { partner: user.name, partnerCode: user.code, sessionId: sid });
-      setUser(u => ({ ...u, partner: partner.name, partnerCode: code, partnerConnected: true, sessionId: sid }));
-      pushNotif(`¡Conectado con ${partner.name}!`);
-      return { ok: true };
-    } catch (e) { return { ok: false, msg: 'Error de red. Intenta de nuevo.' }; }
+      await FB().update(FB().ref(FB().db, `users/${user.code}`), { partner: fromName, partnerCode: fromCode, partnerConnected: true, sessionId: sid });
+      await FB().update(FB().ref(FB().db, `users/${fromCode}`), { partner: user.name, partnerCode: user.code, partnerConnected: true, sessionId: sid });
+      await FB().set(FB().ref(FB().db, `partnerRequests/${user.code}/${fromCode}`), null);
+      setUser(u => ({ ...u, partner: fromName, partnerCode: fromCode, partnerConnected: true, sessionId: sid }));
+      pushNotif(`¡Ahora lees junto a ${fromName}!`);
+    } catch (e) { pushNotif('No se pudo aceptar. Intenta de nuevo.'); }
+  };
+
+  const handleDeclinePartnerRequest = async (fromCode) => {
+    if (!fbOK() || !user?.code) return;
+    try { await FB().set(FB().ref(FB().db, `partnerRequests/${user.code}/${fromCode}`), null); } catch (e) {}
   };
 
   const handleAddNote = async () => {
@@ -3188,26 +3236,11 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       if (cloudAppState) setAppState(cloudAppState);
       if (cloudBooks) setBooks(cloudBooks);
       
-      // Si el usuario ya tiene pareja o sesión, va directo a la app. Si no, a conectarse.
-      if (basicUser.partnerCode || basicUser.sessionId) {
-        setScreen('app');
-        setTimeout(() => pushNotif(`¡Bienvenido de vuelta, ${basicUser.name}!`), 1000);
-      } else {
-        setScreen('connect');
-      }
+      // La unión de parceros ya no vive en el registro: se hace desde Pergaminos.
+      setScreen('app');
+      const volviendo = basicUser.partnerCode || basicUser.sessionId;
+      setTimeout(() => pushNotif(volviendo ? `¡Bienvenido de vuelta, ${basicUser.name}!` : `¡Bienvenido, ${basicUser.name}! Une a tu parcero desde Pergaminos.`), 1000);
     }} /></>
-  );
-
-  if (screen === 'connect')    return (
-    <><style>{globalStyles}</style>
-    <Connect C={C} isLight={isLight} user={user}
-      onDone={({ partnerName, sessionId: sid, partnerCode }) => {
-        setUser(u => ({ ...u, partner: partnerName, partnerCode, partnerConnected: true, sessionId: sid }));
-        setScreen('app');
-        pushNotif(`Conectado con ${partnerName}`);
-      }}
-      onSkip={() => setScreen('app')}
-    /></>
   );
 
   // App principal
@@ -3340,7 +3373,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} />
         </div>
         <div style={{ display: tab === 'books' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} onConnectPartner={handleLinkPartner} />
+          <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} partnerReqs={partnerReqs} onSendPartnerRequest={handleSendPartnerRequest} onAcceptPartnerRequest={handleAcceptPartnerRequest} onDeclinePartnerRequest={handleDeclinePartnerRequest} />
         </div>
         <div style={{ display: tab === 'friends' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <FriendsView C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} pushNotif={pushNotif} onBack={() => setTab('books')} />
@@ -3566,6 +3599,78 @@ function Splash({ onDone, C, isLight }) {
 // ─────────────────────────────────────────────
 //  ONBOARDING (Estética Limpia - Fogata y Chispas)
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  VISTA LEGAL — Términos, Condiciones y Privacidad
+//  ⚠ CONTENIDO PLACEHOLDER: reemplazar por el texto legal real (revisado
+//     con un abogado y ajustado a la Ley 1581 de 2012 de Colombia).
+// ─────────────────────────────────────────────
+const LEGAL_DOCS = {
+  terms: {
+    title: 'Términos y Condiciones',
+    updated: 'Última actualización: [FECHA]',
+    body: [
+      ['1. Aceptación', 'Al crear una cuenta y usar Pankey (la "App") aceptas estos Términos y Condiciones. Si no estás de acuerdo, no uses la App. Pankey es una herramienta de preparación para el examen ICFES Saber 11 con fines educativos y de entretenimiento.'],
+      ['2. Cuenta y edad', 'Debes registrar datos veraces. Si eres menor de edad, declaras contar con la autorización de tus padres o acudientes para usar la App y para el tratamiento de tus datos.'],
+      ['3. Suscripción Pankey Pro y compras', 'Pankey ofrece una suscripción mensual (Pankey Pro) y paquetes de "Empanadas" (moneda virtual sin valor monetario fuera de la App). Los precios se muestran en pesos colombianos (COP). Las Empanadas no son reembolsables ni canjeables por dinero. La suscripción se renueva según lo indicado al momento de la compra y puede cancelarse en cualquier momento.'],
+      ['4. Uso permitido', 'No puedes alterar, automatizar ni explotar la App para obtener monedas, energía o beneficios de forma indebida. Nos reservamos el derecho de suspender cuentas que incurran en fraude o abuso.'],
+      ['5. Contenido educativo', 'El contenido de simulacros y preguntas es material de práctica y no garantiza un resultado específico en el examen oficial. Pankey no está afiliado al ICFES.'],
+      ['6. Cambios y terminación', 'Podemos actualizar la App y estos Términos. El uso continuado implica la aceptación de los cambios. Podemos suspender el servicio por mantenimiento o por incumplimiento.'],
+      ['7. Contacto', 'Para dudas escríbenos a [CORREO DE CONTACTO].'],
+    ],
+  },
+  privacy: {
+    title: 'Política de Privacidad',
+    updated: 'Última actualización: [FECHA]',
+    body: [
+      ['1. Responsable', 'El responsable del tratamiento de tus datos es [RAZÓN SOCIAL / NIT / DIRECCIÓN]. Correo: [CORREO].'],
+      ['2. Datos que recolectamos', 'Recolectamos tu nombre, alias, edad, correo asociado a tu cuenta de Google, y tu progreso dentro de la App (rachas, simulacros, logros, hábitos y actividad social).'],
+      ['3. Finalidad', 'Usamos tus datos para crear tu perfil, guardar tu progreso, habilitar funciones sociales (parceros, ranking) y mejorar la experiencia. No vendemos tus datos personales.'],
+      ['4. Autorización (Ley 1581 de 2012)', 'Al aceptar autorizas el tratamiento de tus datos personales conforme a la ley colombiana de Habeas Data. Si eres menor, esta autorización la otorga tu padre, madre o acudiente.'],
+      ['5. Tus derechos', 'Puedes conocer, actualizar, rectificar y solicitar la supresión de tus datos, así como revocar la autorización, escribiendo a [CORREO].'],
+      ['6. Seguridad y terceros', 'Usamos Firebase (Google) para autenticación y almacenamiento. Tus datos se procesan según las políticas de dichos proveedores.'],
+      ['7. Cambios', 'Podemos actualizar esta política; te informaremos de cambios relevantes dentro de la App.'],
+    ],
+  },
+};
+
+function LegalView({ C, onClose, initial = 'terms' }) {
+  const [tab, setTab] = useState(initial === 'privacy' ? 'privacy' : 'terms');
+  const doc = LEGAL_DOCS[tab];
+  return (
+    <Portal>
+      <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99997, background: C.bg || '#0F0D0C', color: C.text,
+        display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 18px', borderBottom: `1px solid ${C.border}` }}>
+          <button onClick={onClose} style={{ background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <PkIc n="left" s={17} c={C.text} />
+          </button>
+          <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>Legal</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, padding: '12px 18px 0' }}>
+          {[['terms', 'Términos'], ['privacy', 'Privacidad']].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '9px 0', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700,
+              background: tab === id ? C.accent : 'rgba(255,255,255,0.04)', color: tab === id ? '#fff' : C.textMuted, border: `1px solid ${tab === id ? C.accent : C.border}` }}>{label}</button>
+          ))}
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ fontSize: 11, color: '#E8A34A', background: 'rgba(232,163,74,0.1)', border: '1px solid rgba(232,163,74,0.3)', borderRadius: 10, padding: '10px 12px', marginBottom: 16, lineHeight: 1.5 }}>
+            ⚠ Borrador de ejemplo. Reemplaza los campos entre [corchetes] y valida este texto con un abogado antes de publicar.
+          </div>
+          <div className="serif" style={{ fontSize: 24, fontWeight: 800, color: C.text, marginBottom: 4 }}>{doc.title}</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 20 }}>{doc.updated}</div>
+          {doc.body.map(([h, p], i) => (
+            <div key={i} style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 6 }}>{h}</div>
+              <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.65 }}>{p}</div>
+            </div>
+          ))}
+          <div style={{ height: 20 }} />
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
 function Onboarding({ C, isLight, onDone }) {
   const [step, setStep] = useState('login');
   const [tempUid, setTempUid] = useState(null);
@@ -3575,6 +3680,8 @@ function Onboarding({ C, isLight, onDone }) {
   const [interests, setInterests] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(null); // 'terms' | 'privacy' | null
   const accent = C.accent || '#D4AF37';
 
   const handleGoogleLogin = async () => {
@@ -3598,6 +3705,7 @@ function Onboarding({ C, isLight, onDone }) {
     const cleanUser = username.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (cleanUser.length < 3) { setError('El usuario debe tener al menos 3 letras o números.'); return; }
     if (!age || isNaN(Number(age))) { setError('Por favor, ingresa una edad válida.'); return; }
+    if (!acceptedTerms) { setError('Debes aceptar los Términos y las Políticas de Privacidad para continuar.'); return; }
     setLoading(true); setError('');
     try {
       const checkSnap = await window.__FB.get(window.__FB.ref(window.__FB.db, `users/${cleanUser}`));
@@ -3605,6 +3713,7 @@ function Onboarding({ C, isLight, onDone }) {
       const userData = {
         name: name.trim() || cleanUser, code: cleanUser, uid: tempUid,
         age: parseInt(age), interests: interests.trim(),
+        acceptedTerms: true, acceptedTermsTs: Date.now(),
         partner: null, partnerConnected: false, sessionId: null, ts: Date.now()
       };
       await window.__FB.set(window.__FB.ref(window.__FB.db, `users/${cleanUser}`), userData);
@@ -3708,10 +3817,25 @@ function Onboarding({ C, isLight, onDone }) {
               </div>
             </div>
             {error && <div style={{ fontSize: 12, color: accent, background: `${accent}10`, borderRadius: 10, padding: '10px 14px', fontWeight: 600 }}>⚠ {error}</div>}
-            <PrimaryBtn C={C} onClick={submitProfile} loading={loading}>Comenzar Expedición →</PrimaryBtn>
+
+            {/* Checkbox legal obligatorio */}
+            <div onClick={() => { setAcceptedTerms(v => !v); setError(''); }} style={{ display: 'flex', alignItems: 'flex-start', gap: 11, cursor: 'pointer', padding: '2px' }}>
+              <div style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: acceptedTerms ? accent : 'transparent', border: `2px solid ${acceptedTerms ? accent : 'rgba(255,255,255,0.28)'}`, transition: 'all 0.15s' }}>
+                {acceptedTerms && <PkIc n="check" s={14} c="#1A1206" sw={3} />}
+              </div>
+              <div style={{ fontSize: 12.5, color: C.textMid, lineHeight: 1.5 }}>
+                He leído y acepto los{' '}
+                <span onClick={e => { e.stopPropagation(); setLegalOpen('terms'); }} style={{ color: accent, fontWeight: 700, textDecoration: 'underline' }}>Términos, Condiciones y Políticas de Privacidad</span>.
+              </div>
+            </div>
+
+            <PrimaryBtn C={C} onClick={submitProfile} loading={loading} disabled={!acceptedTerms}>Comenzar Expedición →</PrimaryBtn>
           </div>
         </div>
       )}
+
+      {legalOpen && <LegalView C={C} initial={legalOpen} onClose={() => setLegalOpen(null)} />}
     </div>
   );
 }
@@ -4472,7 +4596,7 @@ function PlantSVG({ streak = 0, color = '#4A7EB8', done = false, size = 56 }) {
 }
 
 // ── Sección 1: El Dúo de Lectura Activa ──
-function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPhotoURL, myReading, onConnectPartner }) {
+function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPhotoURL, myReading, partnerReqs = [], onSendRequest, onAcceptRequest, onDeclineRequest }) {
   const connected = !!user?.partnerConnected;
   const partnerReading = !!appState.theirTimerActive && partnerOnline;
   const bothReading = myReading && partnerReading;
@@ -4481,6 +4605,7 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sentTo, setSentTo] = useState(null); // nombre/código al que envié solicitud
 
   const miEstado = myReading
     ? { txt: 'Leyendo ahora', dot: C.tealMid, pulse: true }
@@ -4496,12 +4621,13 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
 
   const submit = async () => {
     setErr(''); setLoading(true);
-    const r = await (onConnectPartner ? onConnectPartner(pcode) : Promise.resolve({ ok: false, msg: 'No disponible.' }));
+    const r = await (onSendRequest ? onSendRequest(pcode) : Promise.resolve({ ok: false, msg: 'No disponible.' }));
     setLoading(false);
-    if (r && !r.ok) setErr(r.msg || 'No se pudo vincular.');
-    else { setShowConnect(false); setPcode(''); }
+    if (r && !r.ok) setErr(r.msg || 'No se pudo enviar.');
+    else { setSentTo(r?.toName || pcode); setPcode(''); }
   };
   const copyCode = () => { try { navigator.clipboard?.writeText(user?.code || ''); } catch (e) {} setCopied(true); setTimeout(() => setCopied(false), 1500); };
+  const accept = async (req) => { setErr(''); await onAcceptRequest?.(req.fromCode, req.fromName); };
 
   return (
     <div style={{ position: 'relative', borderRadius: 22, padding: '15px 16px',
@@ -4542,11 +4668,16 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
           </div>
         ) : (
           <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-            <button onClick={() => setShowConnect(s => !s)} style={{ width: 46, height: 46, borderRadius: '50%', margin: '0 auto', cursor: 'pointer',
-              background: 'transparent', border: `2px dashed ${C.accent}66`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={() => setShowConnect(s => !s)} style={{ position: 'relative', width: 46, height: 46, borderRadius: '50%', margin: '0 auto', cursor: 'pointer',
+              background: partnerReqs.length ? `${C.accent}22` : 'transparent', border: `2px dashed ${C.accent}${partnerReqs.length ? 'AA' : '66'}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: partnerReqs.length ? 'dotPulse 1.6s ease-in-out infinite' : 'none' }}>
               <PkIc n="people" s={22} c={C.accent} />
+              {partnerReqs.length > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff',
+                  fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: `2px solid ${C.bg}` }}>{partnerReqs.length}</span>
+              )}
             </button>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginTop: 8 }}>Agregar parcero</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, marginTop: 8 }}>{partnerReqs.length ? `${partnerReqs.length} solicitud${partnerReqs.length > 1 ? 'es' : ''}` : 'Agregar parcero'}</div>
           </div>
         )}
       </div>
@@ -4558,26 +4689,55 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
         </div>
       )}
 
-      {/* Vincular parcero por código */}
+      {/* Solicitudes de unión entrantes (siempre visibles si las hay) */}
+      {!connected && partnerReqs.length > 0 && (
+        <div style={{ marginTop: 13, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {partnerReqs.map(req => (
+            <div key={req.fromCode} style={{ display: 'flex', alignItems: 'center', gap: 10, background: `${C.accent}12`, border: `1px solid ${C.accent}33`, borderRadius: 12, padding: '9px 11px' }}>
+              <Av name={req.fromName || req.fromCode} sz={34} C={C} color={C.blueMid} photoURL={req.fromPhoto} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.fromName || req.fromCode}</div>
+                <div style={{ fontSize: 10.5, color: C.textMuted }}>quiere ser tu parcero de lectura</div>
+              </div>
+              <button onClick={() => accept(req)} style={{ flexShrink: 0, padding: '8px 13px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 800, background: C.tealMid, color: '#06231C' }}>Aceptar</button>
+              <button onClick={() => onDeclineRequest?.(req.fromCode)} style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: `1px solid ${C.border}`, cursor: 'pointer', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PkIc n="x" s={14} c={C.textMuted} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Enviar solicitud de unión por código */}
       {!connected && showConnect && (
         <div style={{ marginTop: 13, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
-            Comparte tu código o pega el de tu parcero para sincronizarse de verdad.
-          </div>
-          <button onClick={copyCode} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10,
-            background: `${C.accent}12`, border: `1px solid ${C.accent}33`, borderRadius: 10, padding: '9px', cursor: 'pointer', fontFamily: 'inherit' }}>
-            <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 1 }}>TU CÓDIGO</span>
-            <span style={{ fontSize: 15, fontWeight: 900, color: C.accent, letterSpacing: 2 }}>{user?.code}</span>
-            <span style={{ fontSize: 10, color: copied ? C.tealMid : C.textMuted, fontWeight: 700 }}>{copied ? '¡copiado!' : 'copiar'}</span>
-          </button>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input value={pcode} onChange={e => setPcode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} placeholder="Código del parcero" maxLength={10}
-              onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-              style={{ flex: 1, fontSize: 14, fontWeight: 700, letterSpacing: 1.5, padding: '11px 13px', borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontFamily: 'inherit', textTransform: 'uppercase' }} />
-            <button onClick={submit} disabled={loading || !pcode} style={{ flexShrink: 0, padding: '0 18px', borderRadius: 11, border: 'none', cursor: (loading || !pcode) ? 'default' : 'pointer',
-              background: (loading || !pcode) ? C.border : C.accent, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 800 }}>{loading ? '…' : 'Vincular'}</button>
-          </div>
-          {err && <div style={{ fontSize: 11, color: '#EF4444', marginTop: 8, fontWeight: 600 }}>{err}</div>}
+          {sentTo ? (
+            <div style={{ textAlign: 'center', padding: '6px 0' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.tealMid }}>✓ Solicitud enviada a {sentTo}</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>Esperando que acepte la unión…</div>
+              <button onClick={() => { setSentTo(null); }} style={{ marginTop: 10, background: 'none', border: 'none', color: C.accent, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enviar a otro código</button>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
+                Comparte tu código, o pega el de tu parcero y envíale la solicitud de unión.
+              </div>
+              <button onClick={copyCode} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10,
+                background: `${C.accent}12`, border: `1px solid ${C.accent}33`, borderRadius: 10, padding: '9px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <span style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 1 }}>TU CÓDIGO</span>
+                <span style={{ fontSize: 15, fontWeight: 900, color: C.accent, letterSpacing: 2 }}>{user?.code}</span>
+                <span style={{ fontSize: 10, color: copied ? C.tealMid : C.textMuted, fontWeight: 700 }}>{copied ? '¡copiado!' : 'copiar'}</span>
+              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={pcode} onChange={e => { setPcode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setErr(''); }} placeholder="Código del parcero" maxLength={10}
+                  onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+                  style={{ flex: 1, fontSize: 14, fontWeight: 700, letterSpacing: 1.5, padding: '11px 13px', borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontFamily: 'inherit', textTransform: 'uppercase' }} />
+                <button onClick={submit} disabled={loading || !pcode} style={{ flexShrink: 0, padding: '0 16px', borderRadius: 11, border: 'none', cursor: (loading || !pcode) ? 'default' : 'pointer',
+                  background: (loading || !pcode) ? C.border : C.accent, color: '#fff', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 800 }}>{loading ? '…' : 'Enviar'}</button>
+              </div>
+              {err && <div style={{ fontSize: 11, color: '#EF4444', marginTop: 8, fontWeight: 600 }}>{err}</div>}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -5318,7 +5478,7 @@ function NotasColapsable({ C, isLight, notes, user, appState, partnerPhotoURL, n
 // ═════════════════════════════════════════════════════════════
 //  PERGAMINOS TAB — El Sanctuario del Lector (orquestador)
 // ═════════════════════════════════════════════════════════════
-function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBooks, onAddBook, onConfirm, partnerOnline, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, notes, noteText, setNoteText, onAddNote, onReactNote, onRemindPartner, onConnectPartner }) {
+function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBooks, onAddBook, onConfirm, partnerOnline, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, notes, noteText, setNoteText, onAddNote, onReactNote, onRemindPartner, partnerReqs, onSendPartnerRequest, onAcceptPartnerRequest, onDeclinePartnerRequest }) {
   const [showAdd, setShowAdd] = useState(false);
   const [nb, setNb] = useState({ title: '', author: '', totalChapters: 10, totalPages: 0, genre: 'Ficción' });
   const [myReading, setMyReading] = useState(false);
@@ -5348,7 +5508,8 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* 1. Dúo de lectura activa */}
-        <DuoReadingHeader C={C} user={user} partner={partner} appState={appState} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} myReading={myReading} onConnectPartner={onConnectPartner} />
+        <DuoReadingHeader C={C} user={user} partner={partner} appState={appState} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} myReading={myReading}
+          partnerReqs={partnerReqs} onSendRequest={onSendPartnerRequest} onAcceptRequest={onAcceptPartnerRequest} onDeclineRequest={onDeclinePartnerRequest} />
 
         {/* 2. Tu libro */}
         <div>
