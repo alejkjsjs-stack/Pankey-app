@@ -539,34 +539,71 @@ function PankeyLogo({ size = 64, C, glow = true }) {
   );
 }
 function TexturaFondo({ C, isLight }) {
-  // Grano sutil generado como SVG turbulence (data URI), muy tenue
-  const grano = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E")`;
+  // ── Fondo global "Ascua": negro total + campo de estrellas con parallax + fugaces ──
+  const farRef = useRef(null);
+  const nearRef = useRef(null);
 
-  const figuras = [
-    { p: 0, top: '6%',  left: '-6%',  size: 200, rot: -8 },
-    { p: 1, top: '38%', left: '70%',  size: 240, rot: 12 },
-    { p: 2, top: '72%', left: '-8%',  size: 180, rot: 5 },
-    { p: 0, top: '85%', left: '68%',  size: 160, rot: -14 },
-  ];
+  const starsFar = useMemo(() => Array.from({ length: 90 }, () => ({
+    left: Math.random() * 100, top: Math.random() * 100,
+    o: (0.22 + Math.random() * 0.5).toFixed(2), dur: (4 + Math.random() * 5).toFixed(1), del: (Math.random() * 5).toFixed(1),
+  })), []);
+  const starsNear = useMemo(() => Array.from({ length: 32 }, () => ({
+    left: Math.random() * 100, top: Math.random() * 100,
+    o: (0.3 + Math.random() * 0.6).toFixed(2), dur: (5 + Math.random() * 5).toFixed(1), del: (Math.random() * 5).toFixed(1),
+  })), []);
+  // Estrellas fugaces: pocas y espaciadas en el tiempo (ciclo largo)
+  const shooting = useMemo(() => Array.from({ length: 3 }, (_, i) => ({
+    top: 4 + Math.random() * 42, left: 8 + Math.random() * 55,
+    del: (i * 6.5 + Math.random() * 5).toFixed(1), dur: (9 + Math.random() * 6).toFixed(1),
+  })), []);
+
+  // Parallax: el fondo se desplaza suavemente con el puntero/dedo (profundidad)
+  useEffect(() => {
+    let raf = 0, tx = 0, ty = 0, cx = 0, cy = 0;
+    const onMove = (e) => {
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      tx = ((p.clientX / window.innerWidth) - 0.5) * 2;
+      ty = ((p.clientY / window.innerHeight) - 0.5) * 2;
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    const tick = () => {
+      cx += (tx - cx) * 0.07; cy += (ty - cy) * 0.07;
+      if (farRef.current)  farRef.current.style.transform  = `translate3d(${(cx * 7).toFixed(2)}px, ${(cy * 7).toFixed(2)}px, 0)`;
+      if (nearRef.current) nearRef.current.style.transform = `translate3d(${(cx * 18).toFixed(2)}px, ${(cy * 18).toFixed(2)}px, 0)`;
+      if (Math.abs(tx - cx) > 0.0008 || Math.abs(ty - cy) > 0.0008) raf = requestAnimationFrame(tick);
+      else raf = 0;
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('touchmove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('touchmove', onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      {/* Petroglifos tenues */}
-      {figuras.map((f, i) => (
-        <svg key={i} viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round"
-          style={{ position: 'absolute', top: f.top, left: f.left, width: f.size, height: f.size,
-            opacity: 0.025, transform: `rotate(${f.rot}deg)` }}>
-          <path d={PETROGLIFOS_MARCA[f.p]} />
-        </svg>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden', background: '#000' }}>
+      {/* Aura roja que respira (profundidad cálida) */}
+      <div className="asc-aura" />
+      {/* Estrellas lejanas (parallax lento) */}
+      <div ref={farRef} className="asc-stars asc-far" style={{ willChange: 'transform' }}>
+        {starsFar.map((s, i) => (
+          <i key={i} style={{ left: `${s.left}%`, top: `${s.top}%`, '--o': s.o, animationDuration: `${s.dur}s`, animationDelay: `${s.del}s` }} />
+        ))}
+      </div>
+      {/* Estrellas cercanas (parallax más marcado) */}
+      <div ref={nearRef} className="asc-stars asc-near" style={{ willChange: 'transform' }}>
+        {starsNear.map((s, i) => (
+          <i key={i} style={{ left: `${s.left}%`, top: `${s.top}%`, '--o': s.o, animationDuration: `${s.dur}s`, animationDelay: `${s.del}s` }} />
+        ))}
+      </div>
+      {/* Estrellas fugaces diminutas y ocasionales */}
+      {shooting.map((s, i) => (
+        <span key={`sh${i}`} className="asc-shoot" style={{ top: `${s.top}%`, left: `${s.left}%`, animationDelay: `${s.del}s`, animationDuration: `${s.dur}s` }} />
       ))}
-      {/* Grano de piedra */}
-      <div style={{ position: 'absolute', inset: 0, backgroundImage: grano, backgroundRepeat: 'repeat',
-        opacity: isLight ? 0.03 : 0.04, mixBlendMode: isLight ? 'multiply' : 'overlay' }} />
-      {/* Viñeta sutil para dar profundidad a los bordes — cálida en claro, oscura en noche */}
-      <div style={{ position: 'absolute', inset: 0,
-        background: isLight
-          ? 'radial-gradient(ellipse at 50% 35%, transparent 60%, rgba(120,95,50,0.09) 100%)'
-          : 'radial-gradient(ellipse at 50% 35%, transparent 55%, rgba(0,0,0,0.35) 100%)' }} />
+      {/* Viñeta para profundidad en los bordes */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 38%, transparent 54%, rgba(0,0,0,0.55) 100%)' }} />
     </div>
   );
 }
@@ -3651,7 +3688,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} />
         </div>
         <div style={{ display: tab === 'inicio' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '14px 20px 10px', WebkitOverflowScrolling: 'touch' }}>
-          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} onOpenEnergy={() => setEnergyModalOpen(true)} onOpenTienda={() => setTiendaRealOpen(true)} />
+          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} onOpenEnergy={() => setEnergyModalOpen(true)} onOpenTienda={() => setTiendaRealOpen(true)} onOpenIdentity={() => setIdentityMenu(true)} />
         </div>
         <div style={{ display: tab === 'icfes' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} onConsumeEnergy={consumeEnergy} onEnergyBlocked={() => setEnergyModalOpen(true)} />
@@ -11130,7 +11167,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 // ═════════════════════════════════════════════
 //  INICIO TAB v5 — CENTRO DE MANDO
 // ═════════════════════════════════════════════
-function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst, onOpenEnergy, onOpenTienda }) {
+function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst, onOpenEnergy, onOpenTienda, onOpenIdentity }) {
   const lvl         = computeLevel(appState.xp || 0);
   const [rankInfo, setRankInfo]   = useState(null);
   const [retoOpen, setRetoOpen]   = useState(false);
@@ -11338,41 +11375,17 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     dur: 4 + (i % 5), del: (i * 0.6) % 4, o: 0.2 + (i % 3) * 0.1,
   })), []);
 
-  // ── Fondo ASCUA: estrellas en dos capas (se generan UNA sola vez) ──
-  const starsFar = useMemo(() => Array.from({ length: 70 }, () => ({
-    left: Math.random() * 100, top: Math.random() * 100,
-    o: (0.3 + Math.random() * 0.6).toFixed(2), dur: 4 + Math.random() * 4, del: Math.random() * 4,
-  })), []);
-  const starsNear = useMemo(() => Array.from({ length: 26 }, () => ({
-    left: Math.random() * 100, top: Math.random() * 100,
-    o: (0.3 + Math.random() * 0.6).toFixed(2), dur: 5 + Math.random() * 5, del: Math.random() * 5,
-  })), []);
-
   return (
     <div className="fi" style={{ position: 'relative', display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
 
-      {/* ══ FONDO ASCUA — negro puro + estrellas (2 capas) + aura roja que respira + veil ══ */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: '#000' }} />
-      <div className="stars far" style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true">
-        {starsFar.map((s, i) => (
-          <i key={i} style={{ left: `${s.left}%`, top: `${s.top}%`, '--o': s.o, animationDuration: `${s.dur}s`, animationDelay: `${s.del}s` }} />
-        ))}
-      </div>
-      <div className="stars near" style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true">
-        {starsNear.map((s, i) => (
-          <i key={i} style={{ left: `${s.left}%`, top: `${s.top}%`, '--o': s.o, animationDuration: `${s.dur}s`, animationDelay: `${s.del}s` }} />
-        ))}
-      </div>
-      <div className="aura" style={{ position: 'fixed', zIndex: 0 }} aria-hidden="true" />
-      <div className="aura2" style={{ position: 'fixed', zIndex: 0 }} aria-hidden="true" />
-      <div className="veil" style={{ position: 'fixed', zIndex: 0 }} aria-hidden="true" />
+      {/* ══ FONDO: lo provee el TexturaFondo global (negro + estrellas parallax + fugaces + aura). ══ */}
 
       {/* ══ CONTENIDO ══ */}
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 15, flex: 1 }}>
 
         {/* ── 1. TOP BAR ASCUA (avatar con anillo vivo + nivel + nombre + chips glass) ── */}
         <div className="top" style={{ padding: '2px 0 0', animation: 'staggerRise 0.5s ease both' }}>
-          <div className="av" onClick={ciclarFuego} title="Cambiar color del fuego">
+          <div className="av" onClick={() => { FX.play('tap'); onOpenIdentity?.(); }} title="Perfil y ajustes">
             <div className="av__r" />
             <div className="av__i" style={{ overflow: 'hidden' }}>
               <Av name={user?.name || '?'} sz={40} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
@@ -11466,18 +11479,39 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
         </div>
 
-        {/* ── 5. COMPETENCIA — una línea limpia (.rank) ── */}
-        {rankInfo && rankInfo.pos > 1 && rankInfo.aheadGap !== null && rankInfo.aheadGap <= 8 && (
-          <button className="rank" onClick={() => onGoTab('friends')}
-            style={{ margin: 0, border: 'none', fontFamily: 'inherit', textAlign: 'left', animation: 'staggerRise 0.5s ease 0.3s both' }}>
-            <div className="rank__av">{(rankInfo.aheadName || '?')[0]?.toUpperCase()}</div>
-            <div className="rank__d">
-              <div className="rank__t"><em>@{rankInfo.aheadName}</em> te lleva {rankInfo.aheadGap} punto{rankInfo.aheadGap !== 1 ? 's' : ''}</div>
-              <div className="rank__s">Vas #{rankInfo.pos} en El Combo · quítale el #{rankInfo.pos - 1}</div>
-            </div>
-            <div className="rank__go">→</div>
-          </button>
-        )}
+        {/* ── 5. COMPETENCIA (.rank) — siempre visible, encima de Jugar ── */}
+        <button className="rank" onClick={() => onGoTab('friends')}
+          style={{ margin: 0, border: 'none', fontFamily: 'inherit', textAlign: 'left', animation: 'staggerRise 0.5s ease 0.3s both' }}>
+          {(() => {
+            const rk = rankInfo;
+            if (rk && rk.pos > 1 && rk.aheadName) {
+              return (<>
+                <div className="rank__av">{(rk.aheadName || '?')[0]?.toUpperCase()}</div>
+                <div className="rank__d">
+                  <div className="rank__t"><em>@{rk.aheadName}</em> te {rk.aheadGap <= 8 ? 'lleva' : 'saca'} {rk.aheadGap} punto{rk.aheadGap !== 1 ? 's' : ''}</div>
+                  <div className="rank__s">Vas #{rk.pos} en El Combo · quítale el #{rk.pos - 1}</div>
+                </div>
+              </>);
+            }
+            if (rk && rk.pos === 1) {
+              return (<>
+                <div className="rank__av" style={{ color: '#FFCF6B', boxShadow: 'inset 0 0 0 1.5px rgba(255,207,107,.5), 0 0 14px -4px rgba(255,207,107,.6)' }}>1</div>
+                <div className="rank__d">
+                  <div className="rank__t">Vas <em>#1</em> en El Combo</div>
+                  <div className="rank__s">Nadie te ha alcanzado — mantén la corona</div>
+                </div>
+              </>);
+            }
+            return (<>
+              <div className="rank__av"><PkIc n="people" s={17} c="#FF2E4C"/></div>
+              <div className="rank__d">
+                <div className="rank__t">El Combo te espera</div>
+                <div className="rank__s">Compite con tus parceros y escala la tabla</div>
+              </div>
+            </>);
+          })()}
+          <div className="rank__go">→</div>
+        </button>
 
         {/* Empuja el CTA al fondo cuando hay poco contenido */}
         <div style={{ flex: 1 }}/>
