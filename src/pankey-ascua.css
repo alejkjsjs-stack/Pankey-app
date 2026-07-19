@@ -62,21 +62,23 @@
 .fire.flare .fl{animation:flareA .5s var(--pop)}
 @keyframes flareA{40%{transform:scale(1.2)}}
 .fl{position:relative;width:92px;height:106px}
-.fl i{position:absolute;left:50%;bottom:0;transform-origin:50% 96%;border-radius:50% 50% 48% 48%/60% 60% 42% 42%}
-/* halo/resplandor exterior */
+.fl i{position:absolute;left:50%;bottom:0;transform-origin:50% 98%;border-radius:50% 50% 48% 48%/60% 60% 42% 42%;will-change:transform}
+/* halo/resplandor exterior — baila lento */
 .fl i:nth-child(1){width:90px;height:102px;margin-left:-45px;filter:blur(12px);opacity:.82;
-  background:radial-gradient(ellipse at 50% 72%,var(--fuego) 0%,var(--rojo-2) 52%,transparent 78%);animation:fuego 2.7s ease-in-out infinite}
-/* cuerpo gordito con degradado ámbar → naranja → carmesí */
+  background:radial-gradient(ellipse at 50% 72%,var(--fuego) 0%,var(--rojo-2) 52%,transparent 78%);animation:ascFuego 2.9s ease-in-out infinite}
+/* cuerpo gordito con degradado ámbar → naranja → carmesí — baila con más swing */
 .fl i:nth-child(2){width:66px;height:92px;margin-left:-33px;filter:blur(3px);
-  background:radial-gradient(ellipse at 50% 70%,#FFDF9A 0%,#FF9A3D 32%,#FF5A3C 60%,#FF2E4C 82%,transparent 92%);animation:fuego2 1.9s ease-in-out infinite}
-/* llama media cálida */
+  background:radial-gradient(ellipse at 50% 70%,#FFDF9A 0%,#FF9A3D 32%,#FF5A3C 60%,#FF2E4C 82%,transparent 92%);animation:ascFuego2 1.75s ease-in-out infinite}
+/* llama media cálida — rápida y al reverso */
 .fl i:nth-child(3){width:38px;height:70px;margin-left:-19px;filter:blur(1.6px);
-  background:radial-gradient(ellipse at 50% 70%,#FFF3C8 0%,#FFC06A 38%,#FF6B54 72%,transparent 88%);animation:fuego 1.45s ease-in-out infinite reverse}
-/* núcleo brillante */
+  background:radial-gradient(ellipse at 50% 70%,#FFF3C8 0%,#FFC06A 38%,#FF6B54 72%,transparent 88%);animation:ascFuego2 1.15s ease-in-out infinite reverse}
+/* núcleo brillante — late y salta */
 .fl i:nth-child(4){width:15px;height:40px;margin-left:-7.5px;filter:blur(.6px);
-  background:radial-gradient(ellipse at 50% 68%,#FFFFFF 0%,#FFF0C4 48%,#FFC06A 84%,transparent);animation:fuego 1.0s ease-in-out infinite}
-@keyframes fuego{0%,100%{transform:scaleY(1) scaleX(1) skewX(0)}33%{transform:scaleY(1.1) scaleX(.92) skewX(-4deg)}66%{transform:scaleY(.94) scaleX(1.06) skewX(4deg)}}
-@keyframes fuego2{0%,100%{transform:scaleY(1) scaleX(1) skewX(0) translateX(0)}22%{transform:scaleY(1.09) scaleX(.93) skewX(-3deg) translateX(-1.5px)}48%{transform:scaleY(.95) scaleX(1.06) skewX(2.5deg) translateX(0)}72%{transform:scaleY(1.05) scaleX(.96) skewX(-2deg) translateX(1.5px)}}
+  background:radial-gradient(ellipse at 50% 68%,#FFFFFF 0%,#FFF0C4 48%,#FFC06A 84%,transparent);animation:ascCore 0.9s ease-in-out infinite}
+/* Movimiento vivo tipo fuego real (sway/dance con rotación desde la base) */
+@keyframes ascFuego{0%,100%{transform:scaleY(1) scaleX(1) rotate(-1.6deg)}28%{transform:scaleY(1.12) scaleX(.92) rotate(2deg)}55%{transform:scaleY(.9) scaleX(1.08) rotate(-2.6deg)}80%{transform:scaleY(1.07) scaleX(.96) rotate(1.2deg)}}
+@keyframes ascFuego2{0%,100%{transform:scaleY(1) scaleX(1) rotate(-1.2deg) translateX(0)}22%{transform:scaleY(1.14) scaleX(.9) rotate(2.4deg) translateX(-2.5px)}48%{transform:scaleY(.9) scaleX(1.08) rotate(-2deg) translateX(1px)}74%{transform:scaleY(1.08) scaleX(.94) rotate(1.8deg) translateX(2.5px)}}
+@keyframes ascCore{0%,100%{transform:scaleY(1) translateY(0) rotate(-1deg);opacity:.94}40%{transform:scaleY(1.2) translateY(-4px) rotate(1.5deg);opacity:1}70%{transform:scaleY(.86) translateY(1px) rotate(-1.5deg);opacity:.84}}
 /* ── Vida extra del fuego (mejoras sobre la demo) ── */
 .fireglow{position:absolute;left:50%;bottom:2px;width:160px;height:160px;transform:translateX(-50%);border-radius:50%;pointer-events:none;z-index:-1;
   background:radial-gradient(circle,var(--fuego-glow) 0%,rgba(255,90,60,.15) 42%,transparent 70%);filter:blur(7px);mix-blend-mode:screen;animation:fireGlow 3.2s ease-in-out infinite}
@@ -86,9 +88,9 @@
 @keyframes ascEmber{0%{transform:translate(-50%,0) scale(1);opacity:0}18%{opacity:.95}100%{transform:translate(calc(-50% + var(--ex,0)),-56px) scale(.15);opacity:0}}
 .spark{position:absolute;bottom:60px;width:2px;height:2px;border-radius:50%;background:#FFF6D8;box-shadow:0 0 5px var(--amber);pointer-events:none;z-index:2;animation:ascSpark ease-out infinite}
 @keyframes ascSpark{0%{transform:translate(-50%,0);opacity:0}30%{opacity:1}100%{transform:translate(calc(-50% + var(--ex,0)),-30px);opacity:0}}
-.eyes{position:absolute;top:54px;left:50%;transform:translateX(-50%);display:flex;gap:13px;z-index:3;pointer-events:none}
-.eyes b{width:7px;height:11px;border-radius:50%;background:#2A0E00;box-shadow:0 0 3px rgba(0,0,0,.45);transform-origin:50% 50%;animation:blink 3.6s ease-in-out infinite}
-@keyframes blink{0%,40%,52%,90%,100%{transform:scaleY(1)}46%,96%{transform:scaleY(.08)}}
+.eyes{position:absolute;top:52px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:4;pointer-events:none}
+.eyes b{width:8px;height:12px;border-radius:50%;background:#2A0E00;box-shadow:0 0 4px rgba(0,0,0,.5);transform-origin:50% 50%;animation:ascBlink 2.8s ease-in-out infinite}
+@keyframes ascBlink{0%,34%,45%,78%,89%,100%{transform:scaleY(1)}40%,84%{transform:scaleY(.06)}}
 /* la racha: número GIGANTE y fino, geométrica tipo Apple */
 .num{font:200 104px/.8 'Sora';letter-spacing:-.05em;margin-top:4px;
   background:var(--fire);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
@@ -200,7 +202,10 @@
 .mode--on .mode__t::after{content:' ✓';color:var(--ac)}
 
 :focus-visible{outline:2px solid var(--rojo);outline-offset:3px;border-radius:10px}
+/* Reduced-motion: calmamos solo el fondo/parallax pesado.
+   El fuego, los ojos y el número son la identidad viva de la pantalla y
+   se mantienen animados a propósito (como el fuego original de la app). */
 @media (prefers-reduced-motion:reduce){
-  .stars i,.aura,.fl i,.eyes b,.num,.chest--on,.float,.cta,.cta::after,.av__r,.nav-ascua a .live,.float--pres .dotlive{animation:none!important}
-  .stars,.near,.far{transform:none!important}
+  .float{animation:none!important}
+  .stars.far,.stars.near{transition:none!important}
 }
