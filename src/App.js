@@ -11132,6 +11132,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const [ahora, setAhora]         = useState(Date.now());
   const [fuegoStats, setFuegoStats] = useState(false);
   const [jugarPress, setJugarPress] = useState(false);
+  const [modosSheet, setModosSheet] = useState(false); // hoja de modos (bottom sheet Ascua)
   const logrosRef = useRef([]);
   logrosRef.current = appState.logrosSecretos || [];
   const lpTimer = useRef(null);
@@ -11526,77 +11527,42 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           </button>
         )}
 
-        {/* ── 7. CARTAS DE MODO (carrusel snap) ── */}
-        <div style={{ animation: 'staggerRise 0.5s ease 0.38s both' }}>
-          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.textMuted, marginBottom: 4, marginLeft: 2 }}>
-            ¿A QUÉ LE VAS HOY?
-          </div>
-          <div className="modos-cartas">
-            {MODOS.map((m, i) => {
-              const activo = modoSel === i;
-              return (
-                <button key={m.id} onClick={() => { if (!activo) { FX.play('nav'); FX.vibrate('light'); setModoSel(i); } }} style={{
-                  flexShrink: 0, width: 80, height: 88, borderRadius: 14, scrollSnapAlign: 'start',
-                  cursor: 'pointer', fontFamily: 'inherit', padding: '10px 4px 8px',
-                  background: m.grad,
-                  border: activo ? `1.5px solid ${m.color}` : '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: activo ? `0 0 20px ${m.color}50` : 'none',
-                  opacity: activo ? 1 : 0.7,
-                  transform: activo ? 'scale(1)' : 'scale(0.92)',
-                  transition: 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1), border 0.3s ease, box-shadow 0.3s ease',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ animation: activo ? m.anim : 'none', color: m.color, display: 'flex' }}>
-                    <PkIc n={m.ic} s={26} c={activo ? m.color : `${m.color}99`}/>
-                  </div>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: activo ? '#fff' : 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 1.15 }}>{m.nom}</span>
-                  <span style={{ fontSize: 8.5, fontWeight: 700, color: activo ? m.color : C.textMuted }}>{m.rec}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Empuja el botón JUGAR al fondo cuando hay poco contenido */}
+        {/* Empuja el CTA al fondo cuando hay poco contenido */}
         <div style={{ flex: 1 }}/>
 
-        {/* ══ BOTÓN JUGAR — la puerta del templo (sticky) ══ */}
-        <div style={{ position: 'sticky', bottom: 4, zIndex: 50, paddingTop: 6 }}>
-          {/* Latido del glow (respiración del botón) */}
-          <div style={{ position: 'absolute', inset: '6px 2px 0', borderRadius: 18, pointerEvents: 'none',
-            boxShadow: `0 10px 30px ${sel.color}55`, animation: 'luzRespira 2s ease-in-out infinite' }}/>
-          <button
-            onPointerDown={() => setJugarPress(true)}
-            onPointerUp={() => setJugarPress(false)}
-            onPointerLeave={() => setJugarPress(false)}
-            onPointerCancel={() => setJugarPress(false)}
-            onClick={() => { setJugarPress(false); FX.play('duelStart'); FX.vibrate('heavy'); lanzarModo(sel.id); }}
-            style={{
-              position: 'relative', width: '100%', height: 62, border: 'none', borderRadius: 18, cursor: 'pointer',
-              fontFamily: 'inherit', overflow: 'hidden',
-              backgroundImage: `linear-gradient(135deg, ${sel.color}CC 0%, ${sel.color} 50%, ${sel.color}CC 100%)`,
-              backgroundSize: '200% 100%',
-              animation: 'shimmerButton 3s linear infinite',
-              transform: jugarPress ? 'scale(0.97)' : 'scale(1)',
-              boxShadow: `0 0 0 1px rgba(255,255,255,0.12), 0 8px 24px ${sel.color}70, inset 0 -1px 0 rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)`,
-              transition: 'transform 0.12s ease, background 0.3s ease',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 11 }}>
-            <div style={{ opacity: btnFade ? 0 : 1, transition: 'opacity 0.15s ease',
-              display: 'flex', alignItems: 'center', gap: 11 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                <PkIc n={sel.ic} s={20} c={sel.color}/>
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 19, fontWeight: 900, color: '#fff', letterSpacing: 2, lineHeight: 1 }}>JUGAR</div>
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>· {sel.nom} · {sel.det}</div>
-              </div>
-              <div style={{ marginLeft: 6, animation: 'arrowPulse 1s ease-in-out infinite', display: 'flex' }}>
-                <PkIc n="right" s={18} c="#fff"/>
-              </div>
-            </div>
+        {/* ══ MODOS ASCUA — botón que abre la hoja + CTA liquid-glass que respira ══ */}
+        <div className="foot" style={{ position: 'sticky', bottom: 4, zIndex: 50, animation: 'staggerRise 0.5s ease 0.38s both' }}>
+          <button className="pickbtn" onClick={() => { FX.play('nav'); FX.vibrate('light'); setModosSheet(true); }} aria-label="Modos">
+            <svg className="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+            <span>Modos</span>
+          </button>
+          <button className="cta" onClick={() => { FX.play('duelStart'); FX.vibrate('heavy'); lanzarModo(sel.id); }}>
+            <span className="cta__ic"><PkIc n={sel.ic} s={20} c="#2A0E00"/></span>
+            <span style={{ opacity: btnFade ? 0 : 1, transition: 'opacity 0.16s ease', minWidth: 0 }}>
+              <span className="cta__t">{({ simulacro: 'Empezar Simulacro', contrarreloj: 'Empezar Contrarreloj', supervivencia: 'Empezar Supervivencia', ruleta: 'Girar La Ruleta', duelo: 'Jugar Duelo' }[sel.id]) || `Jugar ${sel.nom}`}</span>
+              <span className="cta__s">{sel.det} · {sel.rec}</span>
+            </span>
+            <span className="cta__a">→</span>
           </button>
         </div>
+
+        {/* Hoja de modos (bottom sheet Ascua) */}
+        <Portal>
+          <div className={`scrim${modosSheet ? ' open' : ''}`} style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 9993 }} onClick={() => setModosSheet(false)}>
+            <div className={`sheet${modosSheet ? ' open' : ''}`} style={{ position: 'relative', width: '100%', maxWidth: 430 }} onClick={e => e.stopPropagation()}>
+              <div className="sheet__grip" />
+              <div className="sheet__h">¿A qué le vas hoy?</div>
+              {MODOS.map((m, i) => (
+                <div key={m.id} className={`mode${modoSel === i ? ' mode--on' : ''}`} style={{ '--ac': m.color }}
+                  onClick={() => { if (modoSel !== i) { FX.play('tap'); FX.vibrate('light'); setModoSel(i); } setTimeout(() => setModosSheet(false), 180); }}>
+                  <div className="mode__ic"><PkIc n={m.ic} s={20} c={m.color}/></div>
+                  <div style={{ minWidth: 0 }}><div className="mode__t">{m.nom}</div><div className="mode__s">{m.det}</div></div>
+                  <span className="mode__rec"><PkIc n={m.ic} s={12} c={m.color}/>{m.rec}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Portal>
 
         {/* ══ OVERLAYS ══ */}
         {retoOpen && (
