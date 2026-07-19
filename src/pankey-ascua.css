@@ -67,6 +67,15 @@
 .fl i:nth-child(2){width:42px;height:72px;margin-left:-21px;filter:blur(4px);background:radial-gradient(ellipse at 50% 74%,#FFC06A,var(--fuego) 60%,transparent 82%);animation:fuego 1.7s ease-in-out infinite reverse}
 .fl i:nth-child(3){width:18px;height:42px;margin-left:-9px;filter:blur(1px);background:radial-gradient(ellipse at 50% 72%,#FFFDF4,#FFE6A6 54%,transparent 84%);animation:fuego 1.15s ease-in-out infinite}
 @keyframes fuego{0%,100%{transform:scaleY(1) scaleX(1) skewX(0)}33%{transform:scaleY(1.1) scaleX(.92) skewX(-4deg)}66%{transform:scaleY(.94) scaleX(1.06) skewX(4deg)}}
+/* ── Vida extra del fuego (mejoras sobre la demo) ── */
+.fireglow{position:absolute;left:50%;bottom:2px;width:160px;height:160px;transform:translateX(-50%);border-radius:50%;pointer-events:none;z-index:-1;
+  background:radial-gradient(circle,var(--fuego-glow) 0%,rgba(255,90,60,.15) 42%,transparent 70%);filter:blur(7px);mix-blend-mode:screen;animation:fireGlow 3.2s ease-in-out infinite}
+@keyframes fireGlow{0%,100%{opacity:.5;transform:translateX(-50%) scale(1)}50%{opacity:.92;transform:translateX(-50%) scale(1.14)}}
+.fire.nervous .fireglow{animation-duration:.9s;background:radial-gradient(circle,rgba(255,46,76,.6) 0%,rgba(255,46,76,.18) 42%,transparent 70%)}
+.ember{position:absolute;bottom:10px;border-radius:50%;background:#FFDDA0;box-shadow:0 0 7px var(--fuego);pointer-events:none;z-index:2;animation:ascEmber ease-out infinite}
+@keyframes ascEmber{0%{transform:translate(-50%,0) scale(1);opacity:0}18%{opacity:.95}100%{transform:translate(calc(-50% + var(--ex,0)),-56px) scale(.15);opacity:0}}
+.spark{position:absolute;bottom:60px;width:2px;height:2px;border-radius:50%;background:#FFF6D8;box-shadow:0 0 5px var(--amber);pointer-events:none;z-index:2;animation:ascSpark ease-out infinite}
+@keyframes ascSpark{0%{transform:translate(-50%,0);opacity:0}30%{opacity:1}100%{transform:translate(calc(-50% + var(--ex,0)),-30px);opacity:0}}
 .eyes{position:absolute;top:46px;left:50%;transform:translateX(-50%);display:flex;gap:11px;z-index:3;pointer-events:none}
 .eyes b{width:6px;height:9px;border-radius:50%;background:#3A1500;animation:blink 5s infinite}
 @keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}

@@ -11215,6 +11215,14 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const fire   = fireLevelFor(streak);
   const fireSkin = fireSkinFilter(appState.fireColor); // filtro de la skin Pro (tiñe toda la escena del fuego)
   const numRacha = useCountUp(streak, 1000);            // conteo ascendente del número de racha (Ascua)
+  // Brasas ascendentes: más partículas a mayor nivel de racha (respeta la evolución)
+  const embers = useMemo(() => Array.from({ length: Math.max(2, (fire.parts || 0) + 2) }, (_, i) => ({
+    left: 40 + (i * 13) % 22, s: 2 + (i % 3), ex: ((i % 2 ? 1 : -1) * (6 + (i % 4) * 4)),
+    dur: 1.7 + (i % 5) * 0.35, del: (i * 0.4) % 2.2,
+  })), [fire.parts]);
+  const chispas = useMemo(() => Array.from({ length: Math.max(1, Math.floor((fire.parts || 0) / 2)) }, (_, i) => ({
+    left: 44 + (i * 9) % 14, ex: ((i % 2 ? 1 : -1) * (8 + i * 3)), dur: 1.1 + (i % 3) * 0.4, del: (i * 0.6) % 2,
+  })), [fire.parts]);
   const fireRef = useRef(null);
   // Estallido de chispas al tocar el fuego (Web Animations API, igual a la demo Ascua)
   const burstFuego = () => {
@@ -11434,10 +11442,20 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
         {/* ── 3. HÉROE ASCUA — fuego criatura + número gigante ── */}
         <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoCancel}
           style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '8px 0 2px', animation: 'staggerRise 0.6s ease 0.16s both' }}>
-          <div className="fire" ref={fireRef} style={{ transform: `scale(${(0.58 + Math.min(fire.id, 6) * 0.075).toFixed(3)})`, transition: 'transform 0.45s var(--ez)' }}>
-            <div className="fl" style={{ filter: [fireSkin !== 'none' ? fireSkin : '', fire.id === 0 ? 'grayscale(1) brightness(0.55)' : ''].filter(Boolean).join(' ') || 'none' }}>
+          <div className={`fire${enPeligro ? ' nervous' : ''}`} ref={fireRef}
+            style={{ transform: `scale(${(0.58 + Math.min(fire.id, 6) * 0.075).toFixed(3)})`,
+              filter: [fireSkin !== 'none' ? fireSkin : '', fire.id === 0 ? 'grayscale(1) brightness(0.55)' : ''].filter(Boolean).join(' ') || 'none',
+              transition: 'transform 0.45s var(--ez), filter 0.4s ease' }}>
+            <div className="fireglow" />
+            <div className="fl">
               <i /><i /><i />
             </div>
+            {fire.id > 0 && embers.map((e, i) => (
+              <span key={`e${i}`} className="ember" style={{ left: `${e.left}%`, width: e.s, height: e.s, '--ex': `${e.ex}px`, animationDuration: `${e.dur}s`, animationDelay: `${e.del}s` }} />
+            ))}
+            {fire.id > 0 && chispas.map((e, i) => (
+              <span key={`s${i}`} className="spark" style={{ left: `${e.left}%`, '--ex': `${e.ex}px`, animationDuration: `${e.dur}s`, animationDelay: `${e.del}s` }} />
+            ))}
             <div className="eyes"><b /><b /></div>
           </div>
           <div className="num" style={appState.fireColor ? { filter: `drop-shadow(0 8px 32px var(--fuego-glow)) ${fireSkin}`, animation: 'none' } : undefined}>{numRacha}</div>
