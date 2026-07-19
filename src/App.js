@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { THEMES as T } from './config/theme';
 import { Ic } from './components/Icon';
 import { BookCover } from './components/BookCover';
+import './pankey-ascua.css'; // Tema "Ascua" (reskin del Inicio)
 
 // ─────────────────────────────────────────────
 //  GLOBAL STYLES — Premium Japanese aesthetic
@@ -11213,6 +11214,36 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const streak = appState.streakDays || 0;
   const fire   = fireLevelFor(streak);
   const fireSkin = fireSkinFilter(appState.fireColor); // filtro de la skin Pro (tiñe toda la escena del fuego)
+  const numRacha = useCountUp(streak, 1000);            // conteo ascendente del número de racha (Ascua)
+  const fireRef = useRef(null);
+  // Estallido de chispas al tocar el fuego (Web Animations API, igual a la demo Ascua)
+  const burstFuego = () => {
+    const host = fireRef.current;
+    if (!host) return;
+    FX.play('sparks'); FX.vibrate('medium');
+    host.classList.add('flare');
+    setTimeout(() => host.classList.remove('flare'), 500);
+    const r = host.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height * 0.4;
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('i');
+      const a = Math.random() * 6.28, d = 34 + Math.random() * 50;
+      p.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:4px;height:4px;border-radius:50%;background:#FFE6A6;box-shadow:0 0 8px var(--fuego);pointer-events:none;z-index:9999`;
+      document.body.appendChild(p);
+      p.animate([{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+        { transform: `translate(calc(-50% + ${Math.cos(a) * d}px),calc(-50% + ${Math.sin(a) * d}px)) scale(0)`, opacity: 0 }],
+        { duration: 640, easing: 'cubic-bezier(.2,.8,.2,1)' }).onfinish = () => p.remove();
+    }
+  };
+  // Cambio de color del fuego (movido al avatar, según el diseño Ascua): cicla las skins Pro
+  const ciclarFuego = () => {
+    if (!appState.isPro) { FX.play('tap'); pushNotif('🔥 Cambia el color del fuego con Pankey Pro'); return; }
+    const ids = Object.keys(FIRE_SKINS);
+    const nextId = ids[(ids.indexOf(appState.fireColor || 'default') + 1) % ids.length];
+    FX.play('sparks'); FX.vibrate('light');
+    setAppState(s => ({ ...s, fireColor: nextId === 'default' ? null : nextId }));
+    pushNotif(`Fuego ${FIRE_SKINS[nextId].name}`);
+  };
   const sealed = appState.yourConfirmed ||
     (appState.icfesHistory || []).some(r => r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
   const last7 = Array.from({ length: 7 }, (_, i) => {
@@ -11304,19 +11335,8 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const fuegoCancel = () => { clearTimeout(lpTimer.current); setFuegoStats(false); fuegoLong.current = true; };
   const fuegoUp = () => {
     clearTimeout(lpTimer.current); setFuegoStats(false);
-    // Tap corto en el fuego → cambia la skin (beneficio Pankey Pro)
-    if (!fuegoLong.current && streak > 0) {
-      if (appState.isPro) {
-        const ids = Object.keys(FIRE_SKINS);
-        const nextId = ids[(ids.indexOf(appState.fireColor || 'default') + 1) % ids.length];
-        FX.play('sparks'); FX.vibrate('light');
-        setAppState(s => ({ ...s, fireColor: nextId === 'default' ? null : nextId }));
-        pushNotif(`Fuego ${FIRE_SKINS[nextId].name}`);
-      } else {
-        FX.play('tap');
-        pushNotif('🔥 Toca para cambiar el color del fuego con Pankey Pro');
-      }
-    }
+    // Tap corto en el fuego → estallido de chispas (juice). El color se cambia desde el avatar.
+    if (!fuegoLong.current && streak > 0) burstFuego();
   };
 
   // ── Atmósfera: estrellas, niebla y polvo (deterministas, estables) ──
@@ -11336,38 +11356,34 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     dur: 4 + (i % 5), del: (i * 0.6) % 4, o: 0.2 + (i % 3) * 0.1,
   })), []);
 
+  // ── Fondo ASCUA: estrellas en dos capas (se generan UNA sola vez) ──
+  const starsFar = useMemo(() => Array.from({ length: 70 }, () => ({
+    left: Math.random() * 100, top: Math.random() * 100,
+    o: (0.3 + Math.random() * 0.6).toFixed(2), dur: 4 + Math.random() * 4, del: Math.random() * 4,
+  })), []);
+  const starsNear = useMemo(() => Array.from({ length: 26 }, () => ({
+    left: Math.random() * 100, top: Math.random() * 100,
+    o: (0.3 + Math.random() * 0.6).toFixed(2), dur: 5 + Math.random() * 5, del: Math.random() * 5,
+  })), []);
+
   return (
     <div className="fi" style={{ position: 'relative', display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
 
-      {/* ══ CAPA 1 — EL CIELO DEL PÁRAMO ══ */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 120% 60% at 50% 0%, #1A2744 0%, #0D1525 40%, #060C14 100%)' }}>
-        {estrellas.map((e, i) => (
-          <div key={i} style={{ position: 'absolute', left: `${e.left}%`, top: `${e.top}%`,
-            width: e.s, height: e.s, borderRadius: '50%', background: `rgba(255,255,255,${e.o})`,
-            animation: `twinkle ${e.dur}s ease-in-out infinite ${e.del}s` }}/>
+      {/* ══ FONDO ASCUA — negro puro + estrellas (2 capas) + aura roja que respira + veil ══ */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', background: '#000' }} />
+      <div className="stars far" style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true">
+        {starsFar.map((s, i) => (
+          <i key={i} style={{ left: `${s.left}%`, top: `${s.top}%`, '--o': s.o, animationDuration: `${s.dur}s`, animationDelay: `${s.del}s` }} />
         ))}
       </div>
-
-      {/* ══ CAPA 2 — EL TEMPLO (suelo + piedra + niebla) ══ */}
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, height: '45%', pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 140% 80% at 50% 100%, #1A3A1A 0%, #0D1A0D 40%, transparent 70%)' }}>
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.55,
-          background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 14px)' }}/>
-        {nieblas.map((n, i) => (
-          <div key={i} style={{ position: 'absolute', bottom: n.b, left: n.l, width: n.w, height: n.h,
-            background: 'radial-gradient(ellipse, rgba(255,255,255,0.03) 0%, transparent 60%)',
-            animation: `nieblaDrift ${n.dur}s ease-in-out infinite alternate ${n.del}s`, willChange: 'transform' }}/>
+      <div className="stars near" style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true">
+        {starsNear.map((s, i) => (
+          <i key={i} style={{ left: `${s.left}%`, top: `${s.top}%`, '--o': s.o, animationDuration: `${s.dur}s`, animationDelay: `${s.del}s` }} />
         ))}
       </div>
-
-      {/* ══ CAPA 3 — LUZ AMBIENTAL (rebote en el suelo) ══ */}
-      {fire.id > 0 && (
-        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, height: 130, pointerEvents: 'none', zIndex: 0,
-          background: `radial-gradient(ellipse 300px 100px at 50% 100%, ${fire.halo} 0%, transparent 60%)`,
-          filter: fireSkin, transition: 'filter 0.4s ease',
-          animation: `luzRespira ${fire.id >= 5 ? 2 : 3}s ease-in-out infinite` }}/>
-      )}
+      <div className="aura" style={{ position: 'fixed', zIndex: 0 }} aria-hidden="true" />
+      <div className="aura2" style={{ position: 'fixed', zIndex: 0 }} aria-hidden="true" />
+      <div className="veil" style={{ position: 'fixed', zIndex: 0 }} aria-hidden="true" />
 
       {/* ══ CONTENIDO ══ */}
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 15, flex: 1 }}>
@@ -11375,7 +11391,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
         {/* ── 1. IDENTIDAD (texto flotante, sin card) ── */}
         <div style={{ animation: 'staggerRise 0.5s ease both' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <button onClick={() => { FX.play('tap'); onGoTab('perfil'); }} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}>
+            <button onClick={ciclarFuego} title="Cambiar color del fuego" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}>
               <Av name={user?.name || '?'} sz={46} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -11415,37 +11431,29 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
         </div>
 
-        {/* ── 3. LA LLAMA SOBRE EL ALTAR ── */}
+        {/* ── 3. HÉROE ASCUA — fuego criatura + número gigante ── */}
         <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoCancel}
-          style={{ position: 'relative', animation: 'staggerRise 0.6s ease 0.16s both', margin: '0 0 2px' }}>
-          {/* Luz primaria: la llama ilumina hacia arriba */}
-          {fire.id > 0 && (
-            <div style={{ position: 'absolute', top: '-8%', left: '50%', transform: 'translateX(-50%)',
-              width: 240, height: 300, pointerEvents: 'none',
-              background: `radial-gradient(ellipse 200px 300px at 50% 45%, ${fire.halo} 0%, transparent 70%)`,
-              filter: fireSkin, transition: 'filter 0.4s ease',
-              animation: `luzRespira ${fire.id >= 5 ? 2 : 3}s ease-in-out infinite` }}/>
-          )}
-          <FuegoRacha streak={streak} C={C} week={last7} sealed={sealed} isLight={isLight} enAltar fireColor={appState.fireColor}/>
-          {/* Polvo de oro cuando la racha está sellada */}
-          {streak > 0 && sealed && polvo.map((p, i) => (
-            <div key={i} style={{ position: 'absolute', left: `${p.left}%`, top: `${p.top}%`,
-              width: p.s, height: p.s, borderRadius: '50%', background: '#FBBF24',
-              opacity: p.o, pointerEvents: 'none',
-              '--dx': `${p.dx}px`, '--dy': `${p.dy}px`,
-              animation: `dustFloat ${p.dur}s ease-in-out infinite ${p.del}s` }}/>
-          ))}
-          {/* Panel de stats (long-press) */}
+          style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '8px 0 2px', animation: 'staggerRise 0.6s ease 0.16s both' }}>
+          <div className="fire" ref={fireRef} style={{ transform: `scale(${(0.58 + Math.min(fire.id, 6) * 0.075).toFixed(3)})`, transition: 'transform 0.45s var(--ez)' }}>
+            <div className="fl" style={{ filter: [fireSkin !== 'none' ? fireSkin : '', fire.id === 0 ? 'grayscale(1) brightness(0.55)' : ''].filter(Boolean).join(' ') || 'none' }}>
+              <i /><i /><i />
+            </div>
+            <div className="eyes"><b /><b /></div>
+          </div>
+          <div className="num" style={appState.fireColor ? { filter: `drop-shadow(0 8px 32px var(--fuego-glow)) ${fireSkin}`, animation: 'none' } : undefined}>{numRacha}</div>
+          <div className="sub">{streak > 0 ? 'Días imparable' : 'Prende tu racha'}</div>
+
+          {/* Panel de stats (long-press del fuego) */}
           {fuegoStats && (
-            <div className="fi" style={{ position: 'absolute', inset: 0, borderRadius: 20, zIndex: 5,
-              background: 'rgba(10,20,32,0.82)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,215,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <div className="fi" style={{ position: 'absolute', inset: '-10px -24px', borderRadius: 22, zIndex: 5,
+              background: 'rgba(8,4,10,0.9)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,207,107,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, padding: 18 }}>
                 {[
-                  { label: 'RACHA ACTUAL', val: `${streak}d`, c: '#FBBF24' },
-                  { label: 'SELLOS TOTALES', val: (appState.sellos || []).length, c: '#D4AF37' },
+                  { label: 'RACHA ACTUAL', val: `${streak}d`, c: '#FFCF6B' },
+                  { label: 'SELLOS TOTALES', val: (appState.sellos || []).length, c: '#FF6B54' },
                   { label: 'KODACHIS', val: appState.streakFreezes || 0, c: '#38BDF8' },
-                  { label: 'SIMULACROS', val: icfesHist.length, c: C.accent },
+                  { label: 'SIMULACROS', val: icfesHist.length, c: '#FF2E4C' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 22, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.val}</div>
@@ -11456,13 +11464,6 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
             </div>
           )}
         </div>
-
-        {/* Pista sutil: el fuego se cambia tocándolo (Pro) */}
-        {streak > 0 && appState.isPro && (
-          <div style={{ textAlign: 'center', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, color: 'rgba(255,255,255,0.32)', margin: '0 0 6px' }}>
-            Toca el fuego para cambiar su color
-          </div>
-        )}
 
         {/* ── 4. PANEL DE STATS (recursos del templo) ── */}
         <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: 16, overflow: 'hidden',
