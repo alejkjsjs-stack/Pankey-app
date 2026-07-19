@@ -584,8 +584,7 @@ function TexturaFondo({ C, isLight }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden', background: '#000' }}>
-      {/* Aura roja que respira (profundidad cálida) */}
-      <div className="asc-aura" />
+      {/* (Sin aura central: la única aura cálida es la del propio fuego, en el héroe) */}
       {/* Estrellas lejanas (parallax lento) */}
       <div ref={farRef} className="asc-stars asc-far" style={{ willChange: 'transform' }}>
         {starsFar.map((s, i) => (
@@ -819,6 +818,45 @@ const FX = {
     src.start(t); src.stop(t + dur);
   },
 
+  // ── PRIMITIVA: campana FM (chime satisfactorio, brillante y con cola) ──
+  bell: function(freq, vol = 0.1, dur = 1.7, ratio = 2.0) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const carrier = this.ctx.createOscillator();
+    const mod = this.ctx.createOscillator();
+    const modGain = this.ctx.createGain();
+    const gain = this.ctx.createGain();
+    carrier.type = 'sine';
+    carrier.frequency.value = freq;
+    mod.type = 'sine';
+    mod.frequency.value = freq * ratio;
+    modGain.gain.setValueAtTime(freq * 1.3, t);
+    modGain.gain.exponentialRampToValueAtTime(1, t + dur * 0.75);
+    mod.connect(modGain); modGain.connect(carrier.frequency);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    carrier.connect(gain); gain.connect(this.ctx.destination);
+    mod.start(t); carrier.start(t);
+    mod.stop(t + dur); carrier.stop(t + dur);
+  },
+
+  // ── PRIMITIVA: barrido (whoosh de aperturas / transiciones) ──
+  sweep: function(f0 = 260, f1 = 1000, vol = 0.07, dur = 0.28, type = 'sine') {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, t);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + dur * 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + dur);
+  },
+
   play: function(sound) {
     try {
       this.init();
@@ -836,20 +874,87 @@ const FX = {
           this.shaker(0.05, 0.06, 7000);
           break;
 
-        // Moneda/empanada: guacharaca/maracas que suena a plata
+        // Moneda/empanada: guacharaca/maracas que suena a plata + campanita brillante
         case 'coin': {
           this.shaker(0.12, 0.07, 5500);
           setTimeout(() => this.shaker(0.10, 0.06, 6500), 70);
-          setTimeout(() => this.shaker(0.08, 0.05, 7500), 130);
+          setTimeout(() => { this.shaker(0.08, 0.05, 7500); this.bell(this._vary(1318.5, 8), 0.06, 1.2); }, 130);
           break;
         }
 
-        // Acierto: acorde alegre ascendente de tiple
+        // Acierto: acorde alegre ascendente de tiple + campana que corona
         case 'success': {
           const root = this._vary(523.25, 15); // Do
           [1, 1.26, 1.5, 2].forEach((mult, i) => {
             setTimeout(() => this.pluck(root * mult, 0.11, 1.4, 'sawtooth'), i * 55);
           });
+          setTimeout(() => this.bell(root * 2, 0.06, 1.4), 120);
+          break;
+        }
+
+        // Selección (modo/misión): tick corto y satisfactorio
+        case 'select': {
+          this.drum(this._vary(260), 120, 0.08, 0.06);
+          this.shaker(0.03, 0.02, 9000);
+          break;
+        }
+
+        // Abrir hoja/menú: whoosh suave ascendente
+        case 'open': {
+          this.sweep(240, 900, 0.06, 0.28, 'sine');
+          this.shaker(0.04, 0.12, 3500);
+          break;
+        }
+
+        // Cerrar: whoosh descendente
+        case 'close': {
+          this.sweep(900, 240, 0.05, 0.24, 'sine');
+          break;
+        }
+
+        // Whoosh genérico de transición
+        case 'whoosh': {
+          this.sweep(200, 1100, 0.07, 0.26, 'triangle');
+          break;
+        }
+
+        // Pop ligero (aparición de elemento)
+        case 'pop': {
+          this.drum(this._vary(320), 140, 0.09, 0.07);
+          break;
+        }
+
+        // Recompensa satisfactoria: cascada de monedas + campanas ascendentes
+        case 'reward': {
+          this.shaker(0.12, 0.06, 5200);
+          setTimeout(() => this.shaker(0.11, 0.05, 6200), 60);
+          setTimeout(() => this.shaker(0.09, 0.05, 7200), 120);
+          [0, 1, 2].forEach(i => setTimeout(() => this.bell(this._vary(880 * Math.pow(1.26, i), 6), 0.09, 1.6), 140 + i * 90));
+          break;
+        }
+
+        // Misión cumplida: campanas brillantes que suben + tamborcito
+        case 'mission': {
+          const notes = [659.25, 830.61, 987.77, 1318.5];
+          notes.forEach((f, i) => setTimeout(() => this.bell(this._vary(f, 5), 0.09, 1.7), i * 95));
+          this.drum(150, 55, 0.2, 0.2);
+          break;
+        }
+
+        // Desbloqueo: golpe grave + dos campanas altas
+        case 'unlock': {
+          this.drum(90, 45, 0.25, 0.3);
+          setTimeout(() => this.bell(this._vary(1046.5, 6), 0.1, 1.8), 160);
+          setTimeout(() => this.bell(this._vary(1318.5, 6), 0.08, 1.6), 300);
+          break;
+        }
+
+        // Victoria: fanfarria de campanas + doble tambora
+        case 'win': {
+          const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+          notes.forEach((f, i) => setTimeout(() => this.bell(this._vary(f, 5), 0.11, 2.2), i * 80));
+          this.drum(170, 60, 0.28, 0.24);
+          setTimeout(() => this.drum(120, 45, 0.34, 0.4), 400);
           break;
         }
 
@@ -859,13 +964,14 @@ const FX = {
           break;
         }
 
-        // Subir de nivel: fanfarria festiva tipo gaita
+        // Subir de nivel: fanfarria festiva de campanas + doble tambora
         case 'levelUp': {
           const notes = [261.63, 329.63, 392.0, 523.25, 659.25, 783.99, 1046.5];
           notes.forEach((f, i) => {
-            setTimeout(() => this.pluck(this._vary(f, 8), 0.13, 2.2, 'triangle'), i * 65);
+            setTimeout(() => this.bell(this._vary(f, 6), 0.10, 2.0), i * 62);
           });
-          setTimeout(() => this.drum(180, 60, 0.3, 0.25), 0);
+          this.drum(180, 60, 0.3, 0.25);
+          setTimeout(() => this.drum(120, 45, 0.34, 0.4), 430);
           break;
         }
 
@@ -915,12 +1021,12 @@ const FX = {
           break;
         }
 
-        // Apertura de cofre: crujido + explosión de riqueza
+        // Apertura de cofre: crujido grave + explosión de campanas de tesoro
         case 'chestOpen': {
           this.drum(90, 40, 0.35, 0.35);
           setTimeout(() => this.shaker(0.14, 0.25, 4500), 200);
           const arps = [523.25, 659.25, 783.99, 1046.5, 1318.5];
-          arps.forEach((f, i) => setTimeout(() => this.pluck(this._vary(f, 10), 0.11, 1.8, 'triangle'), 350 + i * 80));
+          arps.forEach((f, i) => setTimeout(() => this.bell(this._vary(f, 8), 0.09, 1.9), 350 + i * 80));
           break;
         }
 
@@ -1003,14 +1109,32 @@ const todayStr = () => new Date().toDateString();
 
 // IDs de los objetos que brillan en la vitrina del Inicio (los más vistosos)
 const DESTACADOS_IDS = ['f_koi', 'b_void', 't_kami', 'f_celestial', 'b_cosmos'];
-// ─────────────────────────────────────────────
-//  PISTAS DE AMBIENTACIÓN POR TEMA
-//  Pega aquí los links de audio (loops de bancos libres como Freesound).
-//  Déjalo en null por ahora; cuando tengas los audios, reemplaza el null
-//  por el link directo al .mp3/.ogg y se activará solo.
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+//  🎵 MÚSICA DE FONDO  ←  AQUÍ PONES TU AUDIO
+//  ───────────────────────────────────────────────────────────────────────
+//  CÓMO PONER UN AUDIO DE FONDO (loop suave, tipo lo-fi/ambient):
+//
+//  OPCIÓN A — archivo local (recomendado):
+//    1. Descarga un loop libre de derechos (p.ej. pixabay.com/music o freesound.org).
+//    2. Copia el archivo a la carpeta  public/  del proyecto, por ejemplo:
+//         public/ambient.mp3
+//    3. Abajo cambia  null  por la ruta con "/" al inicio:
+//         aizome_dark: '/ambient.mp3',
+//
+//  OPCIÓN B — link directo en internet:
+//         aizome_dark: 'https://.../tu-audio.mp3',   // debe terminar en .mp3/.ogg y permitir CORS
+//
+//  Luego SUBIR EL CÓDIGO (desde la carpeta del proyecto, en la terminal):
+//         npm run build           (debe decir "Compiled successfully")
+//         git add -A && git commit -m "Música de fondo"
+//         git push
+//         vercel deploy --prod --yes
+//
+//  La música arranca sola cuando el usuario activa "Ambiente" en Ajustes
+//  (y suena bajita, en loop). Si lo dejas en null, no suena nada.
+// ═══════════════════════════════════════════════════════════════════════
 const AMBIENT_TRACKS = {
-  aizome_dark: null, // olas suaves (Caribe)
+  aizome_dark: null,   // ←  pon aquí  '/ambient.mp3'  (o tu link)  para activar la música de fondo
 };
 // ─────────────────────────────────────────────
 //  MOTOR DE DUELOS 1v1 EN VIVO (Firebase)
@@ -2215,7 +2339,7 @@ function DailyMissions({ C, isLight, appState, setAppState, onReward }) {
   const collectMission = (template) => {
     if (rewarded.includes(template.id)) return;
     
-    FX.play('levelUp'); FX.vibrate('success'); // 🔥 Melodía épica andina al cobrar
+    FX.play('mission'); FX.vibrate('success'); // 🔥 Campanas brillantes al cobrar la misión
 
     setAppState(s => ({
       ...s,
@@ -3800,123 +3924,72 @@ function Splash({ onDone, C, isLight }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [onDone]);
 
-  const oro = '#D4AF37';
-  const cielo = isLight
-    ? 'linear-gradient(180deg, #FDF9F0 0%, #F8EDD6 42%, #F0DAB2 76%, #E9C98D 100%)'
-    : 'linear-gradient(180deg, #05070C 0%, #0C1018 40%, #191410 76%, #2B1D0E 100%)';
-  const montFar  = isLight ? '#CDB88C' : '#131A15';
-  const montNear = isLight ? '#8FA284' : '#0A110C';
-  const luci = Array.from({ length: 7 }, (_, i) => ({
-    left: 8 + (i * 13) % 84, top: 34 + (i * 17) % 38, d: (i % 5) * 0.7, s: i % 2 ? 3 : 4.5,
+  // Estrellas deterministas del fondo del splash
+  const stars = Array.from({ length: 48 }, (_, i) => ({
+    left: (i * 47.3) % 100, top: (i * 29.7) % 100,
+    o: (0.2 + (i % 5) * 0.13).toFixed(2), dur: 3 + (i % 5), del: ((i * 0.4) % 4).toFixed(1), s: (i % 7 === 0) ? 2 : 1,
   }));
 
   return (
-    <div style={{ width: '100%', height: '100dvh', background: cielo,
+    <div style={{ width: '100%', height: '100dvh', background: '#000',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       position: 'relative', overflow: 'hidden' }}>
 
       <style>{`
-        @keyframes pkFlip { 0% { transform: perspective(900px) rotateY(150deg) scale(0.35) translateY(-36px); opacity: 0; } 55% { opacity: 1; } 100% { transform: perspective(900px) rotateY(0deg) scale(1) translateY(0); opacity: 1; } }
-        @keyframes pkFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-7px) rotate(1.4deg); } }
-        @keyframes pkRipple { 0% { transform: scale(0.55); opacity: 0.75; } 100% { transform: scale(2); opacity: 0; } }
-        @keyframes pkShine { 0%, 58% { transform: translateX(-150%) rotate(16deg); } 100% { transform: translateX(190%) rotate(16deg); } }
-        @keyframes pkSun { 0% { transform: translateX(-50%) translateY(52px) scale(0.85); opacity: 0.35; } 100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; } }
-        @keyframes pkMist { 0%, 100% { transform: translateX(-3.5%); } 50% { transform: translateX(3.5%); } }
-        @keyframes pkLuci { 0%, 100% { opacity: 0.12; transform: translateY(0); } 50% { opacity: 0.85; transform: translateY(-9px); } }
-        @keyframes pkCondor { 0% { transform: translate(-40px, 10px) scale(1); opacity: 0; } 12% { opacity: 0.55; } 88% { opacity: 0.55; } 100% { transform: translate(105vw, -16px) scale(1.08); opacity: 0; } }
-        @keyframes pkTitle { 0% { letter-spacing: 24px; opacity: 0; filter: blur(7px); } 100% { letter-spacing: 10px; opacity: 1; filter: blur(0); } }
-        @keyframes pkLoad { 0% { width: 0%; } 14% { width: 11%; } 32% { width: 37%; } 48% { width: 52%; } 66% { width: 68%; } 82% { width: 86%; } 100% { width: 100%; } }
+        @keyframes spkStar { 0%,100%{opacity:var(--o,.5)} 50%{opacity:.06} }
+        @keyframes spkRise { 0%{opacity:0;transform:translateY(26px) scale(.72)} 100%{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes spkAura { 0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)} }
+        @keyframes spkTitle { 0%{letter-spacing:22px;opacity:0;filter:blur(7px)} 100%{letter-spacing:8px;opacity:1;filter:blur(0)} }
+        @keyframes spkLoad { 0%{width:0%} 20%{width:24%} 45%{width:52%} 70%{width:74%} 100%{width:100%} }
+        @keyframes spkShoot { 0%{opacity:0;transform:translate(-40px,-24px) rotate(32deg) scaleX(.4)} 8%{opacity:.9} 22%{opacity:0;transform:translate(150px,94px) rotate(32deg)} 100%{opacity:0} }
       `}</style>
 
-      {/* ── Sol dorado subiendo tras las montañas ── */}
-      <div style={{ position: 'absolute', bottom: 96, left: '50%', width: 110, height: 110,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, #FFF3CC 0%, #F0C560 55%, transparent 72%)',
-        boxShadow: `0 0 70px 30px ${isLight ? 'rgba(240,197,96,0.45)' : 'rgba(240,197,96,0.22)'}`,
-        animation: 'pkSun 2.4s cubic-bezier(0.22,1,0.36,1) both', pointerEvents: 'none' }}/>
-
-      {/* ── Cóndor cruzando el cielo ── */}
-      <svg viewBox="0 0 24 24" style={{ position: 'absolute', top: '19%', left: 0, width: 36, height: 36,
-        animation: 'pkCondor 4.4s ease-in-out 0.6s both', pointerEvents: 'none' }}
-        fill="none" stroke={isLight ? '#5A4A28' : '#C9B98F'} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.55">
-        <path d="M2 9c3-1 5 0 6 2 1-3 2.5-5 4-5s3 2 4 5c1-2 3-3 6-2-2 1.5-3 3-3.5 5l-2-1.5L13 14l-1-1.5-1 1.5-3.5-1.5L5.5 14C5 12 4 10.5 2 9z"/>
-      </svg>
-
-      {/* ── Montañas: capa lejana (difuminada = profundidad) ── */}
-      <svg viewBox="0 0 400 120" preserveAspectRatio="none"
-        style={{ position: 'absolute', bottom: 0, left: '-2%', width: '104%', height: 150,
-          filter: 'blur(3px)', opacity: 0.75, pointerEvents: 'none' }}>
-        <path d="M0 120 L0 70 Q40 40 85 62 Q130 26 180 54 Q225 18 275 46 Q325 28 365 50 Q385 42 400 48 L400 120 Z" fill={montFar}/>
-      </svg>
-
-      {/* ── Niebla del páramo ── */}
-      <div style={{ position: 'absolute', bottom: 88, left: '-6%', width: '112%', height: 46,
-        background: `linear-gradient(90deg, transparent, ${isLight ? 'rgba(255,252,244,0.85)' : 'rgba(200,190,170,0.10)'}, transparent)`,
-        filter: 'blur(11px)', animation: 'pkMist 7s ease-in-out infinite', pointerEvents: 'none' }}/>
-
-      {/* ── Montañas: capa cercana ── */}
-      <svg viewBox="0 0 400 120" preserveAspectRatio="none"
-        style={{ position: 'absolute', bottom: 0, left: '-2%', width: '104%', height: 112, pointerEvents: 'none' }}>
-        <path d="M0 120 L0 86 Q55 56 110 78 Q160 46 215 74 Q270 44 330 72 Q370 58 400 70 L400 120 Z" fill={montNear}/>
-      </svg>
-
-      {/* ── Luciérnagas ── */}
-      {luci.map((l, i) => (
-        <div key={i} style={{ position: 'absolute', left: `${l.left}%`, top: `${l.top}%`,
-          width: l.s, height: l.s, borderRadius: '50%',
-          background: '#FFE9A8', boxShadow: '0 0 8px #F0C560',
-          animation: `pkLuci ${2.4 + l.d}s ease-in-out infinite ${l.d}s`, pointerEvents: 'none' }}/>
+      {/* ── Campo de estrellas ── */}
+      {stars.map((s, i) => (
+        <span key={i} style={{ position: 'absolute', left: `${s.left}%`, top: `${s.top}%`, width: s.s, height: s.s,
+          borderRadius: '50%', background: '#fff', '--o': s.o, opacity: s.o,
+          animation: `spkStar ${s.dur}s ease-in-out ${s.del}s infinite`, pointerEvents: 'none' }}/>
       ))}
+      {/* ── Estrella fugaz ── */}
+      <span style={{ position: 'absolute', top: '20%', left: '12%', width: 64, height: 1.5, borderRadius: 2,
+        background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.9))', boxShadow: '0 0 6px rgba(255,255,255,.5)',
+        animation: 'spkShoot 4.6s ease-in 1.2s infinite', pointerEvents: 'none' }}/>
 
       {/* ── CONTENIDO ── */}
-      <div style={{ textAlign: 'center', position: 'relative', zIndex: 2,
-        display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-        {/* Medallón con flip 3D + flotación + destello */}
-        <div style={{ position: 'relative', marginBottom: 24 }}>
-          <div style={{ position: 'absolute', inset: -8, borderRadius: '50%',
-            border: `2px solid ${oro}66`,
-            animation: 'pkRipple 1.5s ease-out 1.2s both', pointerEvents: 'none' }}/>
-          <div style={{ animation: 'pkFlip 1.35s cubic-bezier(0.34,1.4,0.64,1) both' }}>
-            <div style={{ animation: 'pkFloat 3.6s 1.6s ease-in-out infinite' }}>
-              <PankeyLogo size={118} C={{ accent: oro, bgAlt: isLight ? '#2E2718' : '#1A1715' }}/>
-              {/* Destello que barre el medallón */}
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden', pointerEvents: 'none' }}>
-                <div style={{ position: 'absolute', top: '-30%', bottom: '-30%', width: 34,
-                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
-                  animation: 'pkShine 3.1s ease-in-out 1.4s infinite' }}/>
-              </div>
-            </div>
+        {/* Fuego criatura — el alma de Pankey (misma llama del Inicio) */}
+        <div style={{ position: 'relative', animation: 'spkRise 0.9s cubic-bezier(.2,.8,.2,1) both', marginBottom: 34 }}>
+          <div style={{ position: 'absolute', left: '50%', top: '54%', width: 210, height: 210, transform: 'translate(-50%,-50%)',
+            borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,62,76,.5) 0%, rgba(255,90,60,.14) 44%, transparent 70%)',
+            filter: 'blur(8px)', mixBlendMode: 'screen', animation: 'spkAura 3s ease-in-out infinite', pointerEvents: 'none' }}/>
+          <div className="fire" style={{ transform: 'scale(1.35)' }}>
+            <div className="fl"><i /><i /><i /><i /></div>
+            <div className="eyes"><b /><b /></div>
           </div>
         </div>
 
-        {/* Título con degradado de oro */}
-        <div className="serif" style={{
-          fontSize: 44, fontWeight: 800, marginBottom: 14, paddingLeft: 10,
-          background: 'linear-gradient(180deg, #F7E7B0 0%, #D4AF37 55%, #9C7414 100%)',
+        {/* Título carmesí, fino tipo Apple */}
+        <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 46, fontWeight: 200, letterSpacing: 8, marginBottom: 16,
+          background: 'linear-gradient(140deg,#FFCF6B 0%,#FF6B54 46%,#FF2E4C 100%)',
           WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-          textShadow: isLight ? 'none' : '0 6px 24px rgba(212,175,55,0.25)',
-          animation: phase >= 1 ? 'pkTitle 1s cubic-bezier(0.22,1,0.36,1) both' : 'none',
-          opacity: phase >= 1 ? 1 : 0 }}>
+          filter: 'drop-shadow(0 6px 26px rgba(255,62,76,.35))',
+          animation: phase >= 1 ? 'spkTitle 1s cubic-bezier(.22,1,.36,1) both' : 'none', opacity: phase >= 1 ? 1 : 0 }}>
           PANKEY
         </div>
 
         {/* Frases del Sabio */}
-        <div style={{ opacity: phase >= 2 ? 1 : 0, transition: 'opacity 0.8s ease', minHeight: 38,
+        <div style={{ opacity: phase >= 2 ? 1 : 0, transition: 'opacity 0.8s ease', minHeight: 36,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <div className="serif" style={{ fontSize: 12, letterSpacing: 3, fontWeight: 600,
-            color: isLight ? '#8A6410' : `${oro}DD` }}>{phrase.top}</div>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 2,
-            color: isLight ? '#9E8A60' : '#A39C95' }}>{phrase.bottom}</div>
+          <div style={{ fontFamily: "'Instrument Sans',sans-serif", fontSize: 11.5, letterSpacing: 3, fontWeight: 700, color: '#FFCF6B' }}>{phrase.top}</div>
+          <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: 2, color: '#8A7B80' }}>{phrase.bottom}</div>
         </div>
 
-        {/* Barra de carga dorada */}
-        <div style={{ marginTop: 26, width: 152, height: 4, borderRadius: 99, overflow: 'hidden',
-          background: isLight ? 'rgba(120,95,40,0.16)' : 'rgba(255,255,255,0.10)' }}>
+        {/* Barra de carga carmesí */}
+        <div style={{ marginTop: 28, width: 160, height: 4, borderRadius: 99, overflow: 'hidden', background: 'rgba(255,255,255,.09)' }}>
           <div style={{ height: '100%', borderRadius: 99,
-            background: `linear-gradient(90deg, ${oro}, #F7E7B0, ${oro})`,
-            boxShadow: `0 0 10px ${oro}80`,
-            animation: 'pkLoad 4.3s ease-in-out both' }}/>
+            background: 'linear-gradient(90deg,#FF2E4C,#FF6B54,#FFCF6B)', boxShadow: '0 0 10px rgba(255,62,76,.6)',
+            animation: 'spkLoad 4.3s ease-in-out both' }}/>
         </div>
       </div>
     </div>
@@ -9956,34 +10029,10 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
 
   return (
     <>
-      {/* ── COFRES ASCUA: dial de progreso + fila de cofres en glass ── */}
+      {/* ── COFRES ASCUA: fila de cofres flotantes (el "cofre grande" se reemplazó por el botón de Misiones en el Inicio) ── */}
       <div style={{ padding: '0 2px' }}>
-        {/* Dial: anillo con el cofre objetivo + "Falta X día pal Cofre Y" */}
-        <div className="dial" style={{ marginTop: 4 }}>
-          <button onClick={() => { FX.play('tap'); if (canOpen) setModal(true); else onGoShop?.(); }}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <div className="dial__row">
-              <div className="dial__ring">
-                <svg viewBox="0 0 66 66">
-                  <circle className="tk" cx="33" cy="33" r={dialR}/>
-                  <circle className="pg" cx="33" cy="33" r={dialR}
-                    strokeDasharray={DIAL_CIRC} strokeDashoffset={DIAL_CIRC * (1 - dialPct)}
-                    style={canOpen ? { stroke: '#FFCF6B', filter: 'drop-shadow(0 0 5px rgba(255,207,107,.7))' } : undefined}/>
-                </svg>
-                <div className="dial__ic" style={{ filter: canOpen ? `drop-shadow(0 0 7px ${lv.c2}cc)` : 'none' }}>
-                  <CofreSVG lv={dialChest} open={false} size={30}/>
-                </div>
-              </div>
-              <div className="dial__tx" style={{ textAlign: 'left' }}>
-                <b style={canOpen ? { color: '#FFCF6B' } : undefined}>{dialTitle}</b>
-                <span>{dialSub}</span>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        {/* Fila de cofres en glass (estética Ascua) — mantiene el flujo de apertura */}
-        <div className="chests" style={{ justifyContent: 'center', gap: 11 }}>
+        {/* Fila de cofres (estética Ascua) — mantiene el flujo de apertura */}
+        <div className="chests" style={{ justifyContent: 'center', gap: 16 }}>
           {slots.map((slot, i) => {
             const locked = slot.estado === 'proximo' || slot.estado === 'bloqueado';
             const cls = slot.estado === 'listo' ? 'chest chest--on' : locked ? 'chest chest--x' : 'chest';
@@ -11182,6 +11231,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const [fuegoStats, setFuegoStats] = useState(false);
   const [jugarPress, setJugarPress] = useState(false);
   const [modosSheet, setModosSheet] = useState(false); // hoja de modos (bottom sheet Ascua)
+  const [misionesSheet, setMisionesSheet] = useState(false); // hoja de misiones del día
   const logrosRef = useRef([]);
   logrosRef.current = appState.logrosSecretos || [];
   const lpTimer = useRef(null);
@@ -11308,6 +11358,12 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
     otorgarBotinSesion(appState, setAppState, pushNotif, onCoinBurst);
   };
 
+  // ── Misiones del día (para el botón que reemplaza al cofre grande) ──
+  const misionesHoy = generateDailyMissions(todayStr());
+  const misRewarded = appState.missionsRewarded || [];
+  const misDone      = misionesHoy.filter(m => getMissionProgress(m, appState) >= m.target).length;
+  const misCobrables = misionesHoy.filter(m => getMissionProgress(m, appState) >= m.target && !misRewarded.includes(m.id)).length;
+
   // ── Reto del Día ──
   const jugadoHoy   = appState.retoDia?.date === dk && appState.retoDia?.done;
   const retoPerfect = jugadoHoy && appState.retoDia.perfect;
@@ -11430,9 +11486,12 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           <PresenciaViva variant="float" C={C} user={user}/>
         </div>
 
+        {/* ── BLOQUE CENTRADO VERTICAL: fuego → misiones → cofres → combo ── */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18 }}>
+
         {/* ── 3. HÉROE ASCUA — fuego criatura + número gigante ── */}
         <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoCancel}
-          style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '8px 0 2px', animation: 'staggerRise 0.6s ease 0.16s both' }}>
+          style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '4px 0 2px', animation: 'staggerRise 0.6s ease 0.16s both' }}>
           <div className={`fire${enPeligro ? ' nervous' : ''}`} ref={fireRef}
             style={{ transform: `scale(${(0.58 + Math.min(fire.id, 6) * 0.075).toFixed(3)})`,
               filter: [fireSkin !== 'none' ? fireSkin : '', fire.id === 0 ? 'grayscale(1) brightness(0.55)' : ''].filter(Boolean).join(' ') || 'none',
@@ -11474,7 +11533,21 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           )}
         </div>
 
-        {/* ── 4. COFRES (dial + fila en glass) — bajados bajo el héroe como en la demo ── */}
+        {/* ── 4a. MISIONES (reemplaza el cofre grande) — abre la hoja de misiones ── */}
+        <button className="mis-btn" onClick={() => { FX.play('open'); FX.vibrate('light'); setMisionesSheet(true); }}
+          style={{ animation: 'staggerRise 0.5s ease 0.2s both' }}>
+          <div className="mis-btn__ic">
+            <PkIc n="target" s={22} c="#FFCF6B"/>
+            {misCobrables > 0 && <span className="mis-btn__pin">{misCobrables}</span>}
+          </div>
+          <div className="mis-btn__tx">
+            <b>Misiones del día</b>
+            <span>{misDone >= 3 ? '¡Todas cumplidas! Vuelve mañana' : misCobrables > 0 ? `${misCobrables} lista${misCobrables !== 1 ? 's' : ''} para cobrar` : `${misDone}/3 cumplidas · sigue así`}</span>
+          </div>
+          <span className="mis-btn__go">→</span>
+        </button>
+
+        {/* ── 4b. COFRES (fila flotante) ── */}
         <div style={{ animation: 'staggerRise 0.5s ease 0.24s both' }}>
           <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
         </div>
@@ -11513,12 +11586,11 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           <div className="rank__go">→</div>
         </button>
 
-        {/* Empuja el CTA al fondo cuando hay poco contenido */}
-        <div style={{ flex: 1 }}/>
+        </div>{/* /bloque centrado */}
 
         {/* ══ MODOS ASCUA — botón que abre la hoja + CTA liquid-glass que respira ══ */}
         <div className="foot" style={{ position: 'sticky', bottom: 4, zIndex: 50, animation: 'staggerRise 0.5s ease 0.38s both' }}>
-          <button className="pickbtn" onClick={() => { FX.play('nav'); FX.vibrate('light'); setModosSheet(true); }} aria-label="Modos">
+          <button className="pickbtn" onClick={() => { FX.play('open'); FX.vibrate('light'); setModosSheet(true); }} aria-label="Modos">
             <svg className="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
             <span>Modos</span>
           </button>
@@ -11540,12 +11612,23 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
               <div className="sheet__h">¿A qué le vas hoy?</div>
               {MODOS.map((m, i) => (
                 <div key={m.id} className={`mode${modoSel === i ? ' mode--on' : ''}`} style={{ '--ac': m.color }}
-                  onClick={() => { if (modoSel !== i) { FX.play('tap'); FX.vibrate('light'); setModoSel(i); } setTimeout(() => setModosSheet(false), 180); }}>
+                  onClick={() => { if (modoSel !== i) { FX.play('select'); FX.vibrate('light'); setModoSel(i); } setTimeout(() => setModosSheet(false), 180); }}>
                   <div className="mode__ic"><PkIc n={m.ic} s={20} c={m.color}/></div>
                   <div style={{ minWidth: 0 }}><div className="mode__t">{m.nom}</div><div className="mode__s">{m.det}</div></div>
                   <span className="mode__rec"><PkIc n={m.ic} s={12} c={m.color}/>{m.rec}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </Portal>
+
+        {/* Hoja de misiones del día (bottom sheet Ascua) */}
+        <Portal>
+          <div className={`scrim${misionesSheet ? ' open' : ''}`} style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 9993 }} onClick={() => setMisionesSheet(false)}>
+            <div className={`sheet${misionesSheet ? ' open' : ''}`} style={{ position: 'relative', width: '100%', maxWidth: 430, maxHeight: '82vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+              <div className="sheet__grip" />
+              <div className="sheet__h">Misiones del día</div>
+              <DailyMissions C={C} isLight={isLight} appState={appState} setAppState={setAppState} onReward={onMissionReward} />
             </div>
           </div>
         </Portal>
