@@ -9904,67 +9904,26 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
           )}
         </div>
 
-        {/* Los cofres flotan libres en el espacio del templo */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {slots.map((slot, i) => (
-            <button key={i} onClick={() => { FX.play('tap'); setModal(true); }}
-              style={{ flex: 1, height: 96, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                padding: '6px 2px 2px', position: 'relative',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-              {slot.estado === 'bloqueado' ? (
-                <>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" style={{ opacity: 0.4, marginBottom: 14 }}>
-                    <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-                  </svg>
-                  <span style={{ fontSize: 7.5, fontWeight: 700, color: C.textMuted, textAlign: 'center', lineHeight: 1.2 }}>Anterior primero</span>
-                </>
-              ) : slot.estado === 'proximo' ? (
-                <>
-                  <div style={{ width: 54, height: 50, borderRadius: 12, border: `1.5px dashed ${slot.cc.c2}45`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
-                    <div style={{ opacity: 0.35, filter: 'grayscale(0.6)' }}>
-                      <CofreSVG lv={slot.cc} open={false} size={36}/>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 8, fontWeight: 800, color: C.textMuted, lineHeight: 1.1 }}>{slot.nombre}</span>
-                  {slot.faltan != null && <span style={{ fontSize: 7.5, fontWeight: 700, color: `${C.textMuted}BB` }}>{slot.faltan}d más</span>}
-                </>
-              ) : (
-                <>
-                  <div style={{ position: 'relative',
-                    animation: `chestFloat 3s ease-in-out infinite ${i * 0.8}s`, willChange: 'transform' }}>
-                    <div style={{
-                      filter: slot.estado === 'listo' ? `drop-shadow(0 0 10px ${slot.cc.c2}99)` : `drop-shadow(0 3px 6px rgba(0,0,0,0.4))`,
-                      animation: slot.estado === 'listo' ? 'chestIdle 3.5s ease-in-out infinite' : 'none' }}>
-                      <CofreSVG lv={slot.cc} open={false} size={44}/>
-                    </div>
-                    {/* Chispas del cofre listo */}
-                    {slot.estado === 'listo' && [0, 1, 2].map(k => (
-                      <div key={k} style={{ position: 'absolute', bottom: 4, left: `${22 + k * 24}%`,
-                        width: 3, height: 3, borderRadius: '50%', background: slot.cc.c1,
-                        boxShadow: `0 0 5px ${slot.cc.c2}`, pointerEvents: 'none',
-                        animation: `emberFloat ${1.8 + k * 0.5}s ease-out infinite ${k * 0.6}s` }}/>
-                    ))}
-                    {/* La luz del cofre ilumina el piso */}
-                    <div style={{ position: 'absolute', bottom: -7, left: '50%', transform: 'translateX(-50%)',
-                      width: 42, height: 7, borderRadius: '50%', pointerEvents: 'none',
-                      background: `radial-gradient(ellipse, ${slot.cc.c2}${slot.estado === 'listo' ? '55' : '22'} 0%, transparent 70%)` }}/>
-                  </div>
-                  <span style={{ fontSize: 8, fontWeight: 800, color: slot.estado === 'listo' ? slot.cc.c1 : C.textMuted, lineHeight: 1.1 }}>
-                    {slot.nombre}
-                  </span>
-                  {slot.estado === 'listo' && (
-                    <span style={{ position: 'absolute', top: 0, right: 4, fontSize: 7, fontWeight: 900, letterSpacing: 0.5,
-                      color: '#1A1206', background: `linear-gradient(135deg, ${slot.cc.c1}, ${slot.cc.c2})`,
-                      borderRadius: 99, padding: '2px 6px', boxShadow: `0 0 8px ${slot.cc.c2}`,
-                      animation: 'listoPulse 1.5s ease-in-out infinite' }}>
-                      ¡LISTO!
-                    </span>
+        {/* Fila de cofres en glass (estética Ascua) — mantiene el flujo de apertura */}
+        <div className="chests" style={{ justifyContent: 'space-between' }}>
+          {slots.map((slot, i) => {
+            const locked = slot.estado === 'proximo' || slot.estado === 'bloqueado';
+            const cls = slot.estado === 'listo' ? 'chest chest--on' : locked ? 'chest chest--x' : 'chest';
+            const col = slot.estado === 'listo' ? '#FFCF6B' : locked ? '#7C6E74' : slot.cc.c2;
+            return (
+              <button key={i} className={cls} onClick={() => { FX.play('tap'); setModal(true); }} title={slot.nombre}>
+                <svg className="ic" viewBox="0 0 24 24" style={{ color: col }}>
+                  {locked ? (
+                    <><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></>
+                  ) : (
+                    <><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 13h18M12 13v7M5 8V6a7 7 0 0 1 14 0v2"/></>
                   )}
-                </>
-              )}
-            </button>
-          ))}
+                </svg>
+                {slot.estado === 'listo' && <span className="chest__pin">{cofresRestantes || 1}</span>}
+                {slot.estado === 'proximo' && slot.faltan != null && <span className="chest__t">{slot.faltan} d</span>}
+              </button>
+            );
+          })}
         </div>
 
         {/* Progreso al siguiente cofre */}
