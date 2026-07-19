@@ -9912,13 +9912,15 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
             const col = slot.estado === 'listo' ? '#FFCF6B' : locked ? '#7C6E74' : slot.cc.c2;
             return (
               <button key={i} className={cls} onClick={() => { FX.play('tap'); setModal(true); }} title={slot.nombre}>
-                <svg className="ic" viewBox="0 0 24 24" style={{ color: col }}>
-                  {locked ? (
-                    <><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></>
-                  ) : (
-                    <><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 13h18M12 13v7M5 8V6a7 7 0 0 1 14 0v2"/></>
-                  )}
-                </svg>
+                {slot.estado === 'bloqueado' ? (
+                  <svg className="ic" viewBox="0 0 24 24" style={{ color: '#7C6E74', fontSize: 22 }}>
+                    <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                  </svg>
+                ) : (
+                  <div style={{ filter: slot.estado === 'listo' ? `drop-shadow(0 0 7px ${slot.cc.c2}bb)` : 'none' }}>
+                    <CofreSVG lv={slot.cc} open={false} size={34}/>
+                  </div>
+                )}
                 {slot.estado === 'listo' && <span className="chest__pin">{cofresRestantes || 1}</span>}
                 {slot.estado === 'proximo' && slot.faltan != null && <span className="chest__t">{slot.faltan} d</span>}
               </button>
@@ -11407,7 +11409,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
               transition: 'transform 0.45s var(--ez), filter 0.4s ease' }}>
             <div className="fireglow" />
             <div className="fl">
-              <i /><i /><i />
+              <i /><i /><i /><i />
             </div>
             {fire.id > 0 && embers.map((e, i) => (
               <span key={`e${i}`} className="ember" style={{ left: `${e.left}%`, width: e.s, height: e.s, '--ex': `${e.ex}px`, animationDuration: `${e.dur}s`, animationDelay: `${e.del}s` }} />
