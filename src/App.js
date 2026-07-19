@@ -3566,7 +3566,9 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         </div>
       )}
 
-      {/* ── Header compacto: solo recursos (estilo Clash Royale) ── */}
+      {/* ── Header compacto: solo recursos (estilo Clash Royale).
+             En Inicio se oculta: el tema Ascua monta su propia barra superior (.top) dentro del InicioTab. ── */}
+      {tab !== 'inicio' && (
       <div style={{
         padding: '10px 18px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         flexShrink: 0, zIndex: 900, background: `linear-gradient(180deg, ${C.bg} 60%, transparent)`,
@@ -3608,6 +3610,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           );
         })()}
       </div>
+      )}
 
       {/* Menú de identidad desplegable (estilo Duolingo) */}
       {identityMenu && (
@@ -3648,7 +3651,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} />
         </div>
         <div style={{ display: tab === 'inicio' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '14px 20px 10px', WebkitOverflowScrolling: 'touch' }}>
-          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} />
+          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} onOpenEnergy={() => setEnergyModalOpen(true)} onOpenTienda={() => setTiendaRealOpen(true)} />
         </div>
         <div style={{ display: tab === 'icfes' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} onConsumeEnergy={consumeEnergy} onEnergyBlocked={() => setEnergyModalOpen(true)} />
@@ -3670,28 +3673,29 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       {energyModalOpen && <EnergiaModal C={C} appState={appState} onClose={() => setEnergyModalOpen(false)} onOpenPro={openPro} />}
       {tiendaRealOpen && <TiendaReal C={C} appState={appState} onClose={() => setTiendaRealOpen(false)} onBuyPro={handleBuyPro} onBuyPack={handleBuyPack} />}
 
-      {/* Nav bar */}
+      {/* Nav bar (Ascua) — íconos + labels, activo en rojo con glow, punto "live" en Combo */}
       <div style={{
-        display: 'flex', height: 66, flexShrink: 0,
-        background: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(8,12,20,0.92)',
+        display: 'flex', height: 70, flexShrink: 0,
+        background: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(8,4,10,0.82)',
         backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
-        borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'}`,
-        zIndex: 900,
+        borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.10)'}`,
+        zIndex: 900, paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         {NAV_TABS.map(({ id, icon, label }) => {
           const active = tab === id;
+          const dot = (id === 'tienda' && cofrePendiente) || (id === 'friends' && partnerOnline);
           return (
-           <button key={id} onClick={() => { 
+           <button key={id} onClick={() => {
                 if (tab !== id) { FX.play('nav'); FX.vibrate('light'); }
                 if (id === 'perfil') setPerfilStartView('profile');
-                setTab(id); 
+                setTab(id);
               }}
                style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              background: 'none', border: 'none', padding: '6px 0', gap: 3, cursor: 'pointer',
+              background: 'none', border: 'none', padding: '5px 0', gap: 3, cursor: 'pointer',
             }}>
               <div style={{
-                width: 46, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 46, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: active ? C.accent + '1A' : 'transparent',
                 borderRadius: 10, transition: 'background 0.25s ease', position: 'relative',
               }}>
@@ -3702,19 +3706,20 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
                 }}>
                   <PkIc n={icon} s={20} c={active ? C.accent : C.textMuted} />
                 </div>
-                {id === 'tienda' && cofrePendiente && (
-                  <div style={{ position: 'absolute', top: -2, right: 4, minWidth: 8, height: 8, borderRadius: 99,
-                    background: '#EF4444', boxShadow: '0 0 6px #EF4444', animation: 'comboDot 1.4s ease-in-out infinite' }} />
-                )}
-                {active && (
-                  <div style={{
-                    position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
-                    width: 18, height: 3, borderRadius: 99, background: C.accent,
-                    boxShadow: `0 0 8px ${C.accent}80`,
-                    animation: 'tabPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both',
-                  }} />
+                {dot && (
+                  <div style={{ position: 'absolute', top: -2, right: 6, minWidth: 8, height: 8, borderRadius: 99,
+                    background: '#FF4D53', boxShadow: '0 0 6px #FF4D53', animation: 'comboDot 1.4s ease-in-out infinite' }} />
                 )}
               </div>
+              <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.2,
+                color: active ? C.accent : C.textMuted, transition: 'color 0.25s ease' }}>{label}</span>
+              {active && (
+                <div style={{
+                  width: 16, height: 3, borderRadius: 99, background: C.accent,
+                  boxShadow: `0 0 8px ${C.accent}80`, marginTop: 1,
+                  animation: 'tabPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+                }} />
+              )}
             </button>
           );
         })}
@@ -9592,7 +9597,7 @@ const PRESENCE_LABELS = {
   online:    'en línea',
 };
 
-function PresenciaViva({ C, user }) {
+function PresenciaViva({ C, user, variant }) {
   const [pres, setPres] = useState([]);
   const [open, setOpen] = useState(false);
 
@@ -9611,6 +9616,20 @@ function PresenciaViva({ C, user }) {
 
   const mins = ts => Math.max(0, Math.round((Date.now() - ts) / 60000));
   const n = pres.length;
+
+  // Variante "float": pastilla flotante del tema Ascua (esquina del héroe)
+  if (variant === 'float') {
+    return (
+      <button className="float float--pres" style={{ position: 'static' }}
+        onClick={() => { FX.play('tap'); }}>
+        <div className="float__ic"><span className="dotlive" style={n === 0 ? { animation: 'none', background: 'var(--t3)', boxShadow: 'none' } : undefined} /></div>
+        <div className="float__t">
+          <b>{n > 0 ? `${n} en línea` : 'Nadie en línea'}</b>
+          <span>{n > 0 ? `${n} parcero${n > 1 ? 's' : ''} estudiando` : 'sé el primero'}</span>
+        </div>
+      </button>
+    );
+  }
 
   return (
     <div style={{ background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
@@ -9839,6 +9858,19 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
     return { estado: 'proximo', nombre, cc, faltan: Math.max(0, n.min - streak) };
   });
 
+  // ── Dial de progreso al próximo cofre (ring + texto, estética Ascua) ──
+  const curMin = nivelesAsc[nivelIdx]?.min || 0;
+  const dialR = 30, DIAL_CIRC = 2 * Math.PI * dialR;
+  const dialPct = canOpen ? 1
+    : next ? Math.max(0.04, Math.min(1, (streak - curMin) / Math.max(1, next.min - curMin)))
+    : 1;
+  const dialChest = canOpen ? { c1: lv.c1, c2: lv.c2, c3: lv.c3 }
+    : next ? { c1: next.c1, c2: next.c2, c3: next.c3 }
+    : { c1: lv.c1, c2: lv.c2, c3: lv.c3 };
+  const dialFaltan = next ? Math.max(0, next.min - streak) : 0;
+  const dialTitle = canOpen ? '¡Cofre listo!' : next ? `Falta ${dialFaltan} día${dialFaltan !== 1 ? 's' : ''}` : 'Nivel máximo';
+  const dialSub = canOpen ? 'Toca para abrirlo' : next ? `pal ${next.name.replace('Cofre de ', 'Cofre ')}` : lv.name;
+
   // Apertura escenificada: grieta de luz → explosión + flash → recompensa
   const abrir = () => {
     const rr = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -9887,29 +9919,37 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
 
   return (
     <>
-      {/* ── MIS COFRES: vitrina flotante del templo (sin card) ── */}
+      {/* ── COFRES ASCUA: dial de progreso + fila de cofres en glass ── */}
       <div style={{ padding: '0 2px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.8, color: C.textMuted, flex: 1 }}>MIS COFRES</span>
-          {canOpen ? (
-            <button onClick={() => { FX.play('tap'); setModal(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: 11, fontWeight: 800, color: lv.c1, padding: 0 }}>
-              Abrir ahora →
-            </button>
-          ) : (
-            <button onClick={() => { FX.play('tap'); onGoShop?.(); }} style={{ background: 'none', border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: 11, fontWeight: 800, color: C.accent, padding: 0 }}>
-              Ver Bazar →
-            </button>
-          )}
+        {/* Dial: anillo con el cofre objetivo + "Falta X día pal Cofre Y" */}
+        <div className="dial" style={{ marginTop: 4 }}>
+          <button onClick={() => { FX.play('tap'); if (canOpen) setModal(true); else onGoShop?.(); }}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <div className="dial__row">
+              <div className="dial__ring">
+                <svg viewBox="0 0 66 66">
+                  <circle className="tk" cx="33" cy="33" r={dialR}/>
+                  <circle className="pg" cx="33" cy="33" r={dialR}
+                    strokeDasharray={DIAL_CIRC} strokeDashoffset={DIAL_CIRC * (1 - dialPct)}
+                    style={canOpen ? { stroke: '#FFCF6B', filter: 'drop-shadow(0 0 5px rgba(255,207,107,.7))' } : undefined}/>
+                </svg>
+                <div className="dial__ic" style={{ filter: canOpen ? `drop-shadow(0 0 7px ${lv.c2}cc)` : 'none' }}>
+                  <CofreSVG lv={dialChest} open={false} size={30}/>
+                </div>
+              </div>
+              <div className="dial__tx" style={{ textAlign: 'left' }}>
+                <b style={canOpen ? { color: '#FFCF6B' } : undefined}>{dialTitle}</b>
+                <span>{dialSub}</span>
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* Fila de cofres en glass (estética Ascua) — mantiene el flujo de apertura */}
-        <div className="chests" style={{ justifyContent: 'space-between' }}>
+        <div className="chests" style={{ justifyContent: 'center', gap: 11 }}>
           {slots.map((slot, i) => {
             const locked = slot.estado === 'proximo' || slot.estado === 'bloqueado';
             const cls = slot.estado === 'listo' ? 'chest chest--on' : locked ? 'chest chest--x' : 'chest';
-            const col = slot.estado === 'listo' ? '#FFCF6B' : locked ? '#7C6E74' : slot.cc.c2;
             return (
               <button key={i} className={cls} onClick={() => { FX.play('tap'); setModal(true); }} title={slot.nombre}>
                 {slot.estado === 'bloqueado' ? (
@@ -9926,34 +9966,6 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
               </button>
             );
           })}
-        </div>
-
-        {/* Progreso al siguiente cofre */}
-        <div style={{ marginTop: 8 }}>
-          {openedToday ? (
-            <div style={{ fontSize: 10, color: C.textMuted, textAlign: 'center' }}>
-              {appState.isPro ? `Abriste tus ${maxOpens} cofres Pro de hoy · vuelven mañana` : (premio ? `Hoy salieron +${premio.emp} empanadas · vuelve mañana` : 'Ya abriste el cofre de hoy · vuelve mañana')}
-            </div>
-          ) : (canOpen && appState.isPro && cofresRestantes < maxOpens) ? (
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#A78BFA', textAlign: 'center' }}>
-              ✨ Pro: te queda {cofresRestantes} cofre más hoy
-            </div>
-          ) : !sealed ? (
-            <div style={{ fontSize: 10, color: C.textMuted, textAlign: 'center' }}>
-              Sella tu racha (lee o haz un simulacro) para cargar el cofre de hoy
-            </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8.5, fontWeight: 700, color: C.textMuted, marginBottom: 4 }}>
-                <span>{next ? `Racha: ${streak} días` : `${lv.name} · nivel máximo`}</span>
-                {next && <span style={{ color: next.c2 }}>{next.min - streak} para {next.name}</span>}
-              </div>
-              <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(90deg, #FBBF24, #D4AF37)',
-                  width: next ? `${Math.min(100, ((streak - (nivelesAsc[nivelIdx]?.min || 0)) / Math.max(1, next.min - (nivelesAsc[nivelIdx]?.min || 0))) * 100)}%` : '100%' }}/>
-              </div>
-            </>
-          )}
         </div>
       </div>
 
@@ -11118,7 +11130,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 // ═════════════════════════════════════════════
 //  INICIO TAB v5 — CENTRO DE MANDO
 // ═════════════════════════════════════════════
-function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst }) {
+function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst, onOpenEnergy, onOpenTienda }) {
   const lvl         = computeLevel(appState.xp || 0);
   const [rankInfo, setRankInfo]   = useState(null);
   const [retoOpen, setRetoOpen]   = useState(false);
@@ -11358,47 +11370,51 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
       {/* ══ CONTENIDO ══ */}
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 15, flex: 1 }}>
 
-        {/* ── 1. IDENTIDAD (texto flotante, sin card) ── */}
-        <div style={{ animation: 'staggerRise 0.5s ease both' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <button onClick={ciclarFuego} title="Cambiar color del fuego" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}>
-              <Av name={user?.name || '?'} sz={46} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
-            </button>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="serif" style={{ fontSize: 17, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.name || 'Explorador'}
-              </div>
-              <div className={appState.equipped?.title?.rarity === 'legendario' ? 'title-legendary' : appState.equipped?.title?.rarity === 'mítico' ? 'title-mythic' : ''}
-                style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase',
-                  color: appState.equipped?.title?.rarity ? (RARITY_META[appState.equipped.title.rarity] || {}).color : C.accent }}>
-                {appState.equipped?.title?.name || 'Iniciado'}
-              </div>
+        {/* ── 1. TOP BAR ASCUA (avatar con anillo vivo + nivel + nombre + chips glass) ── */}
+        <div className="top" style={{ padding: '2px 0 0', animation: 'staggerRise 0.5s ease both' }}>
+          <div className="av" onClick={ciclarFuego} title="Cambiar color del fuego">
+            <div className="av__r" />
+            <div className="av__i" style={{ overflow: 'hidden' }}>
+              <Av name={user?.name || '?'} sz={40} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
             </div>
-            {/* El escudo del combo, al costado derecho */}
-            {rankInfo && (
-              <button onClick={() => onGoTab('friends')} style={{ position: 'relative', width: 34, height: 37, flexShrink: 0,
-                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                animation: rankInfo.pos === 1 ? 'coronaShine 4s ease-in-out infinite' : 'none' }}>
-                <svg viewBox="0 0 24 26" width="34" height="37">
-                  <path d="M12 1 L22 5 L22 13 Q22 22 12 25 Q2 22 2 13 L2 5 Z"
-                    fill={rankInfo.pos === 1 ? '#3A2A08' : '#1A2333'}
-                    stroke={rankInfo.pos === 1 ? '#FFD75E' : '#AEB8C2'} strokeWidth="1.5"/>
-                </svg>
-                <span style={{ position: 'absolute', fontSize: 12.5, fontWeight: 900, color: rankInfo.pos === 1 ? '#FFD75E' : '#E5E9F0' }}>{rankInfo.pos}</span>
-                {rankInfo.pos === 1 && <span style={{ position: 'absolute', top: -7, fontSize: 12 }}>👑</span>}
+            <div className="av__n">{computeLevel(appState.xp || 0).level}</div>
+          </div>
+          <div className="who">
+            <div className="who__n">{user?.name || 'Explorador'}</div>
+            <div className={'who__r ' + (appState.equipped?.title?.rarity === 'legendario' ? 'title-legendary' : appState.equipped?.title?.rarity === 'mítico' ? 'title-mythic' : '')}
+              style={appState.equipped?.title?.rarity ? { color: (RARITY_META[appState.equipped.title.rarity] || {}).color } : undefined}>
+              {appState.equipped?.title?.name || 'Iniciado'}
+            </div>
+          </div>
+          {(() => {
+            const eInfo = getEnergyNow(appState);
+            return (
+              <button className="glass glass--en" onClick={() => { FX.play('tap'); onOpenEnergy?.(); }}
+                style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}><path d="M13 2 L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{eInfo.unlimited ? '∞' : eInfo.energy}</span>
               </button>
-            )}
-          </div>
-          <div style={{ fontSize: 11.5, fontWeight: 600, marginTop: 7, marginLeft: 2,
-            color: enPeligro ? '#EF4444' : C.textMid, animation: enPeligro ? 'luzRespira 1.6s ease-in-out infinite' : 'fadeIn 0.6s ease both' }}>
-            {saludo}
-          </div>
+            );
+          })()}
+          <button className="glass" onClick={() => { FX.play('tap'); onOpenTienda?.(); }}
+            style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <PkIc n="empanada" s={15} c="#FFCF6B"/>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{empanadasCount.toLocaleString()}</span>
+            <span className="glass__p">+</span>
+          </button>
         </div>
 
-        {/* ── 2. COFRES FLOTANTES (sin card contenedora) ── */}
-        <div style={{ animation: 'staggerRise 0.5s ease 0.08s both' }}>
-          <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
+        {/* ── 2. PASTILLAS FLOTANTES (Reto del día + presencia en línea) ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginTop: -4 }}>
+          <button className="float float--mis" style={{ position: 'static' }}
+            onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }}>
+            <div className="float__ic"><PkIc n="target" s={14} c="#FF2E4C"/></div>
+            <div className="float__t">
+              <b>Reto del día</b>
+              <span>{jugadoHoy ? (retoPerfect ? 'Perfecto ✓' : 'Completado') : '3 rondas · +150'}</span>
+            </div>
+          </button>
+          <PresenciaViva variant="float" C={C} user={user}/>
         </div>
 
         {/* ── 3. HÉROE ASCUA — fuego criatura + número gigante ── */}
@@ -11445,85 +11461,21 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
           )}
         </div>
 
-        {/* ── 4. PANEL DE STATS (recursos del templo) ── */}
-        <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: 16, overflow: 'hidden',
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-          animation: 'staggerRise 0.5s ease 0.24s both' }}>
-          {[
-            { ic: 'star',   c: bestIcfes > 0 ? getPerfLevel(bestIcfes).color : C.textMuted, val: bestIcfes > 0 ? bestIcfes : '—', label: 'MEJOR', tab: 'icfes' },
-            { ic: 'book',   c: '#3DA873', val: totalMin >= 60 ? `${Math.round(totalMin / 60)}h` : `${totalMin}m`, label: 'LEÍDO', tab: 'books' },
-            { ic: 'swords', c: '#F97316', val: appState.duelosGanados || 0, label: 'DUELOS', tab: 'friends' },
-          ].map((s) => (
-            <button key={s.label} onClick={() => { FX.play('tap'); onGoTab(s.tab); }} style={{
-              flex: 1, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '10px 0',
-              borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 3 }}>
-                <PkIc n={s.ic} s={11} c={s.c}/>
-                <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color: 'rgba(255,255,255,0.4)' }}>{s.label}</span>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.val}</div>
-            </button>
-          ))}
-          <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
-            flex: 1.1, background: jugadoHoy ? 'none' : 'rgba(212,175,55,0.10)', border: 'none',
-            cursor: 'pointer', fontFamily: 'inherit', padding: '10px 0',
-            animation: jugadoHoy ? 'none' : 'retoUrge 2s ease-in-out infinite' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 3 }}>
-              <PkIc n="target" s={11} c={jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24'}/>
-              <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, color: jugadoHoy && retoPerfect ? '#3DA873' : '#FBBF24' }}>RETO</span>
-            </div>
-            {jugadoHoy ? (
-              <div style={{ fontSize: 14, fontWeight: 900, color: retoPerfect ? '#3DA873' : '#EF4444', lineHeight: 1 }}>
-                {retoPerfect ? '✓' : `R${Math.min((appState.retoDia?.wins || 0) + 1, 3)}`}
-              </div>
-            ) : (
-              <div style={{ fontSize: 12, fontWeight: 900, color: '#FBBF24', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{cuenta}</div>
-            )}
-          </button>
+        {/* ── 4. COFRES (dial + fila en glass) — bajados bajo el héroe como en la demo ── */}
+        <div style={{ animation: 'staggerRise 0.5s ease 0.24s both' }}>
+          <CofreRacha C={C} isLight={isLight} appState={appState} setAppState={setAppState} onMissionReward={onMissionReward} onGoShop={onGoShop}/>
         </div>
 
-        {/* ── 5. EL COMBO VIVO ── */}
-        <div style={{ animation: 'staggerRise 0.5s ease 0.3s both' }}>
-          <PresenciaViva C={C} user={user}/>
-        </div>
+        {/* ── 5. COMPETENCIA — una línea limpia (.rank) ── */}
         {rankInfo && rankInfo.pos > 1 && rankInfo.aheadGap !== null && rankInfo.aheadGap <= 8 && (
-          <button onClick={() => onGoTab('friends')} style={{ padding: '9px 14px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
-            textAlign: 'left', border: 'none', borderLeft: `3px solid ${C.accent}`, background: `linear-gradient(90deg, ${C.accent}12, transparent)`,
-            display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PkIc n="star" s={13} c={C.accent}/>
-            <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: C.text }}>
-              Estás a {rankInfo.aheadGap} acierto{rankInfo.aheadGap !== 1 ? 's' : ''} de quitarle el #{rankInfo.pos - 1} a @{rankInfo.aheadName}.
-            </span>
-          </button>
-        )}
-
-        {/* ── 6. RETO DEL DÍA (banner slim, solo si no lo has hecho) ── */}
-        {!jugadoHoy && (
-          <button onClick={() => { FX.play('tap'); FX.vibrate('light'); setRetoOpen(true); }} style={{
-            border: 'none', borderRadius: 16, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-            padding: '13px 15px', borderLeft: '4px solid #FBBF24',
-            background: 'linear-gradient(135deg, rgba(251,191,36,0.08), transparent)',
-            boxShadow: 'inset 0 0 0 1px rgba(251,191,36,0.28)',
-            display: 'flex', alignItems: 'center', gap: 12,
-            animation: 'staggerRise 0.5s ease 0.34s both' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-              background: `${meta1.color || '#FBBF24'}1C`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PkIc n="target" s={20} c={meta1.color || '#FBBF24'}/>
+          <button className="rank" onClick={() => onGoTab('friends')}
+            style={{ margin: 0, border: 'none', fontFamily: 'inherit', textAlign: 'left', animation: 'staggerRise 0.5s ease 0.3s both' }}>
+            <div className="rank__av">{(rankInfo.aheadName || '?')[0]?.toUpperCase()}</div>
+            <div className="rank__d">
+              <div className="rank__t"><em>@{rankInfo.aheadName}</em> te lleva {rankInfo.aheadGap} punto{rankInfo.aheadGap !== 1 ? 's' : ''}</div>
+              <div className="rank__s">Vas #{rankInfo.pos} en El Combo · quítale el #{rankInfo.pos - 1}</div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>Reto del Día · 3 rondas</div>
-              <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 1 }}>
-                {ayerPct !== null ? `Ayer solo el ${ayerPct}% lo logró` : `Empieza en ${retoQs[0]?.subject || 'sorpresa'}`}
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 800,
-                color: '#E8B84B', background: 'rgba(232,184,75,0.14)', border: '1px solid rgba(232,184,75,0.35)', borderRadius: 99, padding: '2px 8px' }}>
-                <PkIc n="empanada" s={9} c="#E8B84B"/>+150 · Sello
-              </span>
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#FBBF24' }}>Ir →</span>
-            </div>
+            <div className="rank__go">→</div>
           </button>
         )}
 
