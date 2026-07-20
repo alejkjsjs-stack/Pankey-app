@@ -9477,11 +9477,12 @@ async function fetchGeminiQuestions(subjects, count, opts = {}) {
 
   // Instrucción visual: los modos rápidos piden preguntas compactas sin contextos largos
   const reglaVisual = opts.compact
-    ? `🚨 MODO RÁPIDO 🚨
-Estas preguntas son para un modo CONTRARRELOJ: deben ser CORTAS y directas.
-- "context" SIEMPRE debe ser null. PROHIBIDO incluir textos largos, tablas o gráficas.
-- El enunciado ("text") máximo 35 palabras. Las opciones máximo 10 palabras cada una.
-- Deben poder responderse en menos de 10 segundos por alguien preparado.`
+    ? `🚨 MODO ÁGIL (con tiempo) 🚨
+Estas preguntas son para un modo con reloj: deben resolverse rápido, PERO igual pueden traer apoyo visual corto.
+- "tipo"/"context" permitidos: SOLO "tabla", "grafica" (barras o geometría), "mapa" corto o "simple". PROHIBIDO "texto", "ingles" y "caricatura" (nada de lecturas largas).
+- Si usas tabla o gráfica, que sea PEQUEÑA (máximo 4 filas o 4 barras) y se lea en segundos.
+- Que ~1 de cada 3 preguntas traiga tabla/gráfica/figura; el resto "simple".
+- El enunciado ("text") máximo 30 palabras. Las opciones máximo 10 palabras cada una.`
     : `🚨 REGLA VISUAL DE VIDA O MUERTE 🚨
 ES OBLIGATORIO que AL MENOS LA MITAD de las preguntas tengan el campo "context" con datos visuales. NUNCA devuelvas todas las preguntas con "context": null. ¡Invéntate tablas, gráficas, textos o avisos!`;
 
@@ -9632,14 +9633,22 @@ TU MISIÓN: Desarma la pregunta pieza por pieza. Explícale por qué su respuest
 async function fetchOracleDynamicQuestions() {
   if (!GEMINI_API_KEY) throw new Error("Falta la Llave Maestra.");
   
+  // Semilla de aleatoriedad + escenarios sugeridos para forzar variedad en cada llamada
+  const AMBIENTES = ['el colegio', 'un negocio de barrio', 'un hospital', 'un estudio de música', 'una finca cafetera',
+    'un laboratorio', 'un partido de fútbol', 'un festival', 'una obra en construcción', 'un viaje por el país',
+    'una emisora', 'un mercado', 'una start-up de tecnología', 'un parque natural', 'un restaurante'];
+  const barajados = [...AMBIENTES].sort(() => Math.random() - 0.5).slice(0, 3).join(', ');
+  const semilla = Math.random().toString(36).slice(2, 8);
+
   const prompt = `Eres el "Sabio del Sumapaz", un orientador vocacional colombiano muy bacano y experimentado.
-  Crea un test de 3 preguntas de opción múltiple MUY CORTAS para descubrir la vocación real de un joven.
-  
-  REGLAS DE SABROSURA REALISTA (OBLIGATORIO):
-  1. Usa situaciones cotidianas y reales de Colombia con mucha sabrosura, PERO CERO MAGIA. (Ej: Se vara una chiva rumbera, organizando un bazar en el barrio, un viaje al Amazonas, camellando en la plaza de mercado). NADA de Mohanes, espíritus o hechizos.
-  2. Lenguaje coloquial ("parcero", "camello", "pille pues") pero profesional y enfocado en descubrir talentos.
-  3. Pregunta CORTA (máximo 15 palabras).
-  4. Opciones CORTAS y directas sobre QUÉ HARÍA en esa situación (máximo 12 palabras). PROHIBIDO usar emojis.
+  Crea un test de 3 preguntas de opción múltiple MUY CORTAS para descubrir la vocación real de un joven, de modo que las respuestas revelen hacia qué CARRERA/PROFESIÓN se inclina.
+
+  REGLAS DE VARIEDAD (OBLIGATORIO):
+  1. VARÍA el escenario en CADA pregunta. Esta vez ambiéntalas en: ${barajados}. NUNCA uses buses ni chivas varadas (está prohibidísimo ese ejemplo). CERO magia (nada de Mohanes, espíritus ni hechizos).
+  2. Cada pregunta debe ser DISTINTA a las típicas; sé original. (Semilla: ${semilla}).
+  3. Lenguaje coloquial colombiano ("parcero", "camello", "pille pues") pero profesional y enfocado en talentos y profesiones reales.
+  4. Pregunta CORTA (máximo 15 palabras).
+  5. Opciones CORTAS y directas sobre QUÉ HARÍA en esa situación (máximo 12 palabras). PROHIBIDO usar emojis.
   
   Las 5 opciones deben corresponder a talentos reales (usa estos códigos en "trait"):
   - "ing" (Lógica, arreglar cosas, mecánica, tecnología, construir)
@@ -9675,29 +9684,47 @@ async function fetchOracleDynamicQuestions() {
     return JSON.parse(cleaned);
   } catch(err) {
     console.error("Usando enigmas de reserva");
-    // Fallback con situaciones colombianas reales y enfocadas en la vocación
-    return [
-      { 
-        q: "Vas en una chiva rumbo a la costa y se vara en plena montaña. ¿Qué haces?", 
-        options: [
-          {text: "Me meto debajo a revisar la mecánica del motor.", trait: "ing"}, 
-          {text: "Reviso que los abuelos y los niños estén bien.", trait: "salud"}, 
-          {text: "Negocio con los vecinos de la zona un transporte alterno.", trait: "neg"}, 
-          {text: "Saco la guitarra y me pongo a animar al combo.", trait: "arte"}, 
-          {text: "Analizo el clima y el terreno por si toca acampar.", trait: "ciencia"}
-        ] 
-      },
-      { 
-        q: "En tu barrio van a armar un proyecto para mejorar la cuadra. Tú...", 
-        options: [
-          {text: "Diseño los planos para arreglar el parque y las calles.", trait: "ing"}, 
-          {text: "Organizo una brigada de salud para los vecinos.", trait: "salud"}, 
-          {text: "Hago la recolecta de plata y administro los fondos.", trait: "neg"}, 
-          {text: "Pinto un mural bien bacano en la cancha.", trait: "arte"}, 
-          {text: "Hago un estudio de qué plantas sembrar según el suelo.", trait: "ciencia"}
-        ] 
-      }
+    // Fallback VARIADO: un banco de situaciones distintas; se eligen 3 al azar
+    // (así, aun sin IA, no sale siempre lo mismo y nunca la chiva).
+    const BANCO = [
+      { q: "En el colegio te toca liderar el proyecto de grado. Tú...", options: [
+        {text: "Construyo un prototipo que funcione de verdad.", trait: "ing"},
+        {text: "Me aseguro de que a nadie del grupo le vaya mal.", trait: "salud"},
+        {text: "Reparto tareas y consigo los recursos.", trait: "neg"},
+        {text: "Diseño la presentación y la hago memorable.", trait: "arte"},
+        {text: "Investigo a fondo antes de proponer nada.", trait: "ciencia"} ] },
+      { q: "Abren un negocio nuevo en tu cuadra y te piden ayuda. ¿En qué?", options: [
+        {text: "En montar la parte técnica y las máquinas.", trait: "ing"},
+        {text: "En atender bien y cuidar a la clientela.", trait: "salud"},
+        {text: "En las cuentas, precios y las ventas.", trait: "neg"},
+        {text: "En el logo, los colores y la publicidad.", trait: "arte"},
+        {text: "En estudiar qué producto se vende más.", trait: "ciencia"} ] },
+      { q: "En un hospital de campaña falta de todo. Tú te encargas de...", options: [
+        {text: "Reparar los equipos que están fallando.", trait: "ing"},
+        {text: "Atender y calmar a los pacientes.", trait: "salud"},
+        {text: "Coordinar al personal y los suministros.", trait: "neg"},
+        {text: "Hacer carteles claros para orientar a todos.", trait: "arte"},
+        {text: "Analizar los casos para priorizar.", trait: "ciencia"} ] },
+      { q: "Grabando una canción con el combo, ¿cuál es tu rol?", options: [
+        {text: "Configuro el sonido y los cables.", trait: "ing"},
+        {text: "Mantengo al grupo unido y con buena energía.", trait: "salud"},
+        {text: "Consigo el estudio y organizo el lanzamiento.", trait: "neg"},
+        {text: "Compongo la letra y la melodía.", trait: "arte"},
+        {text: "Estudio qué suena mejor y por qué.", trait: "ciencia"} ] },
+      { q: "En una finca cafetera hay que mejorar la cosecha. Tú...", options: [
+        {text: "Arreglo la despulpadora y el riego.", trait: "ing"},
+        {text: "Cuido que los trabajadores estén bien.", trait: "salud"},
+        {text: "Busco a quién venderle a mejor precio.", trait: "neg"},
+        {text: "Diseño la marca del café para venderlo.", trait: "arte"},
+        {text: "Analizo el suelo y el clima para el cultivo.", trait: "ciencia"} ] },
+      { q: "En un parque natural encuentran algo raro. Tú...", options: [
+        {text: "Armo un dispositivo para medirlo.", trait: "ing"},
+        {text: "Reviso si es peligroso para la gente.", trait: "salud"},
+        {text: "Organizo la expedición y los permisos.", trait: "neg"},
+        {text: "Lo dibujo y documento con detalle.", trait: "arte"},
+        {text: "Investigo qué es y de dónde viene.", trait: "ciencia"} ] },
     ];
+    return [...BANCO].sort(() => Math.random() - 0.5).slice(0, 3);
   }
 }
 
@@ -10837,8 +10864,21 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
 // ─────────────────────────────────────────────
 function RetoDelDia({ C, appState, setAppState, onClose, onMissionReward, unlockSecret }) {
   const dk = dateKeyISO();
-  const [qs] = useState(() => retoQuestionsFor(dk));
+  const [qs, setQs] = useState(() => retoQuestionsFor(dk));  // banco como base; se reemplaza con IA fresca
   const jugado = appState.retoDia?.date === dk && appState.retoDia?.done;
+
+  // Preguntas NUEVAS con Gemini cada vez que se abre el Reto (fallback: banco del día)
+  useEffect(() => {
+    if (jugado) return;
+    let alive = true;
+    (async () => {
+      try {
+        const fresh = await fetchGeminiQuestions(['Lectura Crítica', 'Matemáticas', 'Ciencias Sociales'], 3, { dificultad: 'Media' });
+        if (alive && Array.isArray(fresh) && fresh.length >= 3) setQs(fresh.slice(0, 3));
+      } catch (e) { /* nos quedamos con las del banco */ }
+    })();
+    return () => { alive = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [phase, setPhase]   = useState(jugado ? 'result' : 'intro'); // intro | trans | round | result
   const [round, setRound]   = useState(0);
