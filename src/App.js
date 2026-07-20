@@ -3082,6 +3082,7 @@ export default function App() {
   const [themeKey, setThemeKey]   = useState('aizome_dark'); // Tema único: Caribe
   const [globalSenseiQ, setGlobalSenseiQ] = useState(null);
   const [tab, setTab]             = useState('inicio');
+  const [icfesStartNonce, setIcfesStartNonce] = useState(0); // dispara el simulacro al entrar desde Inicio
   const [user, setUser]           = useState(saved?.user || null);
   const [appState, setAppState]   = useState(saved?.appState || freshState());
   const [books, setBooks]         = useState(saved?.books || []);
@@ -3098,7 +3099,7 @@ export default function App() {
   const [tiendaRealOpen, setTiendaRealOpen] = useState(false); // Tienda Real (Pro + recargas)
   const [partnerPhotoURL, setPartnerPhotoURL] = useState(null);
   const [fbLoaded, setFbLoaded]   = useState(false);
-  const [ambientOn, setAmbientOn] = useState(saved?.ambientOn || false); // ✅ NEW: ambientación de fondo
+  const [ambientOn, setAmbientOn] = useState(saved?.ambientOn ?? true); // música de fondo ON por defecto (se respeta si la apagaron)
   const [perfilStartView, setPerfilStartView] = useState('profile'); // a qué vista abrir el Perfil
   const [perfilNav, setPerfilNav] = useState(0); // nonce: fuerza re-sync de la vista del Perfil
   const [identityMenu, setIdentityMenu] = useState(false); // menú desplegable de identidad (estilo Duolingo)
@@ -3842,10 +3843,10 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} />
         </div>
         <div style={{ display: tab === 'inicio' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '14px 20px 10px', WebkitOverflowScrolling: 'touch' }}>
-          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} onOpenEnergy={() => setEnergyModalOpen(true)} onOpenTienda={() => setTiendaRealOpen(true)} onOpenIdentity={() => setIdentityMenu(true)} />
+          <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} onOpenEnergy={() => setEnergyModalOpen(true)} onOpenTienda={() => setTiendaRealOpen(true)} onOpenIdentity={() => setIdentityMenu(true)} onStartSimulacro={() => { setTab('icfes'); setIcfesStartNonce(n => n + 1); }} />
         </div>
         <div style={{ display: tab === 'icfes' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} onConsumeEnergy={consumeEnergy} onEnergyBlocked={() => setEnergyModalOpen(true)} />
+          <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} onConsumeEnergy={consumeEnergy} onEnergyBlocked={() => setEnergyModalOpen(true)} startNonce={icfesStartNonce} />
         </div>
         <div style={{ display: tab === 'books' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} partnerReqs={partnerReqs} onSendPartnerRequest={handleSendPartnerRequest} onAcceptPartnerRequest={handleAcceptPartnerRequest} onDeclinePartnerRequest={handleDeclinePartnerRequest} />
@@ -6527,14 +6528,14 @@ function useAIQuestions({ count = 10, compact = false, dificultad = null } = {})
     if (subject) idx = pool.findIndex(q => q.subject === subject);
     if (idx < 0 && !subject && pool.length > 0) idx = 0;
     if (idx >= 0) return pool.splice(idx, 1)[0];
-    // banco local de emergencia
+    // banco local de emergencia (barajamos opciones para evitar sesgo de posición)
     const fb = fallbackRef.current;
     if (subject) {
       const delSubj = fb.filter(q => q.subject === subject);
-      if (delSubj.length) return delSubj[Math.floor(Math.random() * delSubj.length)];
+      if (delSubj.length) return barajarOpciones(delSubj[Math.floor(Math.random() * delSubj.length)]);
     }
     fbIdxRef.current += 1;
-    return fb[fbIdxRef.current % fb.length];
+    return barajarOpciones(fb[fbIdxRef.current % fb.length]);
   };
 
   const quedan = () => poolRef.current.length;
@@ -9417,6 +9418,31 @@ function normalizarExplicacion(q) {
   return { porQue: '', clave: '', truco: '', porQueFalla: {} };
 }
 
+// Baraja las opciones para MATAR el sesgo de posición (Gemini tiende a poner la
+// correcta en B/C). Remapea el índice correcto y las claves del "porQueFalla".
+// Funciona con el formato nuevo (explicacion.porQueFalla) y con el viejo (explanation string).
+function barajarOpciones(q) {
+  if (!q || !Array.isArray(q.options) || q.options.length < 2) return q;
+  const n = q.options.length;
+  let correct = Number(q.correct);
+  if (!isFinite(correct) || correct < 0 || correct >= n) correct = 0;
+  const orden = q.options.map((_, k) => k);
+  for (let k = n - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [orden[k], orden[j]] = [orden[j], orden[k]]; }
+  const nuevasOpts = orden.map(oi => q.options[oi]);
+  const nuevoCorrect = orden.indexOf(correct);
+  const out = { ...q, options: nuevasOpts, correct: nuevoCorrect };
+  // Remapear porQueFalla (índice viejo → nuevo)
+  if (q.explicacion && typeof q.explicacion === 'object' && q.explicacion.porQueFalla) {
+    const pf = {};
+    Object.entries(q.explicacion.porQueFalla).forEach(([viejo, v]) => {
+      const nuevo = orden.indexOf(Number(viejo));
+      if (nuevo >= 0) pf[String(nuevo)] = v;
+    });
+    out.explicacion = { ...q.explicacion, porQueFalla: pf };
+  }
+  return out;
+}
+
 function normalizarPregunta(q, i = 0) {
   if (!q || typeof q !== 'object') return null;
   const options = Array.isArray(q.options) ? q.options.map(String) : [];
@@ -9430,7 +9456,7 @@ function normalizarPregunta(q, i = 0) {
   // Si dijo que tenía contexto pero no llegó válido, cae a "simple" (nunca queda en blanco)
   if (!context) tipo = 'simple';
 
-  return {
+  return barajarOpciones({
     ...q,
     id: q.id != null ? q.id : i + 1,
     subject: q.subject || 'Lectura Crítica',
@@ -9441,7 +9467,7 @@ function normalizarPregunta(q, i = 0) {
     options,
     correct,
     explicacion: normalizarExplicacion(q),
-  };
+  });
 }
 
 async function fetchGeminiQuestions(subjects, count, opts = {}) {
@@ -9486,6 +9512,10 @@ ESTRUCTURA DEL "context" SEGÚN EL TIPO (no dejes campos vacíos):
 - caricatura: {"type":"caricatura","title":"OBSERVA LA CARICATURA","escena":"descripción corta de la escena","globos":[{"quien":"político","texto":"El pueblo tiene voz..."}]}
 - mapa:       {"type":"mapa","title":"OBSERVA EL MAPA","descripcion":"descripción","zonas":[{"nombre":"Región A","valor":"dato"}]}
 - simple:     null
+
+REGLA ANTITRAMPA (MUY IMPORTANTE):
+- Las 4 opciones deben tener LONGITUD SIMILAR. La correcta NUNCA debe ser sistemáticamente la más larga, la más detallada ni la que "suena más completa". Las 3 incorrectas deben ser plausibles y del mismo largo aproximado que la correcta.
+- Distribuye "correct" de forma PAREJA entre 0, 1, 2 y 3 a lo largo de las preguntas (no lo dejes casi siempre en 1 o 2). (La app igual baraja las opciones, pero ayúdanos.)
 
 REGLAS DE FORMATO Y MATEMÁTICAS:
 1. Envuelve TODAS las ecuaciones, variables (x, y) y números sueltos entre comillas invertidas (\`) para formato matemático. Ejemplo: \`f(x) = x² - 3x + 2\`.
@@ -11810,7 +11840,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 // ═════════════════════════════════════════════
 //  INICIO TAB v5 — CENTRO DE MANDO
 // ═════════════════════════════════════════════
-function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst, onOpenEnergy, onOpenTienda, onOpenIdentity }) {
+function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, onGoShop, onMissionReward, pushNotif, onConfirm, onCoinBurst, onOpenEnergy, onOpenTienda, onOpenIdentity, onStartSimulacro }) {
   const lvl         = computeLevel(appState.xp || 0);
   const [rankInfo, setRankInfo]   = useState(null);
   const [retoOpen, setRetoOpen]   = useState(false);
@@ -11818,7 +11848,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const [flashKey, setFlashKey]   = useState(0);
   const [modo, setModo]           = useState(null);    // overlay activo
   const [modoKey, setModoKey]     = useState(0);
-  const [modoSel, setModoSel]     = useState(1);       // carta seleccionada
+  const [modoSel, setModoSel]     = useState(0);       // carta seleccionada (0 = Simulacro por defecto)
   const [btnFade, setBtnFade]     = useState(false);   // transición del botón JUGAR
   const [logroShow, setLogroShow] = useState(null);
   const [ahora, setAhora]         = useState(Date.now());
@@ -11981,7 +12011,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
 
   // ── Los 5 modos (cartas) ──
   const lanzarModo = (id) => {
-    if (id === 'simulacro') { onGoTab('icfes'); return; }
+    if (id === 'simulacro') { onStartSimulacro ? onStartSimulacro() : onGoTab('icfes'); return; }
     if (id === 'duelo') { setFlashKey(k => k + 1); setFlashOpen(true); return; }
     setModoKey(k => k + 1); setModo(id);
   };
@@ -12524,8 +12554,10 @@ function ResultadosShow({ result, appState, onDetalle, onRetry, onBack }) {
   );
 }
 
-function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked }) {
+function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked, startNonce = 0 }) {
   const [icfesScreen, setIcfesScreen] = useState('dashboard');
+  // Al entrar desde Inicio ("Empezar Simulacro") saltamos directo a configurar el simulacro
+  useEffect(() => { if (startNonce > 0) setIcfesScreen('setup'); }, [startNonce]);
   const [activeQuestions, setActiveQuestions] = useState([]);
   const [currentQ, setCurrentQ]       = useState(0);
   const [answers, setAnswers]          = useState([]);
@@ -12606,7 +12638,7 @@ const SABIO_HYPE = [
       catch(e) {
         const filtered = ICFES_QUESTIONS.filter(q => subjects.includes(q.subject));
         const shuffled = [...filtered].sort(() => Math.random() - 0.5);
-        qs = shuffled.slice(0, Math.min(count, shuffled.length));
+        qs = shuffled.slice(0, Math.min(count, shuffled.length)).map(barajarOpciones);
       }
       setActiveQuestions(qs);
       setAnswers(new Array(qs.length).fill(-1));
