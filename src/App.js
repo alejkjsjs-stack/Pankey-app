@@ -9935,6 +9935,19 @@ const FIRE_SKINS = {
 };
 const fireSkinFilter = (id) => (FIRE_SKINS[id] || FIRE_SKINS.default).filter;
 
+// ── [LÓGICA NUEVA] Fueguitos vendibles: estilos de color para la mascota ──
+// Reusan appState.fireColor (ya aplicado al fuego del Inicio). "fireOwned" guarda
+// los comprados. Algunos se GANAN por logro (unlock) en vez de comprarse.
+const FUEGUITOS = [
+  { colorId: 'default',   name: 'Brasa Clásica',    rarity: 'común',      price: 0,    linea: 'La de siempre. Nunca falla.' },
+  { colorId: 'cian',      name: 'Hielo Azul',       rarity: 'raro',       price: 1500, linea: 'Arde tan frío que hasta el ICFES tiembla.' },
+  { colorId: 'esmeralda', name: 'Llama Esmeralda',  rarity: 'raro',       price: 1800, linea: 'Verde como el monte a las seis de la mañana.' },
+  { colorId: 'morado',    name: 'Fuego del Mohán',  rarity: 'épico',      price: 3000, linea: 'Color de brujo del páramo, respételo.' },
+  { colorId: 'rosa',      name: 'Candela Rosa',     rarity: 'épico',      price: 3200, linea: 'Bonita y peligrosa, como debe ser.' },
+  { colorId: 'carmesi',   name: 'Sangre de Dragón', rarity: 'legendario', price: 6000, linea: 'Rojo de leyenda. Que se sepa en el barrio.',
+    unlock: { desc: 'Alcanza 30 días de racha', check: s => (s.streakDays || 0) >= 30 } },
+];
+
 function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false, fireColor = null }) {
   const lvl = fireLevelFor(streak);
   const skinFilter = fireSkinFilter(fireColor);
@@ -15086,6 +15099,25 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       fireBoost();
     };
 
+    // [LÓGICA NUEVA] Comprar/equipar Fueguito (color de la mascota → appState.fireColor)
+    const fireOwned = appState.fireOwned || [];
+    const tieneFuego = (cid) => cid === 'default' || fireOwned.includes(cid);
+    const usarFuego = (f) => {
+      const equipado = (appState.fireColor || 'default') === f.colorId;
+      if (equipado) return;
+      if (!tieneFuego(f.colorId)) {
+        if (f.unlock && !f.unlock.check(appState)) { FX.play('error'); pushNotif?.(f.unlock.desc); return; }
+        const precio = f.unlock ? Math.round(f.price * 0.5) : f.price;
+        if ((appState.ryo || 0) < precio) { FX.play('error'); FX.vibrate('error'); pushNotif?.('No te alcanzan las empanadas.'); return; }
+        FX.play('coin'); FX.vibrate('heavy');
+        setAppState(s => ({ ...s, ryo: (s.ryo || 0) - precio, fireOwned: [...(s.fireOwned || []), f.colorId], fireColor: f.colorId === 'default' ? null : f.colorId }));
+        pushNotif?.(`¡${f.name} encendido!`); fireBoost();
+      } else {
+        FX.play('poder'); FX.vibrate('light');
+        setAppState(s => ({ ...s, fireColor: f.colorId === 'default' ? null : f.colorId }));
+      }
+    };
+
     // Carta de estantería: maneja poseído / equipado / bloqueado por logro / precio
     const cardDe = (item) => {
       const rc = (RARITY_META[item.rarity] || RARITY_META['común']).color;
@@ -15420,6 +15452,44 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                     <span className="bz-card__old">{item.price.toLocaleString()}</span>
                     <PkIc n="empanada" s={11} c="#FFCF6B" />{precio.toLocaleString()}
                   </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ══ FUEGUITO — personaliza tu mascota (primera y destacada) ══ */}
+        <div style={{ padding: '12px 0 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
+            <span className="bz-sec" style={{ color: '#FF6B54' }}>Fueguito</span>
+            <span className="bz-timer" style={{ color: '#FF6B54', background: 'rgba(255,107,84,.12)' }}>siempre a la vista</span>
+          </div>
+          <div className="bz-shelf">
+            {FUEGUITOS.map(f => {
+              const rc = (RARITY_META[f.rarity] || RARITY_META['común']).color;
+              const equipado = (appState.fireColor || 'default') === f.colorId;
+              const owned = tieneFuego(f.colorId);
+              const bloqueado = f.unlock && !f.unlock.check(appState);
+              const rank = rankOf(f.rarity);
+              return (
+                <button key={f.colorId} onClick={() => usarFuego(f)} style={{ '--rc': rc }}
+                  className={`bz-card${rank <= 1 && !bloqueado ? ' bz-card--hot' : ''}${bloqueado ? ' bz-card--lock' : ''}${equipado ? ' bz-card--eq' : ''}`}>
+                  <span className="bz-card__rare">{(RARITY_META[f.rarity] || {}).label}</span>
+                  <span className="bz-card__prev bz-fire" style={{ filter: bloqueado ? 'grayscale(.85) brightness(.7)' : fireSkinFilter(f.colorId) }}>
+                    <span className="fire"><span className="fl"><i /><i /><i /><i /></span></span>
+                  </span>
+                  <span className="bz-card__name">{f.name}</span>
+                  {bloqueado ? (
+                    <span className="bz-card__cond">{f.unlock.desc}</span>
+                  ) : equipado ? (
+                    <span className="bz-card__owned" style={{ color: '#34D399' }}>✓ Equipado</span>
+                  ) : owned ? (
+                    <span className="bz-card__owned" style={{ color: rc }}>Equipar</span>
+                  ) : f.price === 0 ? (
+                    <span className="bz-card__price" style={{ color: '#34D399' }}>GRATIS</span>
+                  ) : (
+                    <span className="bz-card__price"><PkIc n="empanada" s={11} c="#FFCF6B" />{(f.unlock ? Math.round(f.price * 0.5) : f.price).toLocaleString()}</span>
+                  )}
                 </button>
               );
             })}

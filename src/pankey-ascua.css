@@ -198,6 +198,11 @@
 .bz-card--lock .bz-card__prev{filter:grayscale(.85) brightness(.8)}
 .bz-card__lockic{position:absolute;inset:0;display:grid;place-items:center;background:rgba(4,6,12,.4);border-radius:12px}
 /* "Ver todo" + grid de la categoría */
+/* Estado equipado (fueguito) */
+.bz-card--eq{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1.5px #34D399,0 0 20px -8px #34D399}
+/* Mini-fuego vivo dentro de la carta */
+.bz-fire{position:relative;width:56px;height:56px;overflow:hidden;display:block}
+.bz-fire .fire{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%) scale(.46);transform-origin:center bottom;display:flex;flex-direction:column;align-items:center}
 .bz-verall{border:none;background:none;cursor:pointer;font:800 11px/1 'Instrument Sans';color:var(--t3);padding:4px 2px}
 .bz-verall:active{opacity:.6}
 .bz-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
