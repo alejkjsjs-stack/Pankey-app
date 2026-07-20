@@ -192,6 +192,16 @@
 .bz-card__name{font:700 11.5px/1.25 'Instrument Sans';color:var(--t1);min-height:28px;display:flex;align-items:center}
 .bz-card__price{display:inline-flex;align-items:center;gap:4px;font:800 13px/1 'Instrument Sans';color:var(--amber)}
 .bz-card__old{font:600 9px/1 'Instrument Sans';color:var(--t3);text-decoration:line-through}
+.bz-card__owned{font:800 11px/1.2 'Instrument Sans'}
+.bz-card__cond{font:700 9px/1.25 'Instrument Sans';color:var(--t3);text-align:center}
+.bz-card--lock{opacity:.82}
+.bz-card--lock .bz-card__prev{filter:grayscale(.85) brightness(.8)}
+.bz-card__lockic{position:absolute;inset:0;display:grid;place-items:center;background:rgba(4,6,12,.4);border-radius:12px}
+/* "Ver todo" + grid de la categoría */
+.bz-verall{border:none;background:none;cursor:pointer;font:800 11px/1 'Instrument Sans';color:var(--t3);padding:4px 2px}
+.bz-verall:active{opacity:.6}
+.bz-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.bz-grid .bz-card{width:auto}
 
 /* ══ ICFES · SIMULACRO (shell, opciones, explicación, pie) ══ */
 .icq-back{width:32px;height:32px;flex:none;border:none;cursor:pointer;border-radius:50%;display:grid;place-items:center;

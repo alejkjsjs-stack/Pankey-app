@@ -14716,6 +14716,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [selectedShopItem, setSelectedShopItem] = useState(null);
   const [chestShow, setChestShow] = useState(null); // { chest, premio } → show de apertura
   const [bazarCat, setBazarCat] = useState('chest'); // categoría activa del Bazar
+  const [catFull, setCatFull] = useState(null);      // categoría abierta en "Ver todo" (grid completo)
   const [heroIdx, setHeroIdx] = useState(0);         // slide activo del escaparate
   const [bundleConfirm, setBundleConfirm] = useState(null); // pack pendiente de confirmar
   const [, setBazarTick] = useState(0);              // tick del countdown de la oferta
@@ -15085,6 +15086,48 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       fireBoost();
     };
 
+    // Carta de estantería: maneja poseído / equipado / bloqueado por logro / precio
+    const cardDe = (item) => {
+      const rc = (RARITY_META[item.rarity] || RARITY_META['común']).color;
+      const rmeta = RARITY_META[item.rarity] || RARITY_META['común'];
+      const isOwned = (appState.inventory || []).includes(item.id);
+      const isEquipped = appState.equipped?.[item.type]?.id === item.id;
+      const un = SHOP_UNLOCKS[item.id];
+      const bloqueado = un && !un.check(appState);
+      const desbloqueado = un && un.check(appState) && !isOwned;
+      const esOferta = oferta.item.id === item.id;
+      const rank = rankOf(item.rarity);
+      return (
+        <button key={item.id} className={`bz-card${rank <= 1 && !bloqueado ? ' bz-card--hot' : ''}${bloqueado ? ' bz-card--lock' : ''}`}
+          onClick={() => abrirItem(item, esOferta ? oferta.precio : null)} style={{ '--rc': rc }}>
+          <span className="bz-card__rare">{rmeta.label}</span>
+          <span className="bz-card__prev">
+            <BazarPreview item={item} size={54} C={C} user={user} appState={appState} />
+            {bloqueado && (
+              <span className="bz-card__lockic">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B9A9AF" strokeWidth="2" strokeLinecap="round">
+                  <rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+              </span>
+            )}
+          </span>
+          <span className="bz-card__name">{item.name}</span>
+          {bloqueado ? (
+            <span className="bz-card__cond">{un.desc.replace(' para desbloquear', '')}</span>
+          ) : isOwned && item.type !== 'item' && item.type !== 'chest' ? (
+            <span className="bz-card__owned" style={{ color: isEquipped ? '#34D399' : rc }}>{isEquipped ? '✓ Equipado' : '✓ Tuyo'}</span>
+          ) : item.price === 0 ? (
+            <span className="bz-card__price" style={{ color: '#34D399' }}>GRATIS</span>
+          ) : (
+            <span className="bz-card__price">
+              {(esOferta || desbloqueado) && <span className="bz-card__old">{item.price.toLocaleString()}</span>}
+              <PkIc n="empanada" s={11} c="#FFCF6B" />{(esOferta ? oferta.precio : desbloqueado ? un.price : item.price).toLocaleString()}
+            </span>
+          )}
+        </button>
+      );
+    };
+
     const comprarBundle = (b) => {
       if ((appState.ryo || 0) < b.price) { FX.play('error'); FX.vibrate('error'); pushNotif?.('No te alcanzan las empanadas para este pack.'); return; }
       FX.play('coin'); FX.vibrate('heavy');
@@ -15383,120 +15426,56 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           </div>
         </div>
 
-        {/* ══ ZONA 2 — TABS DE CATEGORÍA (sticky) ══ */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 20, padding: '10px 20px 8px',
-          background: `${C.bg}F2`, backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-          borderBottom: `1px solid ${C.border}66` }}>
-          <div className="bazar-tabs">
-            {CATS.map(cat => {
-              const activo = bazarCat === cat.id;
-              const cc = catColor(cat.id);
-              return (
-                <button key={cat.id} onClick={() => { FX.play('tap'); setBazarCat(cat.id); }} style={{
-                  flexShrink: 0, padding: '9px 16px', borderRadius: 12, border: 'none',
-                  background: activo ? `${cc}16` : 'transparent',
-                  color: activo ? cc : C.textMuted, fontSize: 13, fontWeight: 800,
-                  cursor: 'pointer', fontFamily: 'inherit', position: 'relative' }}>
-                  {cat.label}
-                  {activo && (
-                    <div style={{ position: 'absolute', bottom: 0, left: '25%', right: '25%', height: 3,
-                      borderRadius: 99, background: cc, boxShadow: `0 0 8px ${cc}`,
-                      animation: 'tabPop 0.3s cubic-bezier(0.34,1.56,0.64,1) both' }}/>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ══ ZONA 3 — LISTA VERTICAL DE ÍTEMS ══ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, padding: '14px 20px 10px' }}>
-          {listItems.map((item, idx) => {
-            const rc = (RARITY_META[item.rarity] || {}).color || '#888';
-            const rmeta = RARITY_META[item.rarity] || RARITY_META['común'];
-            const isOwned = (appState.inventory || []).includes(item.id);
-            const isEquipped = appState.equipped?.[item.type]?.id === item.id;
-            const un = SHOP_UNLOCKS[item.id];
-            const bloqueado = un && !un.check(appState);
-            const desbloqueado = un && un.check(appState) && !isOwned;
-            const esOferta = oferta.item.id === item.id;
-            const activo = item.type === 'item' && PODER_ACTIVO[item.id]?.(appState);
+        {/* ══ ESTANTERÍAS DEL CATÁLOGO (una fila horizontal por categoría) ══ */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 8 }}>
+          {CATS.map(cat => {
+            const its = SHOP_ITEMS.filter(i => i.type === cat.id)
+              .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
+            if (!its.length) return null;
+            const cc = catColor(cat.id);
             return (
-              <button key={item.id} onClick={() => abrirItem(item, esOferta ? oferta.precio : null)}
-                className="fu" style={{
-                animationDelay: `${Math.min(idx * 0.04, 0.4)}s`,
-                display: 'flex', alignItems: 'center', gap: 13, width: '100%', minHeight: 90,
-                padding: '13px 15px', borderRadius: 18, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                border: `1px solid ${isEquipped ? rc : `${rc}30`}`,
-                /* gradiente MUY sutil del color de la rareza */
-                background: `linear-gradient(120deg, ${rc}0E 0%, ${C.bgAlt} 60%)`,
-                opacity: bloqueado ? 0.72 : 1,
-                boxShadow: isEquipped ? `0 6px 20px ${rc}22` : '0 4px 12px rgba(0,0,0,0.12)' }}>
-                {/* IZQUIERDA: preview animado */}
-                <div style={{ width: 60, height: 60, flexShrink: 0, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', position: 'relative', filter: bloqueado ? 'grayscale(0.9)' : 'none' }}>
-                  <BazarPreview item={item} C={C} user={user} appState={appState}/>
-                  {bloqueado && (
-                    <div style={{ position: 'absolute', inset: -4, borderRadius: 14, display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', background: 'rgba(4,6,12,0.55)' }}>
-                      <PkIc n="settings" s={0} c="transparent"/>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round">
-                        <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-                      </svg>
-                    </div>
-                  )}
+              <div key={cat.id} style={{ padding: '9px 0 6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
+                  <span className="bz-sec" style={{ color: cc }}>{cat.label}</span>
+                  <button className="bz-verall" onClick={() => { FX.play('tap'); setCatFull(cat.id); }}>Ver todo →</button>
                 </div>
-                {/* CENTRO: nombre + desc + rareza */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span className={item.type === 'title' && item.rarity === 'mítico' ? 'title-mythic' : item.type === 'title' && item.rarity === 'legendario' ? 'title-legendary' : ''}
-                      style={{ fontSize: 14, fontWeight: 800, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.name}
-                    </span>
-                    {esOferta && !bloqueado && (
-                      <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: 1, color: '#fff', background: '#EF4444',
-                        borderRadius: 5, padding: '2px 6px', animation: 'ofertaPulse 1.1s ease-in-out infinite', flexShrink: 0 }}>
-                        OFERTA
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, overflow: 'hidden',
-                    textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {bloqueado ? un.desc : item.desc}
-                  </div>
-                  <span style={{ display: 'inline-block', marginTop: 4, fontSize: 8.5, fontWeight: 900, letterSpacing: 1.2,
-                    color: rc, background: rmeta.bg, border: `1px solid ${rc}30`, borderRadius: 5, padding: '2px 7px' }}>
-                    {rmeta.label}{desbloqueado ? ' · DESBLOQUEADO' : ''}
-                  </span>
+                <div className="bz-shelf">
+                  {its.slice(0, 8).map(item => cardDe(item))}
                 </div>
-                {/* DERECHA: precio / estado */}
-                <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                  {bloqueado ? (
-                    <PkIc n="x" s={0} c="transparent"/>
-                  ) : isOwned && item.type !== 'item' && item.type !== 'chest' ? (
-                    <span style={{ fontSize: 12, fontWeight: 800, color: rc }}>{isEquipped ? '✓ Equipado' : '✓ Tuyo'}</span>
-                  ) : activo ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 800, color: '#4ADE80' }}>✓ Activo</span>
-                  ) : item.price === 0 ? (
-                    <span style={{ fontSize: 12, fontWeight: 900, color: '#34D399' }}>GRATIS</span>
-                  ) : (
-                    <div>
-                      {(esOferta || desbloqueado) && (
-                        <div style={{ fontSize: 10, color: 'rgba(245,242,235,0.4)', textDecoration: 'line-through', fontWeight: 700 }}>
-                          {item.price.toLocaleString()}
-                        </div>
-                      )}
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13.5, fontWeight: 900, color: C.amberMid }}>
-                        <PkIc n="empanada" s={13} c={C.amberMid}/>
-                        {(esOferta ? oferta.precio : desbloqueado ? un.price : item.price).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </button>
+              </div>
             );
           })}
         </div>
+
+        {/* ══ "VER TODO": grid completo de la categoría ══ */}
+        {catFull && (() => {
+          const cat = CATS.find(c => c.id === catFull);
+          const its = SHOP_ITEMS.filter(i => i.type === catFull)
+            .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
+          const cc = catColor(catFull);
+          return (
+            <Portal>
+              <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99990, background: 'rgba(0,0,0,0.92)',
+                backdropFilter: 'blur(16px)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 20px 14px' }}>
+                  <button className="icq-back" onClick={() => { FX.play('close'); setCatFull(null); }}>
+                    <PkIc n="left" s={15} c="#B9A9AF" />
+                  </button>
+                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 300, color: '#F6F1F2' }}>
+                    {cat?.label}
+                  </div>
+                  <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: cc,
+                    background: `${cc}18`, borderRadius: 99, padding: '5px 11px' }}>{its.length} ítems</span>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 30px', WebkitOverflowScrolling: 'touch' }}>
+                  <div className="bz-grid">
+                    {its.map(item => cardDe(item))}
+                  </div>
+                </div>
+              </div>
+            </Portal>
+          );
+        })()}
       </div>
     );
   }
