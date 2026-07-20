@@ -924,6 +924,28 @@ const FX = {
           break;
         }
 
+        // ── ICFES ──
+        // Usar pista: tick seco de descarte + swoosh corto hacia abajo
+        case 'pista': {
+          this.shaker(0.07, 0.035, 8200);
+          this.sweep(700, 260, 0.05, 0.18, 'triangle');
+          break;
+        }
+
+        // Presionar "Siguiente": thunk con cuerpo (grave, corto, satisfactorio)
+        case 'next': {
+          this.drum(this._vary(190), 78, 0.26, 0.14);
+          this.shaker(0.035, 0.03, 6000);
+          break;
+        }
+
+        // Baja un poder: whoosh suave + brillo de campana
+        case 'poder': {
+          this.sweep(180, 820, 0.06, 0.34, 'sine');
+          setTimeout(() => this.bell(this._vary(1174.7, 6), 0.075, 1.5), 170);
+          break;
+        }
+
         // Recompensa satisfactoria: cascada de monedas + campanas ascendentes
         case 'reward': {
           this.shaker(0.12, 0.06, 5200);
@@ -8361,7 +8383,203 @@ function IcfesSetup({ C, isLight, onBeginTest, onBack }) {
 // ─────────────────────────────────────────────
 //  MOTOR VISUAL ICFES — Generador de Gráficas y Cuadernillos
 // ─────────────────────────────────────────────
-function IcfesVisualContext({ context }) {
+// ── Contexto visual de la pregunta (Ascua) ────────────────────────────────
+// Tipos: texto / ingles (tarjeta de papel cálido) · tabla / grafica / caricatura / mapa
+// (tarjetas oscuras en glass, teñidas con el color del área). Acepta también los
+// tipos viejos gracias al normalizador.
+function IcfesVisualContext({ context, accent = '#FF6B54' }) {
+  const ctx = normalizarContexto(context);
+  if (!ctx) return null;
+  const t = ctx.type;
+
+  // Etiqueta superior de cada tarjeta
+  const Rotulo = ({ icon, children, sobrePapel }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 11,
+      fontSize: 9, fontWeight: 800, letterSpacing: 1.7, textTransform: 'uppercase',
+      fontFamily: "'Instrument Sans', sans-serif", color: sobrePapel ? '#9A7B2E' : accent }}>
+      <PkIc n={icon} s={11} c={sobrePapel ? '#9A7B2E' : accent} />
+      {children}
+    </div>
+  );
+
+  // ══ TARJETA DE PAPEL (texto de lectura crítica / documento en inglés) ══
+  if (t === 'texto' || t === 'ingles') {
+    const esIngles = t === 'ingles';
+    const rotulo = esIngles
+      ? ({ notice: 'Notice', email: 'Email', dialogue: 'Dialogue' }[ctx.kind] || 'Reading')
+      : 'Lee el texto';
+    return (
+      <div className="icx-paper icx-in">
+        <Rotulo icon={esIngles ? 'msg' : 'book'} sobrePapel>{rotulo}</Rotulo>
+        {ctx.title && <div className="icx-paper__t">{ctx.title}</div>}
+        {ctx.paragraphs.map((p, i) => (
+          <p key={i} className="icx-paper__p" style={esIngles ? { textAlign: 'center' } : undefined}>{p}</p>
+        ))}
+        {ctx.source && <div className="icx-paper__src">Tomado de: {ctx.source}</div>}
+      </div>
+    );
+  }
+
+  // ══ TABLA DE DATOS ══
+  if (t === 'tabla') {
+    return (
+      <div className="icx-card icx-in">
+        <Rotulo icon="book">{ctx.title || 'Tabla de datos'}</Rotulo>
+        <div style={{ overflowX: 'auto', margin: '0 -4px' }}>
+          <table className="icx-table">
+            <thead>
+              <tr>{ctx.headers.map((h, i) => (
+                <th key={i} style={{ color: accent, textAlign: i === 0 ? 'left' : 'right' }}>{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {ctx.rows.map((row, i) => (
+                <tr key={i}>{row.map((cell, j) => (
+                  <td key={j} style={{ textAlign: j === 0 ? 'left' : 'right',
+                    fontWeight: j === 0 ? 600 : 700, color: j === 0 ? '#F6F1F2' : accent }}>{cell}</td>
+                ))}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // ══ GRÁFICA: figura geométrica dibujada ══
+  if (t === 'grafica' && ctx.chart === 'geometria') {
+    const pts = ctx.puntos;
+    const poly = pts.map(p => `${p.x},${p.y}`).join(' ');
+    // Arco del ángulo en un vértice, entre sus dos vecinos
+    const arco = (idx) => {
+      const P = pts[idx], A = pts[(idx - 1 + pts.length) % pts.length], B = pts[(idx + 1) % pts.length];
+      const u = (Q) => { const dx = Q.x - P.x, dy = Q.y - P.y, m = Math.hypot(dx, dy) || 1; return { x: dx / m, y: dy / m }; };
+      const u1 = u(A), u2 = u(B), r = 9;
+      const s = { x: P.x + u1.x * r, y: P.y + u1.y * r };
+      const e = { x: P.x + u2.x * r, y: P.y + u2.y * r };
+      const cruz = u1.x * u2.y - u1.y * u2.x;
+      return { d: `M ${s.x} ${s.y} A ${r} ${r} 0 0 ${cruz > 0 ? 1 : 0} ${e.x} ${e.y}`,
+        lx: P.x + (u1.x + u2.x) * 8, ly: P.y + (u1.y + u2.y) * 8 };
+    };
+    return (
+      <div className="icx-card icx-in">
+        <Rotulo icon="target">{ctx.title || 'Figura'} · Observa</Rotulo>
+        <svg viewBox="-8 -8 116 116" style={{ width: '100%', height: 190, display: 'block', overflow: 'visible' }}>
+          <polygon points={poly} fill={`${accent}14`} stroke={accent} strokeWidth="1.6"
+            strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 6px ${accent}55)` }} />
+          {pts.map((p, i) => {
+            const a = (ctx.angulos || []).find(x => String(x.en).toUpperCase() === String(p.id).toUpperCase());
+            const ar = a ? arco(i) : null;
+            // Etiqueta del vértice, empujada hacia afuera del centro
+            const cx = pts.reduce((s, q) => s + q.x, 0) / pts.length;
+            const cy = pts.reduce((s, q) => s + q.y, 0) / pts.length;
+            const dx = p.x - cx, dy = p.y - cy, m = Math.hypot(dx, dy) || 1;
+            return (
+              <g key={i}>
+                {ar && <path d={ar.d} fill="none" stroke={accent} strokeWidth="1.1" opacity="0.85" />}
+                {ar && a && <text x={ar.lx} y={ar.ly} fill={accent} fontSize="6.5" fontWeight="700"
+                  textAnchor="middle" dominantBaseline="middle">{a.valor}</text>}
+                <circle cx={p.x} cy={p.y} r="2.6" fill={accent} />
+                <text x={p.x + (dx / m) * 9} y={p.y + (dy / m) * 9} fill="#F6F1F2" fontSize="7.5" fontWeight="700"
+                  textAnchor="middle" dominantBaseline="middle">{p.id}</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    );
+  }
+
+  // ══ GRÁFICA: barras / líneas ══
+  if (t === 'grafica') {
+    const max = Math.max(...ctx.data.map(d => d.value), 1);
+    return (
+      <div className="icx-card icx-in">
+        <Rotulo icon="star">{ctx.title || 'Gráfica'} · Observa</Rotulo>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          {ctx.data.map((d, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <div style={{ width: 62, fontSize: 10.5, fontWeight: 600, color: '#B9A9AF', textAlign: 'right',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.label}</div>
+              <div style={{ flex: 1, height: 14, borderRadius: 7, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                <div className="icx-bar" style={{ height: '100%', borderRadius: 7, width: `${(d.value / max) * 100}%`,
+                  background: `linear-gradient(90deg, ${accent}99, ${accent})`, boxShadow: `0 0 10px ${accent}66`,
+                  animationDelay: `${i * 0.08}s` }} />
+              </div>
+              <div style={{ width: 34, fontSize: 11, fontWeight: 800, color: accent }}>{d.value}</div>
+            </div>
+          ))}
+        </div>
+        {(ctx.axisX || ctx.axisY) && (
+          <div style={{ fontSize: 9.5, color: '#7C6E74', marginTop: 9, textAlign: 'center', fontStyle: 'italic' }}>
+            {[ctx.axisY, ctx.axisX].filter(Boolean).join(' · ')}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ══ CARICATURA (viñeta con globo) ══
+  if (t === 'caricatura') {
+    return (
+      <div className="icx-card icx-in" style={{ background: 'linear-gradient(160deg, rgba(22,26,44,0.9), rgba(12,10,18,0.9))' }}>
+        <Rotulo icon="msg">{ctx.title}</Rotulo>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, minHeight: 132 }}>
+          <div style={{ flex: 1 }}>
+            {ctx.globos.map((g, i) => (
+              <div key={i} className="icx-globo">
+                “{g.texto}”
+                {g.quien && <div style={{ fontSize: 9, color: '#7C6E74', marginTop: 5, fontWeight: 700 }}>— {g.quien}</div>}
+              </div>
+            ))}
+            {ctx.escena && !ctx.globos.length && (
+              <div style={{ fontSize: 12, color: '#B9A9AF', lineHeight: 1.5, fontStyle: 'italic' }}>{ctx.escena}</div>
+            )}
+          </div>
+          {/* Personaje simple dibujado (sin emojis) */}
+          <svg width="66" height="96" viewBox="0 0 66 96" style={{ flexShrink: 0 }}>
+            <ellipse cx="33" cy="92" rx="24" ry="4" fill="rgba(0,0,0,0.45)" />
+            <path d="M14 92 Q14 58 33 58 Q52 58 52 92 Z" fill={accent} opacity="0.92" />
+            <circle cx="33" cy="42" r="16" fill="#F0D9C4" />
+            <circle cx="27" cy="40" r="2.1" fill="#2A1E18" />
+            <circle cx="39" cy="40" r="2.1" fill="#2A1E18" />
+            <path d="M27 49 Q33 53 39 49" stroke="#2A1E18" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  // ══ MAPA / ESQUEMA ══
+  if (t === 'mapa') {
+    return (
+      <div className="icx-card icx-in">
+        <Rotulo icon="mountain">{ctx.title}</Rotulo>
+        {ctx.descripcion && (
+          <div style={{ fontSize: 12, color: '#B9A9AF', lineHeight: 1.55, marginBottom: ctx.zonas.length ? 11 : 0 }}>
+            {ctx.descripcion}
+          </div>
+        )}
+        {ctx.zonas.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {ctx.zonas.map((z, i) => (
+              <div key={i} style={{ padding: '8px 10px', borderRadius: 12,
+                background: 'rgba(255,255,255,0.05)', boxShadow: `inset 0 0 0 1px ${accent}33` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#F6F1F2' }}>{z.nombre}</div>
+                {z.valor && <div style={{ fontSize: 10.5, fontWeight: 700, color: accent, marginTop: 2 }}>{z.valor}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// (Componente viejo conservado por si alguna vista aún lo referencia)
+function IcfesVisualContextLegacy({ context }) {
   if (!context || typeof context !== 'object' || !context.type) return null;
 
   const validTypes = ['long_text', 'table', 'bar_chart', 'notice'];
@@ -8465,7 +8683,9 @@ function IcfesVisualContext({ context }) {
 // ─────────────────────────────────────────────
 //  ICFES — Test (Interfaz Híbrida: Cuadernillo + App)
 // ─────────────────────────────────────────────
-function IcfesTest({ C, isLight, question, questionIdx, total, selected, animating, sabioComment, combo, hitsCount = 0, answeredCount = 0, onAnswer, onExit, onNext, repasoDisponible, comodinDisponible, onUsarRepaso, onUsarComodin }) {
+const PISTA_COSTO = 50; // empanadas que cuesta descartar una opción mala
+
+function IcfesTest({ C, isLight, question, questionIdx, total, selected, animating, sabioComment, combo, hitsCount = 0, answeredCount = 0, onAnswer, onExit, onNext, repasoDisponible, comodinDisponible, onUsarRepaso, onUsarComodin, appState, setAppState, vidas }) {
   const meta    = SUBJECT_META[question.subject] || { color: C.accent, bg: C.bgAlt };
   const pct     = (questionIdx / total) * 100;
   const LETTERS = ['A', 'B', 'C', 'D'];
@@ -8473,6 +8693,79 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
   const ratio = answeredCount > 0 ? hitsCount / answeredCount : 1;
   const barColor = answeredCount === 0 ? meta.color : ratio >= 0.7 ? '#3DA873' : ratio >= 0.45 ? '#F59E0B' : '#EF4444';
   const fallo = animating && selected !== question.correct;
+  const acierto = animating && selected === question.correct;
+
+  // ── PISTA: descarta una opción incorrecta a cambio de empanadas (1 por pregunta) ──
+  const [descartada, setDescartada] = useState(null);
+  useEffect(() => { setDescartada(null); }, [questionIdx]);
+  const empanadas = appState?.ryo || 0;
+  const puedePista = !animating && descartada === null && empanadas >= PISTA_COSTO && question.options.length > 2;
+  const usarPista = () => {
+    if (!puedePista || !setAppState) return;
+    const malas = question.options.map((_, i) => i).filter(i => i !== question.correct);
+    const elegida = malas[Math.floor(Math.random() * malas.length)];
+    FX.play('pista'); FX.vibrate('light');
+    setDescartada(elegida);
+    setAppState(s => ({ ...s, ryo: Math.max(0, (s.ryo || 0) - PISTA_COSTO) }));
+  };
+
+  // Explicación estructurada (formato nuevo); si viene la vieja, el normalizador la dejó en porQue
+  const exp = (question.explicacion && typeof question.explicacion === 'object')
+    ? question.explicacion
+    : normalizarExplicacion(question);
+  const porQueFallaTuya = (exp.porQueFalla || {})[String(selected)] || '';
+
+  // Al responder, la explicación se trae suavemente a la vista
+  const expRef = useRef(null);
+  useEffect(() => {
+    if (!animating || !expRef.current) return;
+    const t = setTimeout(() => {
+      try { expRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    }, 260);
+    return () => clearTimeout(t);
+  }, [animating, questionIdx]);
+
+  // ── PODERES QUE APARECEN SOLOS EN EL MOMENTO EN QUE SIRVEN ──
+  // Se ofrecen con el precio real de la Tienda y aplican el mismo efecto al comprarse.
+  const [poderCerrado, setPoderCerrado] = useState(false);
+  const fallosRef = useRef(0);
+  useEffect(() => {
+    if (!animating) return;
+    if (selected === question.correct) fallosRef.current = 0;
+    else fallosRef.current += 1;
+  }, [animating, questionIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPoderCerrado(false); }, [questionIdx]);
+
+  const poderSugerido = (() => {
+    if (poderCerrado || animating || !setAppState || !appState) return null;
+    const yaTiene = (id) => ({
+      i_repaso: !!appState.repasoActive,
+      i_comodin: !!appState.comodinActive,
+      i_freeze: (appState.streakFreezes || 0) > 0,
+    }[id]);
+    let id = null, razon = '';
+    if (fallosRef.current >= 3)      { id = 'i_comodin'; razon = 'Vas 3 seguidas malas. Marca una como correcta.'; }
+    else if (fallosRef.current >= 2) { id = 'i_repaso';  razon = 'Vas 2 seguidas malas. Cambia una respuesta fallida.'; }
+    else if ((appState.streakDays || 0) > 0 && !appState.yourConfirmed && new Date().getHours() >= 18) {
+      id = 'i_freeze'; razon = `Se te puede apagar la racha de ${appState.streakDays} días esta noche.`;
+    }
+    if (!id || yaTiene(id)) return null;
+    const item = (typeof SHOP_ITEMS !== 'undefined' ? SHOP_ITEMS : []).find(x => x.id === id);
+    if (!item) return null;
+    return { ...item, razon, icon: (PODER_ICONS || {})[id] || 'star' };
+  })();
+
+  const comprarPoder = (item) => {
+    if (!setAppState || (appState?.ryo || 0) < item.price) return;
+    FX.play('poder'); FX.vibrate('medium');
+    setAppState(s => ({
+      ...s,
+      ryo: Math.max(0, (s.ryo || 0) - item.price),
+      ...(ITEM_EFFECTS[item.id] ? ITEM_EFFECTS[item.id](s) : {}),
+      inventory: [...(s.inventory || []), item.id],
+    }));
+    setPoderCerrado(true);
+  };
   
   // 🌟 EL TRADUCTOR MÁGICO: Convierte texto plano en matemáticas y listas hermosas
   const renderRichText = (text, isExplanation = false) => {
@@ -8583,13 +8876,20 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
         </div>
       )}
 
-      {/* Barra de progreso superior — el color cuenta cómo vas */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={onExit} style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <PkIc n="left" s={13} c={C.textMuted} /> Salir
+      {/* Barra de progreso superior — línea fina teñida con el color del área */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <button className="icq-back" onClick={onExit} aria-label="Salir del simulacro">
+          <PkIc n="left" s={15} c="#B9A9AF" />
         </button>
-        <div style={{ flex: 1, height: 6, borderRadius: 99, background: C.bgAlt, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${barColor}88, ${barColor})`, transition: 'width 0.5s, background 0.6s', boxShadow: `0 0 8px ${barColor}60` }} />
+        {vidas != null && (
+          <span className="icq-vidas">
+            <PkIc n="flame" s={11} c="#FF2E4C" />{vidas}
+          </span>
+        )}
+        <div className="icq-prog">
+          <div className="icq-prog__f" style={{ width: `${pct}%`,
+            background: `linear-gradient(90deg, ${meta.color}66, ${meta.color})`,
+            boxShadow: `0 0 10px ${meta.color}88` }} />
         </div>
         {combo && combo.mult > 1 ? (
           <span key={combo.n} style={{ fontSize: 11, fontWeight: 900, whiteSpace: 'nowrap',
@@ -8610,57 +8910,75 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
       <div key={questionIdx} style={{ display: 'flex', flexDirection: 'column', gap: 16,
         animation: 'qSlideIn 0.4s cubic-bezier(0.22,1,0.36,1) both' }}>
 
-      {/* Etiquetas de Materia y Competencia */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: meta.bg, border: `1px solid ${meta.color}40`, borderRadius: 8, padding: '5px 12px' }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: meta.color, boxShadow: `0 0 6px ${meta.color}` }} />
-          <span style={{ fontSize: 11, fontWeight: 800, color: meta.color, letterSpacing: 0.5 }}>{question.subject.toUpperCase()}</span>
+      {/* ══ CÁPSULA DE PODER: baja sola cuando el poder te sirve ahora ══ */}
+      {poderSugerido && (
+        <div className="icq-poder">
+          <span className="icq-poder__ic" style={{ color: rarityColor(poderSugerido.rarity) }}>
+            <PkIc n={poderSugerido.icon} s={19} c={rarityColor(poderSugerido.rarity)} />
+          </span>
+          <div className="icq-poder__tx">
+            <b>{poderSugerido.name}</b>
+            <span>{poderSugerido.razon}</span>
+          </div>
+          <button className="icq-poder__buy"
+            disabled={(appState?.ryo || 0) < poderSugerido.price}
+            onClick={() => comprarPoder(poderSugerido)}
+            style={{ background: `${rarityColor(poderSugerido.rarity)}22`,
+              boxShadow: `inset 0 0 0 1px ${rarityColor(poderSugerido.rarity)}66`,
+              color: rarityColor(poderSugerido.rarity) }}>
+            <PkIc n="empanada" s={11} c={rarityColor(poderSugerido.rarity)} />{poderSugerido.price}
+          </button>
+          <button className="icq-poder__x" onClick={() => { FX.play('tap'); setPoderCerrado(true); }} aria-label="Cerrar">✕</button>
         </div>
-        <span style={{ fontSize: 10, color: C.textMuted, background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 5, padding: '4px 10px', fontWeight: 700, letterSpacing: 1 }}>{question.nivel.toUpperCase()}</span>
+      )}
+
+      {/* Chips: área (con su color) + componente */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+        <span className="icq-chip" style={{ color: meta.color, boxShadow: `inset 0 0 0 1px ${meta.color}55` }}>
+          <i style={{ width: 6, height: 6, borderRadius: '50%', background: meta.color, boxShadow: `0 0 6px ${meta.color}` }} />
+          {question.subject}
+        </span>
+        {(question.componente || question.nivel) && (
+          <span className="icq-chip icq-chip--mut">{question.componente || question.nivel}</span>
+        )}
       </div>
 
-      {/* El Motor Visual (Gráficas/Tablas) */}
-      {question.context && <IcfesVisualContext context={question.context} />}
+      {/* Contexto visual de la pregunta (texto, tabla, figura, caricatura, mapa…) */}
+      <IcfesVisualContext context={question.context} accent={meta.color} />
 
       {/* Enunciado de la Pregunta — tiembla sutil si fallas */}
       <div style={{ animation: fallo ? 'shakeX 0.45s ease' : 'none' }}>
-      <Card key={question.id} C={C} isLight={isLight} className="fu" style={{ padding: '20px 22px', borderLeft: `4px solid ${meta.color}` }}>
-        <div style={{ fontSize: 15, lineHeight: 1.7, color: C.text, fontWeight: 500 }}>
-          {/* AQUÍ APLICAMOS EL TRADUCTOR */}
+        <div className="icq-enun" style={{ borderLeftColor: meta.color }}>
           {renderRichText(question.text)}
         </div>
-      </Card>
       </div>
 
       {/* Opciones de Respuesta */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {question.options.map((opt, i) => {
           const isSelected = selected === i, isCorrect = question.correct === i, showResult = animating;
-          let bg = C.bgAlt, border = C.border, txtColor = C.text, shadow = 'none', letterBg = 'rgba(255,255,255,0.05)', letterColor = C.textMuted;
-          
+          const fueDescartada = descartada === i;
+          let cls = 'icq-opt', letterBg = 'rgba(255,255,255,0.06)', letterColor = '#B9A9AF', txtColor = '#F6F1F2';
+
           if (showResult) {
-            if (isSelected && isCorrect)  { bg = '#34D39915'; border = '#34D399'; txtColor = '#34D399'; shadow = `0 4px 20px #34D39925`; letterBg = '#34D399'; letterColor = '#000'; }
-            else if (isSelected && !isCorrect) { bg = '#EF444415'; border = '#EF4444'; txtColor = '#EF4444'; shadow = `0 4px 20px #EF444425`; letterBg = '#EF4444'; letterColor = '#fff'; }
-            else if (isCorrect) { bg = '#34D39908'; border = '#34D39950'; txtColor = '#34D399'; letterBg = '#34D39930'; letterColor = '#34D399'; }
+            if (isCorrect)                     { cls += ' icq-opt--ok';   letterBg = '#34D399'; letterColor = '#04120C'; txtColor = '#8FF0C6'; }
+            else if (isSelected && !isCorrect) { cls += ' icq-opt--bad';  letterBg = '#EF4444'; letterColor = '#fff';    txtColor = '#FFB4B4'; }
+            else                               { cls += ' icq-opt--off'; }
           } else if (isSelected) {
-            bg = meta.bg; border = meta.color; txtColor = meta.color; shadow = `0 4px 20px ${meta.color}30`; letterBg = meta.color; letterColor = '#000';
+            cls += ' icq-opt--sel'; letterBg = meta.color; letterColor = '#0A0608';
           }
-          
+          if (fueDescartada) cls += ' icq-opt--tachada';
+
           return (
-            <button key={i} onClick={() => !animating && onAnswer(i)} style={{
-              background: bg, border: `1px solid ${border}`, borderRadius: 16,
-              padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 14, textAlign: 'left',
-              cursor: animating ? 'default' : 'pointer', boxShadow: shadow, fontFamily: 'inherit',
-              transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)', transform: (isSelected && animating) ? 'scale(1.02)' : 'scale(1)',
-            }}>
-              <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, background: letterBg, color: letterColor,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, transition: 'all 0.3s' }}>
-                {showResult && isSelected ? (isCorrect ? '✓' : '✗') : showResult && isCorrect ? '✓' : LETTERS[i]}
-              </div>
-              <div style={{ fontSize: 14, lineHeight: 1.6, color: txtColor, fontWeight: isSelected ? 700 : 500, flex: 1, marginTop: 4 }}>
-                {/* AQUÍ APLICAMOS EL TRADUCTOR A LAS OPCIONES */}
-                {renderRichText(opt)}
-              </div>
+            <button key={i} className={cls}
+              disabled={fueDescartada}
+              onClick={() => { if (!animating && !fueDescartada) { FX.play('select'); onAnswer(i); } }}
+              style={!showResult && isSelected ? { boxShadow: `inset 0 0 0 1.5px ${meta.color}, 0 6px 22px -8px ${meta.color}` } : undefined}>
+              <span className="icq-opt__l" style={{ background: letterBg, color: letterColor }}>
+                {showResult && isCorrect ? '✓' : showResult && isSelected ? '✕' : LETTERS[i]}
+              </span>
+              <span className="icq-opt__t" style={{ color: txtColor }}>{renderRichText(opt)}</span>
+              {showResult && isSelected && !isCorrect && <span className="icq-opt__dot" />}
             </button>
           );
         })}
@@ -8668,7 +8986,7 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
 
       {/* 🌟 EXPLICACIÓN DEL SABIO REDISEÑADA 🌟 */}
       {animating && (
-        <div className="fu" style={{
+        <div ref={expRef} className="fu" style={{
           background: selected === question.correct ? 'rgba(52, 211, 153, 0.08)' : 'rgba(239, 68, 68, 0.08)',
           border: `1px solid ${selected === question.correct ? 'rgba(52, 211, 153, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
           borderRadius: 20, padding: '22px', marginTop: 12, position: 'relative', overflow: 'hidden'
@@ -8684,16 +9002,50 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: selected === question.correct ? '#34D399' : '#EF4444' }}>
-                {selected === question.correct ? '¡Precisión Absoluta! +10 XP' : 'El Sabio corrige tu camino'}
+                {selected === question.correct ? '¡Bien pensado!' : 'Casi, mira por qué'}
               </div>
               <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, letterSpacing: 1.5, marginTop: 2 }}>ANÁLISIS DE LA PREGUNTA</div>
             </div>
           </div>
 
-          <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.6, position: 'relative', zIndex: 1, 
-            background: 'rgba(0,0,0,0.25)', padding: '16px 18px', borderRadius: 14, border: `1px solid rgba(255,255,255,0.05)` }}>
-            {/* AQUÍ APLICAMOS EL TRADUCTOR A LA EXPLICACIÓN (CON VIÑETAS ACTIVAS) */}
-            {renderRichText(question.explanation, true)}
+          {/* Explicación breve y al punto: 2–3 ideas, una por línea */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', zIndex: 1 }}>
+            {exp.porQue && (
+              <div className="icq-ex__row">
+                <span className="icq-ex__ic" style={{ background: 'rgba(52,211,153,.16)', color: '#34D399' }}>
+                  <PkIc n="check" s={11} c="#34D399" />
+                </span>
+                <div className="icq-ex__tx">
+                  <b style={{ color: '#34D399' }}>{LETTERS[question.correct]}</b>: {renderRichText(exp.porQue)}
+                </div>
+              </div>
+            )}
+            {fallo && porQueFallaTuya && (
+              <div className="icq-ex__row">
+                <span className="icq-ex__ic" style={{ background: 'rgba(239,68,68,.16)', color: '#EF4444' }}>
+                  <PkIc n="x" s={11} c="#EF4444" />
+                </span>
+                <div className="icq-ex__tx">
+                  Tu opción <b style={{ color: '#EF4444' }}>{LETTERS[selected]}</b> falla: {renderRichText(porQueFallaTuya)}
+                </div>
+              </div>
+            )}
+            {(exp.clave || exp.truco) && (
+              <div className="icq-ex__row">
+                <span className="icq-ex__ic" style={{ background: 'rgba(255,207,107,.16)', color: '#FFCF6B' }}>
+                  <PkIc n="star" s={11} c="#FFCF6B" />
+                </span>
+                <div className="icq-ex__tx">
+                  {exp.clave && <>Palabra clave: <span className="icq-ex__key">{exp.clave}</span>{exp.truco ? ' — ' : ''}</>}
+                  {exp.truco}
+                </div>
+              </div>
+            )}
+            {!exp.porQue && !exp.truco && !exp.clave && (
+              <div className="icq-ex__tx" style={{ opacity: .8 }}>
+                La respuesta correcta es la <b style={{ color: '#34D399' }}>{LETTERS[question.correct]}</b>.
+              </div>
+            )}
           </div>
 
           {/* 🔄 EL REPASO: cambia esta respuesta fallida (una vez por test) */}
@@ -8707,11 +9059,26 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
               <PkIc n="refresh" s={15} c="#60A5FA"/> Usar El Repaso: cambiar mi respuesta
             </button>
           )}
-          <div style={{ marginTop: 20, position: 'relative', zIndex: 1 }}>
-            <PrimaryBtn C={C} onClick={onNext}>{questionIdx < total - 1 ? 'Siguiente Desafío →' : 'Ver Resultados de la Expedición'}</PrimaryBtn>
-          </div>
         </div>
       )}
+
+      {/* ══ BARRA INFERIOR: Pista + Siguiente ══ */}
+      <div className="icq-foot">
+        <button className="icq-pista" onClick={usarPista} disabled={!puedePista}
+          title={empanadas < PISTA_COSTO ? 'No te alcanzan las empanadas' : descartada !== null ? 'Ya usaste la pista' : 'Descarta una opción mala'}>
+          <PkIc n="star" s={14} c={puedePista ? '#FFCF6B' : '#6B6067'} />
+          <span>Pista</span>
+          <span className="icq-pista__c">
+            <PkIc n="empanada" s={10} c={puedePista ? '#FFCF6B' : '#6B6067'} />{PISTA_COSTO}
+          </span>
+        </button>
+        <button className={`icq-next${animating ? ' icq-next--on' : ''}`}
+          onClick={() => { if (animating) { FX.play('next'); onNext(); } }}
+          disabled={!animating}
+          style={animating ? { background: `linear-gradient(135deg, ${meta.color}, #FF6B54 70%, #FF2E4C)` } : undefined}>
+          {questionIdx < total - 1 ? 'Siguiente' : 'Ver resultados'} <span style={{ marginLeft: 6 }}>→</span>
+        </button>
+      </div>
 
       {/* 🐸 LA PREGUNTA DE COMODÍN: marca esta pregunta como correcta */}
       {comodinDisponible && !animating && (
@@ -8918,8 +9285,164 @@ function SenseiModal({ C, isLight, question, userAnsText, correctAnsText, onClos
 // ─────────────────────────────────────────────
 //  GEMINI API — Generador de Simulacros con Material Visual
 // ─────────────────────────────────────────────
-// La llave ahora está escondida y segura
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+// La llave de Gemini. Acepta los dos nombres de variable para no romper si el .env
+// usa uno u otro (en .env local está como REACT_APP_API_KEY).
+// ⚠ En Vercel hay que crear la variable (Settings → Environment Variables), porque
+//   el archivo .env está en .gitignore y NO se sube al repositorio.
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || process.env.REACT_APP_API_KEY;
+
+// ── Extractor de JSON a prueba de balas ────────────────────────────────────
+// Gemini a veces devuelve el array correcto seguido de texto extra, o envuelto
+// en ```json, o dos arrays pegados. Esto saca el PRIMER array completo válido
+// haciendo balance de corchetes (respetando strings y escapes).
+function extraerArrayJSON(textoRaw) {
+  const limpio = String(textoRaw || '')
+    .replace(/^\s*```json\s*/i, '').replace(/^\s*```\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
+  // 1) Camino feliz
+  try { const p = JSON.parse(limpio); if (Array.isArray(p)) return p; } catch (e) {}
+
+  // 2) Escaneo con balance de corchetes desde el primer '['
+  const ini = limpio.indexOf('[');
+  if (ini === -1) return null;
+  let prof = 0, enStr = false, escapado = false;
+  for (let i = ini; i < limpio.length; i++) {
+    const c = limpio[i];
+    if (escapado) { escapado = false; continue; }
+    if (c === '\\') { escapado = true; continue; }
+    if (c === '"') { enStr = !enStr; continue; }
+    if (enStr) continue;
+    if (c === '[') prof++;
+    else if (c === ']') {
+      prof--;
+      if (prof === 0) {
+        try { const p = JSON.parse(limpio.slice(ini, i + 1)); if (Array.isArray(p)) return p; } catch (e) {}
+        break;
+      }
+    }
+  }
+
+  // 3) Último recurso: rescatar los objetos {...} completos de nivel superior
+  const objetos = [];
+  let oIni = -1; prof = 0; enStr = false; escapado = false;
+  for (let i = ini; i < limpio.length; i++) {
+    const c = limpio[i];
+    if (escapado) { escapado = false; continue; }
+    if (c === '\\') { escapado = true; continue; }
+    if (c === '"') { enStr = !enStr; continue; }
+    if (enStr) continue;
+    if (c === '{') { if (prof === 0) oIni = i; prof++; }
+    else if (c === '}') {
+      prof--;
+      if (prof === 0 && oIni !== -1) {
+        try { objetos.push(JSON.parse(limpio.slice(oIni, i + 1))); } catch (e) {}
+        oIni = -1;
+      }
+    }
+  }
+  return objetos.length ? objetos : null;
+}
+
+// ── Normalizador de preguntas ──────────────────────────────────────────────
+// Acepta el formato NUEVO (tipo + context + explicacion estructurada) y también
+// el VIEJO (long_text/table/bar_chart/notice + explanation en texto), para que
+// nada se rompa y la pantalla nunca quede en blanco.
+const _TIPOS_VALIDOS = ['texto', 'ingles', 'grafica', 'tabla', 'caricatura', 'mapa', 'simple'];
+const _MAPA_TIPOS_VIEJOS = { long_text: 'texto', table: 'tabla', bar_chart: 'grafica', notice: 'ingles' };
+
+function normalizarContexto(ctx) {
+  if (!ctx || typeof ctx !== 'object') return null;
+  const rawType = String(ctx.type || '').toLowerCase();
+  const type = _TIPOS_VALIDOS.includes(rawType) ? rawType : (_MAPA_TIPOS_VIEJOS[rawType] || null);
+  if (!type || type === 'simple') return null;
+
+  // Párrafos: Gemini a veces manda string, a veces array, a veces otro nombre
+  const rawParas = ctx.paragraphs || ctx.text || ctx.content || ctx.message;
+  const paragraphs = Array.isArray(rawParas) ? rawParas.filter(Boolean).map(String)
+    : (typeof rawParas === 'string' && rawParas.trim() ? [rawParas] : []);
+
+  if (type === 'texto' || type === 'ingles') {
+    if (!paragraphs.length && !ctx.title) return null;
+    return { type, kind: ctx.kind || null, title: ctx.title || null, paragraphs, source: ctx.source || ctx.subtext || null };
+  }
+  if (type === 'tabla') {
+    const headers = ctx.headers || ctx.data?.headers;
+    const rows = ctx.rows || ctx.data?.rows;
+    if (!Array.isArray(headers) || !Array.isArray(rows)) return null;
+    return { type, title: ctx.title || null, headers: headers.map(String), rows: rows.filter(Array.isArray).map(r => r.map(String)) };
+  }
+  if (type === 'grafica') {
+    const chart = String(ctx.chart || 'barras').toLowerCase();
+    if (chart === 'geometria') {
+      const puntos = Array.isArray(ctx.puntos) ? ctx.puntos.filter(p => p && isFinite(p.x) && isFinite(p.y)) : [];
+      if (puntos.length < 2) return null;
+      return { type, chart: 'geometria', title: ctx.title || 'FIGURA', figura: ctx.figura || null,
+        puntos, angulos: Array.isArray(ctx.angulos) ? ctx.angulos : [] };
+    }
+    const data = Array.isArray(ctx.data) ? ctx.data.filter(d => d && d.label != null) : [];
+    if (!data.length) return null;
+    return { type, chart: chart === 'lineas' ? 'lineas' : 'barras', title: ctx.title || null,
+      axisX: ctx.axisX || ctx.axisLabel || null, axisY: ctx.axisY || null,
+      data: data.map(d => ({ label: String(d.label), value: Number(d.value) || 0 })) };
+  }
+  if (type === 'caricatura') {
+    const globos = Array.isArray(ctx.globos) ? ctx.globos.filter(g => g && g.texto) : [];
+    if (!globos.length && !ctx.escena) return null;
+    return { type, title: ctx.title || 'OBSERVA LA CARICATURA', escena: ctx.escena || null, globos };
+  }
+  if (type === 'mapa') {
+    if (!ctx.descripcion && !Array.isArray(ctx.zonas)) return null;
+    return { type, title: ctx.title || 'OBSERVA EL MAPA', descripcion: ctx.descripcion || null,
+      zonas: Array.isArray(ctx.zonas) ? ctx.zonas : [] };
+  }
+  return null;
+}
+
+function normalizarExplicacion(q) {
+  const e = q.explicacion || q.explanation;
+  // Formato nuevo (objeto estructurado)
+  if (e && typeof e === 'object' && !Array.isArray(e)) {
+    const pf = (e.porQueFalla && typeof e.porQueFalla === 'object') ? e.porQueFalla : {};
+    return {
+      porQue: e.porQue || e.porque || '',
+      clave: e.clave || '',
+      truco: e.truco || '',
+      porQueFalla: pf,
+    };
+  }
+  // Formato viejo (string con viñetas) → lo dejamos como "porQue" para no perder nada
+  if (typeof e === 'string' && e.trim()) {
+    return { porQue: e.trim(), clave: '', truco: '', porQueFalla: {} };
+  }
+  return { porQue: '', clave: '', truco: '', porQueFalla: {} };
+}
+
+function normalizarPregunta(q, i = 0) {
+  if (!q || typeof q !== 'object') return null;
+  const options = Array.isArray(q.options) ? q.options.map(String) : [];
+  if (options.length < 2) return null;
+  let correct = Number(q.correct);
+  if (!isFinite(correct) || correct < 0 || correct >= options.length) correct = 0;
+
+  const context = normalizarContexto(q.context);
+  let tipo = String(q.tipo || '').toLowerCase();
+  if (!_TIPOS_VALIDOS.includes(tipo)) tipo = context ? context.type : 'simple';
+  // Si dijo que tenía contexto pero no llegó válido, cae a "simple" (nunca queda en blanco)
+  if (!context) tipo = 'simple';
+
+  return {
+    ...q,
+    id: q.id != null ? q.id : i + 1,
+    subject: q.subject || 'Lectura Crítica',
+    componente: q.componente || q.nivel || null,
+    tipo,
+    context,
+    text: String(q.text || q.pregunta || '').trim(),
+    options,
+    correct,
+    explicacion: normalizarExplicacion(q),
+  };
+}
 
 async function fetchGeminiQuestions(subjects, count, opts = {}) {
   if (!GEMINI_API_KEY) throw new Error("Falta la Llave Maestra de IA.");
@@ -8944,34 +9467,65 @@ Dificultad: ${dificultad}. Formato ICFES real, análisis crítico y pensamiento 
 
 ${reglaVisual}
 
-FORMATOS DE CONTEXTO PERMITIDOS (Usa estrictamente esta estructura y NO dejes campos vacíos):
-1. Tabla: {"type": "table", "data": {"headers": ["Col1", "Col2"], "rows": [["V1", "V2"], ["V3", "V4"]]}}
-2. Gráfica: {"type": "bar_chart", "title": "Título", "axisLabel": "Eje", "data": [{"label": "A", "value": 10}, {"label": "B", "value": 20}]}
-3. Texto Largo: {"type": "long_text", "title": "TITULO", "paragraphs": ["Escribe aquí el texto COMPLETO a analizar. Mínimo 30 palabras."], "source": "Autor"} -> OJO: "paragraphs" es un array de strings obligatorio.
-4. Aviso: {"type": "notice", "text": "WARNING: DO NOT ENTER", "subtext": "Staff only"} -> OJO: "text" es obligatorio.
+CADA PREGUNTA LLEVA UN "tipo" QUE DEFINE CÓMO SE DIBUJA. Elige el que corresponda:
+- "texto"      → Lectura Crítica/Filosofía. Va con un texto para analizar.
+- "ingles"     → Inglés. Va con un aviso/email/diálogo EN INGLÉS.
+- "grafica"    → Matemáticas/C. Naturales. Va con una gráfica o una figura geométrica.
+- "tabla"      → Matemáticas/Sociales. Va con una tabla de datos.
+- "caricatura" → Sociales/Lectura Crítica. Va con una viñeta y su globo de diálogo.
+- "mapa"       → Sociales. Va con un esquema/mapa simple.
+- "simple"     → Pregunta directa, SIN contexto (context: null).
+
+ESTRUCTURA DEL "context" SEGÚN EL TIPO (no dejes campos vacíos):
+- texto:      {"type":"texto","title":"TÍTULO","paragraphs":["párrafo 1","párrafo 2"],"source":"Autor"}
+- ingles:     {"type":"ingles","kind":"notice|email|dialogue","title":"Policy Update","paragraphs":["texto en inglés"]}
+- tabla:      {"type":"tabla","title":"TÍTULO DE LA TABLA","headers":["Col1","Col2"],"rows":[["A","1 de 30"],["B","3 de 20"]]}
+- grafica (barras/líneas): {"type":"grafica","chart":"barras","title":"TÍTULO","axisX":"eje x","axisY":"eje y","data":[{"label":"A","value":10},{"label":"B","value":20}]}
+- grafica (GEOMETRÍA): {"type":"grafica","chart":"geometria","title":"FIGURA 1","figura":"triangulo","puntos":[{"id":"A","x":12,"y":88},{"id":"B","x":88,"y":88},{"id":"C","x":42,"y":18}],"angulos":[{"en":"A","valor":"45°"},{"en":"B","valor":"105°"}]}
+  -> Las coordenadas van de 0 a 100 (x hacia la derecha, y hacia abajo). Deben formar la figura REAL del problema.
+- caricatura: {"type":"caricatura","title":"OBSERVA LA CARICATURA","escena":"descripción corta de la escena","globos":[{"quien":"político","texto":"El pueblo tiene voz..."}]}
+- mapa:       {"type":"mapa","title":"OBSERVA EL MAPA","descripcion":"descripción","zonas":[{"nombre":"Región A","valor":"dato"}]}
+- simple:     null
 
 REGLAS DE FORMATO Y MATEMÁTICAS:
 1. Envuelve TODAS las ecuaciones, variables (x, y) y números sueltos entre comillas invertidas (\`) para formato matemático. Ejemplo: \`f(x) = x² - 3x + 2\`.
 2. NUNCA uses asteriscos (*) para multiplicación. Usa '·' o '×'.
 3. Pon espacios en tus ecuaciones: \`x = 0\` y \`x = 2\`.
-4. La explicación (explanation) DEBE usar viñetas (líneas que empiezan con guion '-'). Usa **negritas** para resaltar.
 
-FORMATO DE RESPUESTA OBLIGATORIO (Devuelve SOLO un array JSON válido, ejemplo):
+LA EXPLICACIÓN DEBE SER BREVE Y ENSEÑAR (nada de párrafos largos):
+- "porQue": UNA frase con el principio/regla por el que la correcta es correcta (máx 20 palabras).
+- "clave": la palabra o fórmula clave (2-4 palabras), que se resalta.
+- "truco": UN dato o truco corto para la próxima vez (máx 15 palabras).
+- "porQueFalla": objeto con el índice de CADA opción incorrecta y por qué ESA opción específica está mal
+  (máx 18 palabras cada una, dirigida a ese error concreto, no genérica).
+
+FORMATO DE RESPUESTA OBLIGATORIO (Devuelve SOLO un array JSON válido, sin markdown, ejemplo):
 [
   {
     "id": 1,
     "subject": "Lectura Crítica",
+    "componente": "Análisis",
     "nivel": "Análisis",
+    "tipo": "texto",
     "context": {
-      "type": "long_text",
-      "title": "LA LIBERTAD",
-      "paragraphs": ["La libertad no es un acto anárquico, sino la capacidad de actuar conforme a la razón...", "Por lo tanto, depende del individuo..."],
-      "source": "Filosofía Moderna"
+      "type": "texto",
+      "title": "EL MITO DE LA TECNOCRACIA",
+      "paragraphs": ["La modernidad ha desplazado la deliberación política por la eficiencia técnica..."],
+      "source": "Anónimo"
     },
-    "text": "¿Qué postura defiende el autor frente a la libertad?",
-    "options": ["A", "B", "C", "D"],
+    "text": "¿Cuál es la crítica principal del autor hacia la tecnocracia?",
+    "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
     "correct": 1,
-    "explanation": "- **Concepto**: El autor liga la libertad a la razón.\\n- Por ello, la opción correcta es la B."
+    "explicacion": {
+      "porQue": "El autor señala que la eficiencia técnica despolitiza la esfera pública.",
+      "clave": "despolitiza",
+      "truco": "Busca el verbo que marca la consecuencia, no el tema.",
+      "porQueFalla": {
+        "0": "Habla de insuficiencia técnica, pero el texto critica el desplazamiento político.",
+        "2": "Culpa al ciudadano; el texto culpa al modelo, no a las personas.",
+        "3": "Invierte la idea: el texto no defiende la descentralización."
+      }
+    }
   }
 ]
 
@@ -8991,11 +9545,12 @@ FORMATO DE RESPUESTA OBLIGATORIO (Devuelve SOLO un array JSON válido, ejemplo):
     const textRaw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textRaw) throw new Error("Respuesta vacía de Gemini.");
     
-    const cleaned = textRaw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-    const parsed  = JSON.parse(cleaned);
-    
+    const parsed = extraerArrayJSON(textRaw);
     if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Formato inválido.");
-    return parsed;
+    // Blindaje: normalizamos todo (formato nuevo y viejo) y descartamos lo inservible
+    const limpias = parsed.map((q, i) => normalizarPregunta(q, i)).filter(Boolean);
+    if (!limpias.length) throw new Error("Formato inválido.");
+    return limpias;
   } catch(err) {
     console.error("Fallo en Gemini:", err);
     throw new Error("El flujo de energía se interrumpió. Usando banco de emergencia.");
@@ -9181,24 +9736,42 @@ function SabioLoading({ C }) {
     return () => clearInterval(interval);
   }, []);
 
+  // La frase se parte para resaltar la última palabra en carmesí (como la demo)
+  const frase = PHRASES[idx].replace(/\.\.\.$/, '');
+  const palabras = frase.split(' ');
+  const ultima = palabras.length > 1 ? palabras.pop() : '';
+
   return (
-    <div className="fi" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 380, gap: 28 }}>
-      <div style={{ position: 'relative', width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* Aros mágicos giratorios */}
-        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `3px dashed ${C.amberMid}50`, animation: 'spin 5s linear infinite' }} />
-        <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', border: `2px solid ${C.amberMid}20`, borderTopColor: C.amberMid, animation: 'spin 3s linear infinite reverse' }} />
-        <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, ${C.amberMid}20 0%, transparent 70%)`, animation: 'celestialPulse 2s ease-in-out infinite' }} />
-        
-        {/* Núcleo del Sabio */}
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: `linear-gradient(135deg, ${C.amberMid}, #D97706)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 30px ${C.amberMid}70`, zIndex: 2 }}>
-          <PkIc n="tiple" s={34} c="#000" />
+    <div className="fi" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      height: '100%', minHeight: 420, gap: 30, position: 'relative' }}>
+
+      {/* El fuego de Ascua (la misma criatura del Inicio) */}
+      <div style={{ position: 'relative', marginBottom: 6 }}>
+        <div style={{ position: 'absolute', left: '50%', top: '54%', width: 190, height: 190, transform: 'translate(-50%,-50%)',
+          borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,62,76,.45) 0%, rgba(255,90,60,.12) 44%, transparent 70%)',
+          filter: 'blur(8px)', mixBlendMode: 'screen', animation: 'fireGlow 3s ease-in-out infinite', pointerEvents: 'none' }} />
+        <div className="fire" style={{ transform: 'scale(1.15)' }}>
+          <div className="fl"><i /><i /><i /><i /></div>
         </div>
       </div>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: C.amberMid, letterSpacing: 2 }}>EL SABIO DICE:</div>
-        <div key={idx} style={{ fontSize: 15, color: C.text, textAlign: 'center', maxWidth: 280, lineHeight: 1.6, animation: 'fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both', fontStyle: 'italic' }}>
-          "{PHRASES[idx]}"
+
+      {/* Frase colombiana que se desvanece y cambia */}
+      <div key={idx} style={{ fontFamily: "'Sora', sans-serif", fontSize: 21, fontWeight: 300, color: '#F6F1F2',
+        textAlign: 'center', maxWidth: 300, lineHeight: 1.45, letterSpacing: '-0.01em',
+        animation: 'icqFrase 0.7s cubic-bezier(0.22,1,0.36,1) both' }}>
+        {palabras.join(' ')} {ultima && <span style={{ color: '#FF6B54' }}>{ultima}</span>}…
+      </div>
+
+      {/* Subtítulo + barra de carga */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <div style={{ fontFamily: "'Instrument Sans', sans-serif", fontSize: 9.5, fontWeight: 700, letterSpacing: 2.6,
+          textTransform: 'uppercase', color: '#7C6E74' }}>
+          Simulacro oficial · preparando preguntas
+        </div>
+        <div style={{ width: 190, height: 4, borderRadius: 99, background: 'rgba(255,255,255,.09)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: 99,
+            background: 'linear-gradient(90deg,#FF2E4C,#FF6B54,#FFCF6B)', boxShadow: '0 0 10px rgba(255,62,76,.6)',
+            animation: 'icqCarga 2.6s ease-in-out infinite' }} />
         </div>
       </div>
     </div>
@@ -12244,6 +12817,8 @@ const SABIO_HYPE = [
       comodinDisponible={!!appState.comodinActive && !usedComodin}
       onUsarRepaso={usarRepaso}
       onUsarComodin={usarComodin}
+      appState={appState}
+      setAppState={setAppState}
       onExit={() => { if (window.confirm('¿Salir del simulacro?')) { setIcfesScreen('dashboard'); setAnswers([]); setSelected(null); setAnimating(false); setCurrentQ(0); streakRef.current = { hits: 0, misses: 0 }; setSabioComment(null); setCombo(null); } }}
     />
   );
