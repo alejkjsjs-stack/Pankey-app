@@ -13068,6 +13068,38 @@ function ofertaDelDia() {
   return { item, precio: Math.round(item.price * 0.7) };
 }
 
+// ── [LÓGICA NUEVA] Regalo del Día: recompensa gratis 1 vez cada 24h ──
+// Es el gancho para volver a la tienda todos los días. Determinista por fecha.
+const REGALO_POOL = [
+  { kind: 'emp', amount: 200, label: '200 empanadas', icon: 'empanada', linea: 'La ñapa del día, pa\' que arranque.' },
+  { kind: 'emp', amount: 350, label: '350 empanadas', icon: 'empanada', linea: 'Cayó la platica sin sudar.' },
+  { kind: 'chest', chestId: 'c_wooden', label: 'Cofre de Madera', icon: 'mochila', linea: 'Modesto, pero de gratis sabe mejor.' },
+  { kind: 'emp', amount: 150, label: '150 empanadas', icon: 'empanada', linea: 'Pa\' la buseta del conocimiento.' },
+  { kind: 'chest', chestId: 'c_bronze', label: 'Cofre de Bronce', icon: 'mochila', linea: 'Algo bueno puede saltar de aquí.' },
+  { kind: 'emp', amount: 500, label: '500 empanadas', icon: 'empanada', linea: '¡Se destapó el marrano hoy!' },
+  { kind: 'emp', amount: 250, label: '250 empanadas', icon: 'empanada', linea: 'Regalito pa\' seguir la racha.' },
+];
+function regaloDelDia() {
+  return REGALO_POOL[hashStr('regalo-' + dateKeyISO()) % REGALO_POOL.length];
+}
+
+// ── [LÓGICA NUEVA] Mercado del Día: set de ítems variados que rota cada 24h ──
+// Un ítem por tipo (marco, título, cofre, poder…), con un pequeño descuento,
+// determinista por fecha. Mañana es otra cosa → razón para volver.
+function mercadoDelDia() {
+  const oferta = ofertaDelDia().item;
+  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && i.id !== oferta.id);
+  const seed = 'mercado-' + dateKeyISO();
+  const picks = [], usados = new Set();
+  ['frame', 'title', 'item', 'chest', 'banner'].forEach(tipo => {
+    const deTipo = pool.filter(i => i.type === tipo && !usados.has(i.id));
+    if (!deTipo.length) return;
+    const it = deTipo[hashStr(seed + tipo) % deTipo.length];
+    if (it) { usados.add(it.id); picks.push({ item: it, precio: Math.round(it.price * 0.85) }); }
+  });
+  return picks.slice(0, 4);
+}
+
 // Preview visual de un ítem del Bazar (60×60, con su animación activa).
 // Vive a nivel de módulo para que React NO lo remonte en cada re-render
 // (el countdown de la oferta reiniciaba las animaciones cada segundo).
@@ -15032,6 +15064,27 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       setSelectedShopItem(final);
     };
 
+    // ── [LÓGICA NUEVA] Regalo del Día + Mercado del Día ──
+    const regalo = regaloDelDia();
+    const regaloReclamado = appState.regaloClaimDate === dateKeyISO();
+    const mercado = mercadoDelDia();
+    const reclamarRegalo = () => {
+      if (regaloReclamado) { FX.play('error'); return; }
+      FX.play('reward'); FX.vibrate('success');
+      if (regalo.kind === 'chest') {
+        const it = SHOP_ITEMS.find(x => x.id === regalo.chestId);
+        const rw = (it && it.rewards) || {};
+        const rr = (a, c) => a + Math.floor(Math.random() * (c - a + 1));
+        const premio = { emp: rr(rw.minRyo || 40, rw.maxRyo || 120), xp: rw.xpBonus || 0, item: null };
+        setAppState(s => ({ ...s, ryo: (s.ryo || 0) + premio.emp, xp: (s.xp || 0) + premio.xp, regaloClaimDate: dateKeyISO() }));
+        if (it) setChestShow({ chest: it, premio });
+      } else {
+        setAppState(s => ({ ...s, ryo: (s.ryo || 0) + regalo.amount, regaloClaimDate: dateKeyISO() }));
+        onCoinBurst?.(regalo.amount);
+      }
+      fireBoost();
+    };
+
     const comprarBundle = (b) => {
       if ((appState.ryo || 0) < b.price) { FX.play('error'); FX.vibrate('error'); pushNotif?.('No te alcanzan las empanadas para este pack.'); return; }
       FX.play('coin'); FX.vibrate('heavy');
@@ -15285,6 +15338,48 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                 boxShadow: heroIdx === i ? `0 0 8px ${slideColor(s)}` : 'none',
                 transition: 'all 0.3s ease' }}/>
             ))}
+          </div>
+        </div>
+
+        {/* ══ REGALO DEL DÍA (gratis · 1 vez cada 24h) ══ */}
+        <div style={{ padding: '2px 20px 0' }}>
+          <button onClick={reclamarRegalo} disabled={regaloReclamado}
+            className={`bz-gift${regaloReclamado ? ' bz-gift--done' : ''}`}>
+            <span className="bz-gift__ic">
+              <PkIc n={regaloReclamado ? 'check' : regalo.icon} s={24} c={regaloReclamado ? '#7C6E74' : '#2A0E00'} />
+            </span>
+            <span className="bz-gift__tx">
+              <span className="bz-gift__k">Regalo del día</span>
+              <b>{regaloReclamado ? 'Reclamado hoy' : regalo.label}</b>
+              <small>{regaloReclamado ? `Vuelve en ${hh}h ${mm2}m` : regalo.linea}</small>
+            </span>
+            <span className="bz-gift__cta">{regaloReclamado ? '✓' : 'Reclamar'}</span>
+          </button>
+        </div>
+
+        {/* ══ MERCADO DEL DÍA (rota cada 24h) ══ */}
+        <div style={{ padding: '16px 0 2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 10px' }}>
+            <span className="bz-sec">Mercado del día</span>
+            <span className="bz-timer"><PkIc n="timer" s={11} c="#FFCF6B" />vuelve en {hh}h {mm2}m</span>
+          </div>
+          <div className="bz-shelf">
+            {mercado.map(({ item, precio }) => {
+              const rc = (RARITY_META[item.rarity] || RARITY_META['común']).color;
+              const rank = rankOf(item.rarity);
+              return (
+                <button key={item.id} className={`bz-card${rank <= 1 ? ' bz-card--hot' : ''}`}
+                  onClick={() => abrirItem(item, precio)} style={{ '--rc': rc }}>
+                  <span className="bz-card__rare">{(RARITY_META[item.rarity] || {}).label}</span>
+                  <span className="bz-card__prev"><BazarPreview item={item} size={54} C={C} user={user} appState={appState} /></span>
+                  <span className="bz-card__name">{item.name}</span>
+                  <span className="bz-card__price">
+                    <span className="bz-card__old">{item.price.toLocaleString()}</span>
+                    <PkIc n="empanada" s={11} c="#FFCF6B" />{precio.toLocaleString()}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

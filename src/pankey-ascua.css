@@ -155,6 +155,44 @@
 @keyframes icqFrase{0%{opacity:0;transform:translateY(9px);filter:blur(4px)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
 @keyframes icqCarga{0%{width:8%;margin-left:0}50%{width:62%}100%{width:8%;margin-left:92%}}
 
+/* ══ BAZAR ASCUA · Regalo del día + Mercado + estanterías ══ */
+.bz-sec{font:800 11px/1 'Instrument Sans';letter-spacing:1.6px;text-transform:uppercase;color:var(--t2)}
+.bz-timer{display:inline-flex;align-items:center;gap:5px;font:700 10.5px/1 'Instrument Sans';color:var(--amber);
+  padding:5px 9px;border-radius:99px;background:rgba(255,207,107,.12)}
+/* Regalo del día */
+.bz-gift{display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:20px;padding:12px 14px;text-align:left;font-family:inherit;
+  background:linear-gradient(120deg,rgba(255,207,107,.16),rgba(255,107,84,.10));
+  box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px rgba(255,207,107,.35),0 10px 28px -12px rgba(255,150,80,.5);
+  transition:transform .12s var(--ez);animation:bzGiftBreath 3.4s ease-in-out infinite}
+@keyframes bzGiftBreath{50%{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px rgba(255,207,107,.55),0 14px 36px -8px rgba(255,150,80,.6)}}
+.bz-gift:active{transform:scale(.985)}
+.bz-gift--done{background:var(--gl-2);box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px var(--gl-bd);animation:none;cursor:default}
+.bz-gift__ic{width:46px;height:46px;flex:none;border-radius:14px;display:grid;place-items:center;
+  background:radial-gradient(circle at 34% 28%,#FFE6A6,#FFB347);box-shadow:0 4px 14px -4px rgba(255,150,60,.7)}
+.bz-gift--done .bz-gift__ic{background:rgba(255,255,255,.06);box-shadow:none}
+.bz-gift__tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.bz-gift__k{font:800 9px/1 'Instrument Sans';letter-spacing:1.6px;text-transform:uppercase;color:var(--amber)}
+.bz-gift--done .bz-gift__k{color:var(--t3)}
+.bz-gift__tx b{font:700 15px/1.1 'Instrument Sans';color:var(--t1)}
+.bz-gift__tx small{font:500 10.5px/1.2 'Instrument Sans';color:var(--t3)}
+.bz-gift__cta{flex:none;padding:9px 15px;border-radius:99px;font:800 13px/1 'Instrument Sans';color:#2A0E00;
+  background:linear-gradient(135deg,#FFCF6B,#FF9A3D);box-shadow:0 6px 16px -6px rgba(255,150,60,.7)}
+.bz-gift--done .bz-gift__cta{background:none;color:#34D399;box-shadow:none;font-size:18px}
+/* Estantería horizontal con snap */
+.bz-shelf{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 20px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.bz-shelf::-webkit-scrollbar{display:none}
+.bz-card{scroll-snap-align:start;flex:none;width:132px;display:flex;flex-direction:column;align-items:center;gap:7px;
+  border:none;cursor:pointer;border-radius:18px;padding:14px 10px 12px;text-align:center;font-family:inherit;position:relative;
+  background:var(--gl-2);box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px var(--gl-bd);
+  transition:transform .14s var(--pop),box-shadow .2s}
+.bz-card:active{transform:translateY(2px) scale(.97)}
+.bz-card--hot{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px color-mix(in srgb,var(--rc) 55%,transparent),0 0 22px -6px var(--rc)}
+.bz-card__rare{font:800 8px/1 'Instrument Sans';letter-spacing:1.2px;color:var(--rc)}
+.bz-card__prev{width:56px;height:56px;display:grid;place-items:center}
+.bz-card__name{font:700 11.5px/1.25 'Instrument Sans';color:var(--t1);min-height:28px;display:flex;align-items:center}
+.bz-card__price{display:inline-flex;align-items:center;gap:4px;font:800 13px/1 'Instrument Sans';color:var(--amber)}
+.bz-card__old{font:600 9px/1 'Instrument Sans';color:var(--t3);text-decoration:line-through}
+
 /* ══ ICFES · SIMULACRO (shell, opciones, explicación, pie) ══ */
 .icq-back{width:32px;height:32px;flex:none;border:none;cursor:pointer;border-radius:50%;display:grid;place-items:center;
   background:var(--gl-2);box-shadow:inset 0 0 0 1px var(--gl-bd);transition:transform .12s var(--ez)}
