@@ -1078,7 +1078,15 @@ const FX = {
     const a = new Audio(url);
     a.loop = true;
     a.volume = 0.18; // bajito, de fondo
-    a.play().catch(() => {}); // si el navegador bloquea hasta interacción, no truena
+    a.play().catch(() => {
+      // El navegador bloquea el autoplay hasta que haya un gesto del usuario:
+      // reintentamos una sola vez en el primer toque/click.
+      const retry = () => {
+        document.removeEventListener('pointerdown', retry);
+        if (this.ambient.enabled && this.ambient.audio === a) { try { a.play().catch(() => {}); } catch (e) {} }
+      };
+      try { document.addEventListener('pointerdown', retry, { once: true }); } catch (e) {}
+    });
     this.ambient.audio = a;
     this.ambient.key = themeKey;
   },
@@ -1134,7 +1142,7 @@ const DESTACADOS_IDS = ['f_koi', 'b_void', 't_kami', 'f_celestial', 'b_cosmos'];
 //  (y suena bajita, en loop). Si lo dejas en null, no suena nada.
 // ═══════════════════════════════════════════════════════════════════════
 const AMBIENT_TRACKS = {
-  aizome_dark: null,   // ←  pon aquí  '/ambient.mp3'  (o tu link)  para activar la música de fondo
+  aizome_dark: '/ambient.mp3',   // ← archivo en public/ambient.mp3 (para cambiarlo, reemplaza ese archivo)
 };
 // ─────────────────────────────────────────────
 //  MOTOR DE DUELOS 1v1 EN VIVO (Firebase)
