@@ -3840,7 +3840,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       {/* ── CONTENIDO ── */}
       <div style={{ flex: 1, position: 'relative', zIndex: 100, overflow: 'hidden' }}>
         <div style={{ display: tab === 'tienda' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} />
+          <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} onOpenTienda={() => setTiendaRealOpen(true)} />
         </div>
         <div style={{ display: tab === 'inicio' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '14px 20px 10px', WebkitOverflowScrolling: 'touch' }}>
           <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} onOpenEnergy={() => setEnergyModalOpen(true)} onOpenTienda={() => setTiendaRealOpen(true)} onOpenIdentity={() => setIdentityMenu(true)} onStartSimulacro={() => { setTab('icfes'); setIcfesStartNonce(n => n + 1); }} />
@@ -14748,7 +14748,7 @@ function TallerAvatar({ C, appState, setAppState, onBack }) {
 // ─────────────────────────────────────────────
 //  SETTINGS TAB — ✅ XP real, achievements pagan, streak freeze
 // ─────────────────────────────────────────────
-function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientOn, appState, setAppState, user, onLogout, onSavePhoto, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, startView = 'settings', startViewNonce = 0, onGoSettings, asTab = false }) {
+function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientOn, appState, setAppState, user, onLogout, onSavePhoto, partnerPhotoURL, pushNotif, onCoinBurst, onAchievement, startView = 'settings', startViewNonce = 0, onGoSettings, asTab = false, onOpenTienda }) {
   const [view, setView]           = useState(startView);
 
   // Re-sincronizar la vista cuando navegan desde afuera (Inicio/menú) — el tab vive siempre montado
@@ -15490,6 +15490,22 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           </div>
         </div>
 
+        {/* ══ PANKEY PRO — promo grande y llamativa ══ */}
+        {!appState.isPro && (
+          <div style={{ padding: '14px 20px 4px' }}>
+            <button className="bz-pro" onClick={() => { FX.play('open'); FX.vibrate('light'); onOpenTienda?.(); }}>
+              <span className="bz-pro__aura" />
+              <span className="bz-pro__badge"><PkIc n="flame" s={26} c="#2A0E00" /></span>
+              <span className="bz-pro__tx">
+                <span className="bz-pro__k">Pankey Pro</span>
+                <b>Energía infinita · cofre doble diario · fuego a color</b>
+                <small>Estudia sin frenos y que tu llama se note.</small>
+              </span>
+              <span className="bz-pro__cta">Ver Pro →</span>
+            </button>
+          </div>
+        )}
+
         {/* ══ FUEGUITO — personaliza tu mascota (primera y destacada) ══ */}
         <div style={{ padding: '12px 0 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
@@ -15547,6 +15563,29 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
               </div>
             );
           })}
+        </div>
+
+        {/* ══ RECARGA DE EMPANADAS (dinero real) — al final del scroll ══ */}
+        <div style={{ padding: '18px 0 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 10px' }}>
+            <span className="bz-sec" style={{ color: '#FFCF6B' }}>Recarga de empanadas</span>
+            <span className="bz-timer">con dinero real</span>
+          </div>
+          <div className="bz-shelf">
+            {EMPANADA_PACKS.map(p => (
+              <button key={p.id} className={`bz-pack${p.best ? ' bz-pack--best' : ''}`}
+                onClick={() => { FX.play('tap'); FX.vibrate('light'); onOpenTienda?.(); }}>
+                {p.best && <span className="bz-pack__best">POPULAR</span>}
+                <span className="bz-pack__ic"><PkIc n="empanada" s={32} c="#FFCF6B" /></span>
+                <span className="bz-pack__emp"><PkIc n="empanada" s={12} c="#FFCF6B" />{p.emp.toLocaleString()}</span>
+                <span className="bz-pack__name">{p.name}</span>
+                <span className="bz-pack__price">{p.price}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 9.5, color: '#7C6E74', textAlign: 'center', padding: '9px 24px 0', lineHeight: 1.5 }}>
+            Pagos en pesos colombianos. Las empanadas son moneda virtual sin valor fuera de la app.
+          </div>
         </div>
 
         {/* ══ "VER TODO": grid completo de la categoría ══ */}
