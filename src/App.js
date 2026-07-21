@@ -10000,15 +10000,16 @@ const FIRE_SKINS = {
 const fireSkinFilter = (id) => (FIRE_SKINS[id] || FIRE_SKINS.default).filter;
 
 // Mini-llama viva con el color equipado (para Perfil y tabla del Combo).
-function MiniFuego({ color, anim = 'normal', size = 26 }) {
+function MiniFuego({ color, anim = 'normal', forma = 'clasica', size = 26 }) {
   const esc = (size / 118).toFixed(3);
   return (
     <span style={{ position: 'relative', width: size, height: size, display: 'inline-block', overflow: 'hidden',
       filter: fireSkinFilter(color), flexShrink: 0, verticalAlign: 'middle' }} aria-hidden="true">
-      <span className={`fire fire--${anim || 'normal'}`} style={{ position: 'absolute', left: '50%', bottom: -Math.round(size * 0.16),
+      <span className={`fire fire--${anim || 'normal'} fire--forma-${forma || 'clasica'}`} style={{ position: 'absolute', left: '50%', bottom: -Math.round(size * 0.16),
         transform: `translateX(-50%) scale(${esc})`, transformOrigin: 'center bottom',
         display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <span className="fl"><i /><i /><i /><i /></span>
+        <span className="eyes"><b /><b /></span>
       </span>
     </span>
   );
@@ -10032,6 +10033,14 @@ const ANIM_FUEGOS = [
   { id: 'normal',  name: 'Normal',      rarity: 'común',  price: 0,    linea: 'El bailecito de siempre.' },
   { id: 'calmado', name: 'Elegante',    rarity: 'raro',   price: 1200, linea: 'Se mueve lento y con clase.' },
   { id: 'hiper',   name: 'Hiperactivo', rarity: 'épico',  price: 2500, linea: 'No se queda quieto ni un segundo.' },
+];
+
+// Eje 3 del Fueguito: FORMA (silueta de la llama) → appState.fireForma + clase CSS fire--forma-<id>
+const FORMA_FUEGOS = [
+  { id: 'clasica', name: 'Clásica',      rarity: 'común',  price: 0,    linea: 'La llama de toda la vida.' },
+  { id: 'brasa',   name: 'Brasa',        rarity: 'raro',   price: 1600, linea: 'Bajita y ancha, puro rescoldo.' },
+  { id: 'candela', name: 'Candela',      rarity: 'raro',   price: 1800, linea: 'Recta y elegante como una vela.' },
+  { id: 'fatuo',   name: 'Fuego Fatuo',  rarity: 'épico',  price: 2800, linea: 'Fina y fantasmal, del más allá.' },
 ];
 
 function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false, fireColor = null }) {
@@ -12003,7 +12012,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
         {/* ── 3. HÉROE ASCUA — fuego criatura + número gigante ── */}
         <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoCancel}
           style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '4px 0 2px', animation: 'staggerRise 0.6s ease 0.16s both' }}>
-          <div className={`fire fire--${appState.fireAnim || 'normal'}${enPeligro ? ' nervous' : ''}`} ref={fireRef}
+          <div className={`fire fire--${appState.fireAnim || 'normal'} fire--forma-${appState.fireForma || 'clasica'}${enPeligro ? ' nervous' : ''}`} ref={fireRef}
             style={{ transform: `scale(${(0.58 + Math.min(fire.id, 6) * 0.075).toFixed(3)})`,
               filter: [fireSkin !== 'none' ? fireSkin : '', fire.id === 0 ? 'grayscale(1) brightness(0.55)' : ''].filter(Boolean).join(' ') || 'none',
               transition: 'transform 0.45s var(--ez), filter 0.4s ease' }}>
@@ -14308,7 +14317,7 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       <Av name={u.name || '?'} sz={46} C={C} photoURL={u.appState?.photoURL || u.photoURL} frameData={u.appState?.equipped?.frame} />
                       {/* Llamita equipada de la persona */}
-                      <span style={{ position: 'absolute', right: -4, bottom: -3 }}>
+                      <span style={{ position: 'absolute', right: -4, bottom: -3, zIndex: 3 }}>
                         <MiniFuego color={u.appState?.fireColor} anim={u.appState?.fireAnim} size={22} />
                       </span>
                     </div>
@@ -14887,7 +14896,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           <div style={{ marginBottom: 12, display: 'inline-block', position: 'relative' }}>
             <Av name={user?.name || '?'} sz={64} C={C} photoURL={appState.photoURL} frameData={myFrame} />
             {/* Tu llamita equipada */}
-            <span style={{ position: 'absolute', right: -6, bottom: -4 }}>
+            <span style={{ position: 'absolute', right: -6, bottom: -4, zIndex: 3 }}>
               <MiniFuego color={appState.fireColor} anim={appState.fireAnim} size={30} />
             </span>
           </div>
@@ -15083,6 +15092,23 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       } else {
         FX.play('poder'); FX.vibrate('light');
         setAppState(s => ({ ...s, fireAnim: a.id }));
+      }
+    };
+
+    // Forma del fueguito (silueta de la llama)
+    const formaOwned = appState.formaOwned || [];
+    const tieneForma = (id) => id === 'clasica' || formaOwned.includes(id);
+    const usarForma = (fo) => {
+      const equipado = (appState.fireForma || 'clasica') === fo.id;
+      if (equipado) return;
+      if (!tieneForma(fo.id)) {
+        if ((appState.ryo || 0) < fo.price) { FX.play('error'); FX.vibrate('error'); pushNotif?.('No te alcanzan las empanadas.'); return; }
+        FX.play('coin'); FX.vibrate('heavy');
+        setAppState(s => ({ ...s, ryo: (s.ryo || 0) - fo.price, formaOwned: [...(s.formaOwned || []), fo.id], fireForma: fo.id }));
+        pushNotif?.(`Forma: ${fo.name}`); fireBoost();
+      } else {
+        FX.play('poder'); FX.vibrate('light');
+        setAppState(s => ({ ...s, fireForma: fo.id }));
       }
     };
 
@@ -15499,7 +15525,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                   className={`bz-card${rank <= 1 && !bloqueado ? ' bz-card--hot' : ''}${bloqueado ? ' bz-card--lock' : ''}${equipado ? ' bz-card--eq' : ''}`}>
                   <span className="bz-card__rare">{(RARITY_META[f.rarity] || {}).label}</span>
                   <span className="bz-card__prev bz-fire" style={{ filter: bloqueado ? 'grayscale(.85) brightness(.7)' : fireSkinFilter(f.colorId) }}>
-                    <span className="fire"><span className="fl"><i /><i /><i /><i /></span></span>
+                    <span className={`fire fire--${appState.fireAnim || 'normal'} fire--forma-${appState.fireForma || 'clasica'}`}><span className="fl"><i /><i /><i /><i /></span><span className="eyes"><b /><b /></span></span>
                   </span>
                   <span className="bz-card__name">{f.name}</span>
                   {bloqueado ? (
@@ -15513,6 +15539,27 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                   ) : (
                     <span className="bz-card__price"><PkIc n="empanada" s={11} c="#FFCF6B" />{(f.unlock ? Math.round(f.price * 0.5) : f.price).toLocaleString()}</span>
                   )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Eje 3: Forma (silueta de la llama) */}
+          <div style={{ display: 'flex', gap: 8, padding: '10px 20px 0' }}>
+            {FORMA_FUEGOS.map(fo => {
+              const eq = (appState.fireForma || 'clasica') === fo.id;
+              const owned = tieneForma(fo.id);
+              const rc = (RARITY_META[fo.rarity] || RARITY_META['común']).color;
+              return (
+                <button key={fo.id} onClick={() => usarForma(fo)} className={`bz-anim${eq ? ' bz-anim--on' : ''}`} style={{ '--rc': rc }}>
+                  <span className="bz-anim__f">
+                    <span className={`fire fire--forma-${fo.id}`}><span className="fl"><i /><i /><i /><i /></span></span>
+                  </span>
+                  <b>{fo.name}</b>
+                  {eq ? <small style={{ color: '#34D399' }}>✓</small>
+                    : owned ? <small>Usar</small>
+                    : fo.price === 0 ? <small style={{ color: '#34D399' }}>Gratis</small>
+                    : <small style={{ color: '#FFCF6B' }}>◈{fo.price}</small>}
                 </button>
               );
             })}
