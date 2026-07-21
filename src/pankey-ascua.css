@@ -155,6 +155,39 @@
 @keyframes icqFrase{0%{opacity:0;transform:translateY(9px);filter:blur(4px)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
 @keyframes icqCarga{0%{width:8%;margin-left:0}50%{width:62%}100%{width:8%;margin-left:92%}}
 
+/* ══ APERTURA DE COFRE (Ascua): 3 golpes → explota → objeto con preview ══ */
+.chx-scrim{position:fixed;inset:0;z-index:99997;background:rgba(2,3,7,.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:24px}
+.chx{position:relative;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.chx-aura{position:absolute;top:44%;left:50%;width:330px;height:330px;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;filter:blur(8px);mix-blend-mode:screen;transition:opacity .4s,background .4s;animation:chxAura 3s ease-in-out infinite}
+@keyframes chxAura{50%{transform:translate(-50%,-50%) scale(1.1)}}
+.chx-flash{position:fixed;inset:0;background:#fff;pointer-events:none;z-index:5;animation:chxFlash .6s ease-out both}
+@keyframes chxFlash{0%{opacity:0}12%{opacity:.9}100%{opacity:0}}
+.chx-part{position:absolute;top:42%;left:50%;border-radius:50%;pointer-events:none;z-index:3}
+@keyframes chxPart{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--sx)),calc(-50% + var(--sy))) scale(0);opacity:0}}
+.chx-name{position:relative;font:900 11px/1 'Instrument Sans';letter-spacing:3px;text-transform:uppercase;margin-bottom:24px}
+.chx-cofre{position:relative;z-index:4;background:none;border:none;cursor:pointer;padding:0;transition:transform .2s var(--pop),filter .3s;animation:chxFloat 2.4s ease-in-out infinite}
+@keyframes chxFloat{50%{transform:translateY(-8px)}}
+.chx-cofre--hit{animation:chxHit .4s ease}
+@keyframes chxHit{0%,100%{transform:rotate(0)}25%{transform:rotate(-5deg)}75%{transform:rotate(5deg)}}
+.chx-cofre--boom{animation:chxBoom .56s cubic-bezier(.3,1.4,.5,1) forwards;pointer-events:none}
+@keyframes chxBoom{0%{transform:scale(1.15)}35%{transform:scale(1.38)}100%{transform:scale(0);opacity:0;filter:brightness(3)}}
+.chx-hint{position:relative;margin-top:22px;font:800 12.5px/1 'Instrument Sans';letter-spacing:1px;color:var(--t2)}
+.chx-dots{position:relative;display:flex;gap:8px;margin-top:14px}
+.chx-dots span{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.14);transition:.2s}
+.chx-dots span.on{background:var(--amber);box-shadow:0 0 10px var(--amber);transform:scale(1.15)}
+.chx-reveal{position:relative;z-index:4;display:flex;flex-direction:column;align-items:center;animation:chxReveal .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes chxReveal{0%{opacity:0;transform:scale(.5) translateY(20px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+.chx-rare{font:900 11px/1 'Instrument Sans';letter-spacing:2.5px;margin-bottom:18px}
+.chx-obj{min-width:130px;min-height:130px;display:grid;place-items:center;margin-bottom:14px;animation:chxObjFloat 3s ease-in-out infinite}
+@keyframes chxObjFloat{50%{transform:translateY(-7px)}}
+.chx-obj-name{font:800 18px/1.2 'Instrument Sans';color:var(--t1)}
+.chx-obj-sub{font:600 11px/1 'Instrument Sans';color:var(--t3);margin-top:5px}
+.chx-loot{display:inline-flex;align-items:center;gap:16px;margin:18px 0;padding:9px 18px;border-radius:99px;background:rgba(255,207,107,.1);box-shadow:inset 0 0 0 1px rgba(255,207,107,.3)}
+.chx-loot__e{display:inline-flex;align-items:center;gap:5px;font:900 17px/1 'Instrument Sans';color:var(--amber)}
+.chx-loot__x{font:800 14px/1 'Instrument Sans';color:#A78BFA}
+.chx-btn{width:100%;max-width:280px;padding:15px;border:none;border-radius:16px;color:#1A1206;font:900 15px/1 'Instrument Sans';cursor:pointer;box-shadow:0 10px 28px -8px rgba(0,0,0,.6);transition:transform .1s var(--ez)}
+.chx-btn:active{transform:scale(.97)}
+
 /* ══ BAZAR ASCUA · Regalo del día + Mercado + estanterías ══ */
 .bz-sec{font:800 11px/1 'Instrument Sans';letter-spacing:1.6px;text-transform:uppercase;color:var(--t2)}
 .bz-timer{display:inline-flex;align-items:center;gap:5px;font:700 10.5px/1 'Instrument Sans';color:var(--amber);

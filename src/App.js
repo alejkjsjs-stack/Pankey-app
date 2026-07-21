@@ -10480,111 +10480,83 @@ function CofreSVG({ lv, open, size = 96 }) {
 //  SHOW DE APERTURA — cofre comprado en la tienda
 //  (tiembla → grieta de luz → explosión → flash → recompensa)
 // ─────────────────────────────────────────────
-function ChestShopShow({ chest, premio, onClose }) {
+// Reveal Ascua compartido: 3 golpes → explota y desaparece → objeto con su preview.
+// Sirve para cofres comprados, bundles y el regalo. lvColors = CHEST_SHOP_COLORS.
+function ChestShopShow({ chest, premio, onClose, appState, user }) {
   const lv = CHEST_SHOP_COLORS[chest.rarity] || CHEST_SHOP_COLORS['común'];
-  const [stage, setStage] = useState('shake'); // shake | crack | explode | open
+  const rc = (RARITY_META[chest.rarity] || {}).color || lv.c2;
+  const itemRc = premio.item ? ((RARITY_META[premio.item.rarity] || {}).color || rc) : '#FFCF6B';
+  const [taps, setTaps] = useState(0);
+  const [stage, setStage] = useState('closed'); // closed | boom | open
 
-  useEffect(() => {
-    FX.play('duelStart'); FX.vibrate('medium');
-    const t1 = setTimeout(() => { setStage('crack'); FX.play('chestOpen'); FX.vibrate('heavy'); }, 500);
-    const t2 = setTimeout(() => { setStage('explode'); FX.play('sparks'); FX.vibrate('heavy'); }, 1300);
-    const t3 = setTimeout(() => { setStage('open'); FX.play(premio.item ? 'levelUp' : 'success'); }, 2000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const golpe = () => {
+    if (stage !== 'closed') return;
+    const n = taps + 1; setTaps(n);
+    if (n < 3) { FX.play(n === 1 ? 'tap' : 'duel'); FX.vibrate(n === 1 ? 'light' : 'medium'); }
+    else {
+      FX.play('duelStart'); FX.vibrate('heavy');
+      setStage('boom');
+      setTimeout(() => { setStage('open'); FX.play(premio.item ? 'unlock' : 'reward'); FX.vibrate('success'); }, 560);
+    }
+  };
+
+  const parts = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
+    sx: Math.round(Math.cos((i / 30) * Math.PI * 2) * (70 + (i % 6) * 26)),
+    sy: Math.round(Math.sin((i / 30) * Math.PI * 2) * (70 + (i % 6) * 26)),
+    s: i % 3 ? 5 : 8, c: i % 3 === 0 ? '#FFF3C4' : i % 3 === 1 ? rc : lv.c1,
+    dur: (0.7 + (i % 5) * 0.16).toFixed(2), del: (i * 0.012).toFixed(3),
+  })), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Portal>
-    <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99997,
-      background: 'rgba(2,4,8,0.94)', backdropFilter: 'blur(14px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-      onClick={stage === 'open' ? onClose : undefined}>
-      <div onClick={e => e.stopPropagation()} style={{ position: 'relative', textAlign: 'center', maxWidth: 340, width: '100%' }}>
-
-        {/* Rayos giratorios al abrir */}
-        {(stage === 'explode' || stage === 'open') && (
-          <div style={{ position: 'absolute', top: -60, left: '50%', width: 380, height: 380, marginLeft: -190,
-            background: `conic-gradient(from 0deg, transparent 0deg, ${lv.c2}30 12deg, transparent 26deg, transparent 60deg, ${lv.c2}24 74deg, transparent 88deg, transparent 130deg, ${lv.c2}30 144deg, transparent 158deg, transparent 200deg, ${lv.c2}26 214deg, transparent 228deg, transparent 270deg, ${lv.c2}30 284deg, transparent 298deg, transparent 330deg, ${lv.c2}24 344deg, transparent 358deg)`,
-            borderRadius: '50%', animation: 'raysSpin 10s linear infinite', pointerEvents: 'none' }}/>
-        )}
-
-        {/* Flash blanco de la explosión */}
-        {stage === 'explode' && (
-          <div style={{ position: 'fixed', inset: 0, background: '#fff', pointerEvents: 'none',
-            animation: 'whiteFlash 0.7s ease-out both', zIndex: 5 }}/>
-        )}
-
-        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color: lv.c1, marginBottom: 22, position: 'relative' }}>
-          {chest.name.toUpperCase()}
-        </div>
-
-        <div style={{ position: 'relative', display: 'inline-block',
-          animation: stage === 'shake' ? 'chestShake 0.45s ease-in-out infinite'
-            : stage === 'crack' ? 'chestShake 0.35s ease-in-out infinite' : 'none',
-          filter: `drop-shadow(0 12px 46px ${lv.c2}${stage === 'shake' ? '55' : '99'})` }}>
-          <CofreSVG lv={lv} open={stage === 'open'} size={150}/>
-          {stage === 'crack' && (
-            <div style={{ position: 'absolute', top: '41%', left: '4%', right: '4%', height: 5,
-              borderRadius: 99, background: '#FFFDF4',
-              boxShadow: `0 0 26px #FFF3C4, 0 0 52px ${lv.c1}`, pointerEvents: 'none',
-              animation: 'crackExpand 0.7s cubic-bezier(0.22,1,0.36,1) both' }}/>
-          )}
-          {(stage === 'explode' || stage === 'open') && Array.from({ length: 26 }, (_, i) => (
-            <div key={i} style={{
-              position: 'absolute', top: '32%', left: '50%', width: i % 2 ? 4 : 7, height: i % 2 ? 4 : 7,
-              borderRadius: '50%', background: i % 3 === 0 ? '#FFF3C4' : i % 3 === 1 ? lv.c1 : lv.c2,
-              boxShadow: `0 0 9px ${lv.c1}`,
-              '--sx': `${Math.round(Math.cos((i / 26) * Math.PI * 2) * (60 + (i % 5) * 26))}px`,
-              '--sy': `${Math.round(Math.sin((i / 26) * Math.PI * 2) * (48 + (i % 4) * 24)) - 40}px`,
-              animation: `sparkRise ${0.75 + (i % 5) * 0.16}s ease-out ${i * 0.02}s both`,
-              pointerEvents: 'none' }}/>
+      <div className="chx-scrim" onClick={stage === 'open' ? onClose : undefined}>
+        <div className="chx" onClick={e => e.stopPropagation()}>
+          <div className="chx-aura" style={{ background: `radial-gradient(circle, ${stage === 'open' ? itemRc : rc}55 0%, transparent 68%)`,
+            opacity: stage === 'closed' ? 0.4 : 1 }} />
+          {stage === 'boom' && <div className="chx-flash" />}
+          {(stage === 'boom' || stage === 'open') && parts.map((p, i) => (
+            <i key={i} className="chx-part" style={{ background: p.c, width: p.s, height: p.s, boxShadow: `0 0 9px ${p.c}`,
+              '--sx': `${p.sx}px`, '--sy': `${p.sy}px`, animation: `chxPart ${p.dur}s ease-out ${p.del}s both` }} />
           ))}
-          {stage === 'open' && premio.item && Array.from({ length: 12 }, (_, i) => (
-            <div key={`cf${i}`} style={{
-              position: 'absolute', top: '20%', left: '50%', width: 5, height: 9, borderRadius: 2,
-              background: ['#F472B6', '#C084FC', '#FBBF24', '#34D399'][i % 4],
-              '--sx': `${Math.round(Math.cos((i / 12) * Math.PI * 2) * (70 + (i % 3) * 30))}px`,
-              '--sy': `${Math.round(Math.sin((i / 12) * Math.PI * 2) * 55) - 60}px`,
-              animation: `sparkRise ${1 + (i % 4) * 0.2}s ease-out ${0.15 + i * 0.04}s both`,
-              pointerEvents: 'none' }}/>
-          ))}
-        </div>
 
-        {stage !== 'open' && (
-          <div style={{ marginTop: 22, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.5,
-            color: 'rgba(245,242,235,0.6)', position: 'relative' }}>
-            {stage === 'shake' ? 'Algo se mueve adentro…' : stage === 'crack' ? '¡Se está abriendo!' : '…'}
-          </div>
-        )}
-
-        {stage === 'open' && (
-          <div className="fi" style={{ marginTop: 24, position: 'relative', animation: 'rewardPop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 10 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 26, fontWeight: 900, color: lv.c1 }}>
-                <PkIc n="empanada" s={24} c={lv.c1}/>+{premio.emp}
-              </span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#A78BFA' }}>+{premio.xp} XP</span>
-            </div>
-            {premio.item && (
-              <div style={{ margin: '0 auto 14px', maxWidth: 260, padding: '10px 16px', borderRadius: 14,
-                background: 'rgba(212,175,55,0.10)', border: '1px solid rgba(212,175,55,0.4)' }}>
-                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: '#D4AF37', marginBottom: 3 }}>
-                  ¡CAYÓ UN TESORO!
+          {stage !== 'open' ? (
+            <>
+              <div className="chx-name" style={{ color: rc }}>{chest.name}</div>
+              <button key={taps} onClick={golpe}
+                className={`chx-cofre${stage === 'boom' ? ' chx-cofre--boom' : ''}${taps > 0 && stage === 'closed' ? ' chx-cofre--hit' : ''}`}
+                style={{ transform: `scale(${1 + taps * 0.05})`, filter: `drop-shadow(0 12px 40px ${rc}${taps >= 2 ? 'cc' : '77'})` }}>
+                <CofreSVG lv={lv} open={false} size={150} />
+              </button>
+              <div className="chx-hint">{taps === 0 ? 'Dale 3 golpes pa\' abrirlo' : taps === 1 ? '¡Eso! Otro más' : '¡Uno más y revienta!'}</div>
+              <div className="chx-dots">{[0, 1, 2].map(i => <span key={i} className={i < taps ? 'on' : ''} />)}</div>
+            </>
+          ) : (
+            <div className="chx-reveal">
+              {premio.item ? (
+                <>
+                  <div className="chx-rare" style={{ color: itemRc }}>{(RARITY_META[premio.item.rarity] || {}).label}</div>
+                  <div className="chx-obj" style={{ filter: `drop-shadow(0 0 26px ${itemRc}aa)` }}>
+                    <BazarPreview item={premio.item} size={130}
+                      C={{ accent: itemRc, bgAlt: '#160E12', text: '#F6F1F2', textMuted: '#B9A9AF', border: `${itemRc}55` }}
+                      user={user || { name: '★' }} appState={appState || {}} />
+                  </div>
+                  <div className="chx-obj-name">{premio.item.name}</div>
+                  <div className="chx-obj-sub">ya está en tu mochila</div>
+                </>
+              ) : (
+                <div className="chx-obj" style={{ filter: `drop-shadow(0 0 24px ${rc}88)` }}>
+                  <PkIc n="empanada" s={92} c={rc} />
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#F5F2EB' }}>{premio.item.name}</div>
-                <div style={{ fontSize: 11, color: 'rgba(245,242,235,0.6)', marginTop: 2 }}>
-                  {premio.item.rarity} · ya está en tu mochila
-                </div>
+              )}
+              <div className="chx-loot">
+                <span className="chx-loot__e"><PkIc n="empanada" s={15} c="#FFCF6B" />+{premio.emp}</span>
+                <span className="chx-loot__x">+{premio.xp} XP</span>
               </div>
-            )}
-            <button onClick={onClose} style={{ width: '100%', padding: '14px', borderRadius: 14,
-              border: 'none', background: `linear-gradient(135deg, ${lv.c1}, ${lv.c2})`, color: '#1A1206',
-              fontSize: 14, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}>
-              ¡A la mochila!
-            </button>
-          </div>
-        )}
+              <button className="chx-btn" style={{ background: `linear-gradient(135deg, ${itemRc}, ${itemRc}bb)` }} onClick={onClose}>¡A la mochila!</button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </Portal>
   );
 }
@@ -10639,8 +10611,12 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
   const dialTitle = canOpen ? '¡Cofre listo!' : next ? `Falta ${dialFaltan} día${dialFaltan !== 1 ? 's' : ''}` : 'Nivel máximo';
   const dialSub = canOpen ? 'Toca para abrirlo' : next ? `pal ${next.name.replace('Cofre de ', 'Cofre ')}` : lv.name;
 
-  // Apertura escenificada: grieta de luz → explosión + flash → recompensa
-  const abrir = () => {
+  // Mapa nivel de racha → rareza (para reusar el reveal Ascua de ChestShopShow)
+  const RAR_BY_CHEST = { madera: 'común', bronce: 'poco común', plata: 'raro', oro: 'épico', tumbaga: 'legendario', ancestral: 'mítico' };
+
+  // Abrir el cofre de racha: calcula el botín, lo aplica y lanza el show (3 golpes → explota → objeto)
+  const abrirCofre = () => {
+    if (!canOpen) { FX.play('tap'); return; }
     const rr = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
     const emp = rr(lv.emp[0], lv.emp[1]);
     const xp  = rr(lv.xp[0], lv.xp[1]);
@@ -10648,41 +10624,23 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
     if (lv.rarezaItem && Math.random() < lv.itemChance) {
       item = rollChestItem(lv.rarezaItem, appState); // ponderado: común más probable
     }
+    setAppState(s => {
+      const prev = s.cofreOpensDate === dk ? (s.cofreOpensCount || 0) : 0;
+      return {
+        ...s,
+        ryo: (s.ryo || 0) + emp,
+        xp:  (s.xp || 0) + xp,
+        cofreLastOpened: dk,
+        cofreOpensDate: dk,
+        cofreOpensCount: prev + 1,
+        inventory: item ? [...(s.inventory || []), item.id] : (s.inventory || []),
+      };
+    });
+    onMissionReward?.(emp);
     setPremio({ emp, xp, item });
-    setStage('crack');
-    FX.play('chestOpen'); FX.vibrate('heavy');
-    setTimeout(() => { setStage('explode'); FX.play('sparks'); FX.vibrate('heavy'); }, 750);
-    setTimeout(() => {
-      setStage('open');
-      FX.play(item ? 'levelUp' : 'success');
-      setAppState(s => {
-        const prev = s.cofreOpensDate === dk ? (s.cofreOpensCount || 0) : 0;
-        return {
-          ...s,
-          ryo: (s.ryo || 0) + emp,
-          xp:  (s.xp || 0) + xp,
-          cofreLastOpened: dk,
-          cofreOpensDate: dk,
-          cofreOpensCount: prev + 1,
-          inventory: item ? [...(s.inventory || []), item.id] : (s.inventory || []),
-        };
-      });
-      onMissionReward?.(emp);
-      fireBoost();
-    }, 1450);
+    setModal(true);
+    fireBoost();
   };
-
-  // Interacción: 3 golpes al cofre para abrirlo
-  const golpear = () => {
-    if (!canOpen || stage !== 'closed') return;
-    const n = taps + 1;
-    setTaps(n);
-    if (n === 1)      { FX.play('tap');  FX.vibrate('light'); }
-    else if (n === 2) { FX.play('duel'); FX.vibrate('medium'); }
-    else              { FX.play('duelStart'); FX.vibrate('heavy'); setTimeout(abrir, 620); }
-  };
-
-  const cerrarModal = () => { setModal(false); setStage('closed'); setTaps(0); setPremio(null); };
 
   return (
     <>
@@ -10694,7 +10652,7 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
             const locked = slot.estado === 'proximo' || slot.estado === 'bloqueado';
             const cls = slot.estado === 'listo' ? 'chest chest--on' : locked ? 'chest chest--x' : 'chest';
             return (
-              <button key={i} className={cls} onClick={() => { FX.play('tap'); setModal(true); }} title={slot.nombre}>
+              <button key={i} className={cls} onClick={() => { if (slot.estado === 'listo') abrirCofre(); else { FX.play('tap'); onGoShop?.(); } }} title={slot.nombre}>
                 {slot.estado === 'bloqueado' ? (
                   <svg className="ic" viewBox="0 0 24 24" style={{ color: '#7C6E74', fontSize: 22 }}>
                     <rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
@@ -10713,153 +10671,14 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
       </div>
 
 
-      {/* ── Overlay de apertura (Portal → escapa del stacking context del Inicio) ── */}
-      {modal && (
-        <Portal>
-        <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99995,
-          background: 'rgba(2,4,8,0.94)', backdropFilter: 'blur(14px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={stage === 'open' || !canOpen ? cerrarModal : undefined}>
-          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', textAlign: 'center', maxWidth: 340, width: '100%' }}>
-
-            {(stage === 'open' || stage === 'explode') && (
-              <div style={{ position: 'absolute', top: -60, left: '50%', width: 380, height: 380, marginLeft: -190,
-                background: `conic-gradient(from 0deg, transparent 0deg, ${luzC}34 12deg, transparent 26deg, transparent 50deg, ${luzC}28 64deg, transparent 78deg, transparent 104deg, ${luzC}34 118deg, transparent 132deg, transparent 158deg, ${luzC}2A 172deg, transparent 186deg, transparent 212deg, ${luzC}34 226deg, transparent 240deg, transparent 268deg, ${luzC}28 282deg, transparent 296deg, transparent 322deg, ${luzC}30 336deg, transparent 350deg)`,
-                borderRadius: '50%', animation: 'raysSpin 10s linear infinite', pointerEvents: 'none' }}/>
-            )}
-
-            {/* Flash blanco de la explosión */}
-            {stage === 'explode' && (
-              <div style={{ position: 'fixed', inset: 0, background: '#fff', pointerEvents: 'none',
-                animation: 'whiteFlash 0.7s ease-out both', zIndex: 5 }}/>
-            )}
-
-            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color: lv.c1, marginBottom: 6, position: 'relative' }}>
-              {lv.name.toUpperCase()}
-            </div>
-            <div style={{ fontSize: 12, color: 'rgba(245,242,235,0.6)', marginBottom: 22, position: 'relative' }}>
-              Racha de {streak} día{streak !== 1 ? 's' : ''}
-            </div>
-
-            <div key={taps} onClick={golpear} style={{ position: 'relative', display: 'inline-block',
-              cursor: canOpen && stage === 'closed' ? 'pointer' : 'default',
-              animation: stage === 'open' || stage === 'explode' ? 'none'
-                : stage === 'crack' ? 'chestShake 0.4s ease-in-out infinite'
-                : taps > 0 ? `chestShake ${0.6 - taps * 0.08}s ease-in-out`
-                : canOpen ? 'chestFloat 2s ease-in-out infinite' : 'none',
-              transform: stage === 'closed' ? `scale(${1 + taps * 0.045})` : 'scale(1)',
-              transition: 'transform 0.25s ease, filter 0.3s ease',
-              filter: `drop-shadow(0 12px ${40 + taps * 14}px ${lv.c2}${taps >= 2 || stage !== 'closed' ? '99' : '55'})`,
-              WebkitTapHighlightColor: 'transparent' }}>
-              <CofreSVG lv={lv} open={stage === 'open'} size={150}/>
-              {/* Partículas orbitando en reposo */}
-              {canOpen && stage === 'closed' && taps === 0 && [0, 1, 2, 3].map(i => (
-                <div key={`ob${i}`} style={{ position: 'absolute', top: '44%', left: '50%', width: 5, height: 5,
-                  borderRadius: '50%', background: lv.c1, boxShadow: `0 0 8px ${lv.c2}`, pointerEvents: 'none',
-                  '--orb': `${86 + i * 9}px`,
-                  animation: `chestOrbit ${5 + i * 1.6}s linear infinite ${i * 0.9}s` }}/>
-              ))}
-              {/* Grieta de luz que crece con los golpes */}
-              {stage === 'closed' && taps > 0 && (
-                <div style={{ position: 'absolute', top: '41%', left: '12%', right: '12%', height: 3,
-                  borderRadius: 99, background: '#FFF3C4', opacity: 0.25 + taps * 0.25,
-                  boxShadow: `0 0 ${8 + taps * 8}px ${lv.c1}`, pointerEvents: 'none' }}/>
-              )}
-              {/* Grieta de luz que se expande antes de reventar */}
-              {stage === 'crack' && (
-                <div style={{ position: 'absolute', top: '41%', left: '4%', right: '4%', height: 5,
-                  borderRadius: 99, background: '#FFFDF4', transformOrigin: '50% 50%',
-                  boxShadow: `0 0 26px #FFF3C4, 0 0 52px ${lv.c1}`, pointerEvents: 'none',
-                  animation: 'crackExpand 0.7s cubic-bezier(0.22,1,0.36,1) both' }}/>
-              )}
-              {/* EXPLOSIÓN de partículas (color de la rareza si cayó un objeto) */}
-              {(stage === 'explode' || stage === 'open') && Array.from({ length: 30 }, (_, i) => (
-                <div key={i} style={{
-                  position: 'absolute', top: '32%', left: '50%', width: i % 2 ? 4 : 8, height: i % 2 ? 4 : 8,
-                  borderRadius: '50%', background: i % 3 === 0 ? '#FFF6D8' : i % 3 === 1 ? luzC : lv.c2,
-                  boxShadow: `0 0 11px ${luzC}`,
-                  '--sx': `${Math.round(Math.cos((i / 30) * Math.PI * 2) * (62 + (i % 5) * 26))}px`,
-                  '--sy': `${Math.round(Math.sin((i / 30) * Math.PI * 2) * (50 + (i % 4) * 24)) - 40}px`,
-                  animation: `sparkRise ${0.75 + (i % 5) * 0.16}s ease-out ${i * 0.02}s both`,
-                  pointerEvents: 'none' }}/>
-              ))}
-              {/* Confeti extra si cayó un ítem raro */}
-              {stage === 'open' && premio?.item && Array.from({ length: 12 }, (_, i) => (
-                <div key={`cf${i}`} style={{
-                  position: 'absolute', top: '20%', left: '50%', width: 5, height: 9, borderRadius: 2,
-                  background: ['#F472B6', '#C084FC', '#FBBF24', '#34D399'][i % 4],
-                  '--sx': `${Math.round(Math.cos((i / 12) * Math.PI * 2) * (70 + (i % 3) * 30))}px`,
-                  '--sy': `${Math.round(Math.sin((i / 12) * Math.PI * 2) * 55) - 60}px`,
-                  animation: `sparkRise ${1 + (i % 4) * 0.2}s ease-out ${0.15 + i * 0.04}s both`,
-                  pointerEvents: 'none' }}/>
-              ))}
-            </div>
-
-            {stage === 'closed' && (
-              <div style={{ marginTop: 24, position: 'relative' }}>
-                {canOpen ? (
-                  <>
-                    <div style={{ fontSize: 14.5, fontWeight: 900, color: '#F5F2EB', marginBottom: 10 }}>
-                      {taps === 0 ? 'Dale 3 golpes pa’ abrirlo' : taps === 1 ? '¡Eso! Otro más' : taps === 2 ? '¡Uno más y revienta!' : '…'}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 9 }}>
-                      {[0, 1, 2].map(i => (
-                        <div key={i} style={{ width: 12, height: 12, borderRadius: '50%',
-                          background: i < taps ? lv.c1 : 'rgba(255,255,255,0.10)',
-                          border: `1.5px solid ${i < taps ? lv.c2 : 'rgba(255,255,255,0.22)'}`,
-                          boxShadow: i < taps ? `0 0 8px ${lv.c2}` : 'none',
-                          transition: 'all 0.2s ease' }}/>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 13, color: 'rgba(245,242,235,0.65)', lineHeight: 1.6, padding: '0 10px' }}>
-                    {openedToday
-                      ? 'Ya reclamaste el cofre de hoy. Mañana se recarga con la racha.'
-                      : 'El cofre se carga cuando sellas tu racha del día: lee o completa un simulacro.'}
-                  </div>
-                )}
-                <button onClick={cerrarModal} style={{ marginTop: 16, background: 'none', border: 'none',
-                  color: 'rgba(245,242,235,0.5)', fontSize: 13, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit', padding: 8 }}>
-                  Cerrar
-                </button>
-              </div>
-            )}
-
-            {stage === 'open' && premio && (
-              <div className="fi" style={{ marginTop: 24, position: 'relative', animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.25s both' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 10 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 26, fontWeight: 900, color: lv.c1 }}>
-                    <PkIc n="empanada" s={24} c={lv.c1}/>+{premio.emp}
-                  </span>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: '#A78BFA' }}>+{premio.xp} XP</span>
-                </div>
-                {premio.item && (
-                  <div style={{ margin: '0 auto 14px', maxWidth: 280, padding: '14px 16px', borderRadius: 16,
-                    background: `${rarezaC}14`, border: `1.5px solid ${rarezaC}66`, boxShadow: `0 0 28px ${rarezaC}44`,
-                    animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.35s both' }}>
-                    <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2.5, color: rarezaC, marginBottom: 6 }}>
-                      ¡CAYÓ UN TESORO!
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: '#F5F2EB' }}>{premio.item.name}</div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 8 }}>
-                      <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', color: '#0A0A0A',
-                        background: rarezaC, borderRadius: 6, padding: '3px 9px' }}>{premio.item.rarity}</span>
-                      <span style={{ fontSize: 11, color: 'rgba(245,242,235,0.6)' }}>· en tu mochila</span>
-                    </div>
-                  </div>
-                )}
-                <button onClick={cerrarModal} style={{ width: '100%', padding: '14px', borderRadius: 14,
-                  border: 'none', background: `linear-gradient(135deg, ${lv.c1}, ${lv.c2})`, color: '#1A1206',
-                  fontSize: 14, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ¡A la mochila!
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        </Portal>
+      {/* ── Apertura Ascua: 3 golpes → explota → objeto con preview (ChestShopShow) ── */}
+      {modal && premio && (
+        <ChestShopShow
+          chest={{ name: lv.name, rarity: RAR_BY_CHEST[lv.id] || 'común' }}
+          premio={premio}
+          appState={appState}
+          onClose={() => { setModal(false); setPremio(null); }}
+        />
       )}
     </>
   );
@@ -15286,7 +15105,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     return (
       <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 0, margin: '-20px -20px 0' }}>
         {chestShow && (
-          <ChestShopShow chest={chestShow.chest} premio={chestShow.premio} onClose={() => setChestShow(null)} />
+          <ChestShopShow chest={chestShow.chest} premio={chestShow.premio} appState={appState} user={user} onClose={() => setChestShow(null)} />
         )}
         {selectedShopItem && (
           <ShopItemModal C={C} isLight={isLight} item={selectedShopItem} appState={appState} user={user} onBuy={buyItem} onEquip={equipItem} onClose={() => setSelectedShopItem(null)} />
