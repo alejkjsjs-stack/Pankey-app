@@ -9999,6 +9999,21 @@ const FIRE_SKINS = {
 };
 const fireSkinFilter = (id) => (FIRE_SKINS[id] || FIRE_SKINS.default).filter;
 
+// Mini-llama viva con el color equipado (para Perfil y tabla del Combo).
+function MiniFuego({ color, size = 26 }) {
+  const esc = (size / 118).toFixed(3);
+  return (
+    <span style={{ position: 'relative', width: size, height: size, display: 'inline-block', overflow: 'hidden',
+      filter: fireSkinFilter(color), flexShrink: 0, verticalAlign: 'middle' }} aria-hidden="true">
+      <span className="fire" style={{ position: 'absolute', left: '50%', bottom: -Math.round(size * 0.16),
+        transform: `translateX(-50%) scale(${esc})`, transformOrigin: 'center bottom',
+        display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <span className="fl"><i /><i /><i /><i /></span>
+      </span>
+    </span>
+  );
+}
+
 // ── [LÓGICA NUEVA] Fueguitos vendibles: estilos de color para la mascota ──
 // Reusan appState.fireColor (ya aplicado al fuego del Inicio). "fireOwned" guarda
 // los comprados. Algunos se GANAN por logro (unlock) en vez de comprarse.
@@ -14279,7 +14294,13 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
                       {index + 1}
                     </div>
 
-                    <Av name={u.name || '?'} sz={46} C={C} photoURL={u.appState?.photoURL || u.photoURL} frameData={u.appState?.equipped?.frame} />
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <Av name={u.name || '?'} sz={46} C={C} photoURL={u.appState?.photoURL || u.photoURL} frameData={u.appState?.equipped?.frame} />
+                      {/* Llamita equipada de la persona */}
+                      <span style={{ position: 'absolute', right: -4, bottom: -3 }}>
+                        <MiniFuego color={u.appState?.fireColor} size={22} />
+                      </span>
+                    </div>
 
                     {/* Info Central */}
                     <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
@@ -14852,8 +14873,12 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       <Card C={C} isLight={isLight} style={{ overflow: 'hidden', padding: 0 }}>
         <div style={{ height: 90, background: myBanner }} />
         <div style={{ padding: '0 20px 20px', marginTop: -32 }}>
-          <div style={{ marginBottom: 12, display: 'inline-block' }}>
+          <div style={{ marginBottom: 12, display: 'inline-block', position: 'relative' }}>
             <Av name={user?.name || '?'} sz={64} C={C} photoURL={appState.photoURL} frameData={myFrame} />
+            {/* Tu llamita equipada */}
+            <span style={{ position: 'absolute', right: -6, bottom: -4 }}>
+              <MiniFuego color={appState.fireColor} size={30} />
+            </span>
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.text, fontFamily: "'Fraunces',serif" }}>{user?.name || 'Usuario'}</div>
           <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>{myTitle}</div>
