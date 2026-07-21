@@ -9487,10 +9487,17 @@ Estas preguntas son para un modo con reloj: deben resolverse rápido, PERO igual
 ES OBLIGATORIO que AL MENOS LA MITAD de las preguntas tengan el campo "context" con datos visuales. NUNCA devuelvas todas las preguntas con "context": null. ¡Invéntate tablas, gráficas, textos o avisos!`;
 
   // ¡El nuevo cerebro ESTRICTO del examinador!
+  const _seedU = Math.random().toString(36).slice(2, 9);
   const prompt = `Eres un examinador experto del ICFES Saber 11 de Colombia.
 Tu ÚNICA tarea es generar exactamente ${count} preguntas de examen NUEVAS y ORIGINALES (nunca repitas preguntas típicas de banco).
 Distribución de materias: ${subjectList}
 Dificultad: ${dificultad}. Formato ICFES real, análisis crítico y pensamiento profundo.
+
+🚫 UNICIDAD OBLIGATORIA (esto es clave):
+- Las ${count} preguntas deben ser TOTALMENTE DISTINTAS entre sí: distinto tema, distinto contexto, distinto enunciado. PROHIBIDO repetir la misma pregunta cambiando una palabra o un número.
+- Cada una debe cubrir un subtema/competencia DIFERENTE (no todas de lo mismo).
+- Varía los escenarios, nombres, datos y redacción. Si dos preguntas se parecen, reemplaza una.
+- Semilla de originalidad (úsala para no repetir lo de siempre): ${_seedU}.
 
 ${reglaVisual}
 
@@ -9568,7 +9575,7 @@ FORMATO DE RESPUESTA OBLIGATORIO (Devuelve SOLO un array JSON válido, sin markd
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, responseMimeType: "application/json" }
+        generationConfig: { temperature: 0.95, topP: 0.95, responseMimeType: "application/json" }
       }),
     });
     const data = await response.json();
@@ -10639,8 +10646,7 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
     const xp  = rr(lv.xp[0], lv.xp[1]);
     let item = null;
     if (lv.rarezaItem && Math.random() < lv.itemChance) {
-      const pool = SHOP_ITEMS.filter(i => i.rarity === lv.rarezaItem && i.type !== 'chest' && !(appState.inventory || []).includes(i.id));
-      if (pool.length) item = pool[Math.floor(Math.random() * pool.length)];
+      item = rollChestItem(lv.rarezaItem, appState); // ponderado: común más probable
     }
     setPremio({ emp, xp, item });
     setStage('crack');
@@ -12966,12 +12972,12 @@ const CHEST_SHOP_COLORS = {
 
 const SHOP_ITEMS = [
   // ── COFRES (recompensa aleatoria según tipo) ─────────────────
-  { id:'c_wooden',    type:'chest', name:'Cofre de Madera',   desc:'Recompensa modesta pero segura.',                 rarity:'común',      price:100,  rewards: { minRyo: 60,   maxRyo: 180,   xpBonus: 40,   itemChance: 0 } },
-  { id:'c_bronze',    type:'chest', name:'Cofre de Bronce',   desc:'Algo bueno puede salir de aquí...',               rarity:'poco común', price:300,  rewards: { minRyo: 220,  maxRyo: 480,   xpBonus: 90,   itemChance: 0.22 } },
-  { id:'c_silver',    type:'chest', name:'Cofre de Plata',    desc:'La suerte empieza a brillar.',                    rarity:'raro',       price:600,  rewards: { minRyo: 480,  maxRyo: 980,   xpBonus: 180,  itemChance: 0.35 } },
-  { id:'c_gold',      type:'chest', name:'Cofre de Oro',      desc:'Fortuna de verdad. Casi siempre cae algo bueno.', rarity:'épico',      price:1200, rewards: { minRyo: 950,  maxRyo: 2100,  xpBonus: 380,  itemChance: 0.55 } },
-  { id:'c_tumbaga',   type:'chest', name:'Cofre de Tumbaga',  desc:'Reliquia ancestral. Aquí viene algo legendario.', rarity:'legendario', price:3000, rewards: { minRyo: 2400, maxRyo: 5200,  xpBonus: 800,  itemChance: 0.8 } },
-  { id:'c_ancestral', type:'chest', name:'Cofre Ancestral',   desc:'Los dioses Muiscas bendicen al que lo abre.',     rarity:'mítico',     price:8000, rewards: { minRyo: 6500, maxRyo: 14000, xpBonus: 1600, itemChance: 0.98 } },
+  { id:'c_wooden',    type:'chest', name:'Cofre de Madera',   desc:'Modesto, pero de vez en cuando sorprende.',       rarity:'común',      price:100,  rewards: { minRyo: 20,   maxRyo: 90,    xpBonus: 40,   itemChance: 0.10, maxItemRarity: 'poco común' } },
+  { id:'c_bronze',    type:'chest', name:'Cofre de Bronce',   desc:'Algo bueno puede saltar de aquí...',              rarity:'poco común', price:300,  rewards: { minRyo: 70,   maxRyo: 260,   xpBonus: 90,   itemChance: 0.28, maxItemRarity: 'raro' } },
+  { id:'c_silver',    type:'chest', name:'Cofre de Plata',    desc:'La suerte empieza a brillar.',                    rarity:'raro',       price:600,  rewards: { minRyo: 160,  maxRyo: 520,   xpBonus: 180,  itemChance: 0.42, maxItemRarity: 'épico' } },
+  { id:'c_gold',      type:'chest', name:'Cofre de Oro',      desc:'Casi siempre cae algo que vale la pena.',         rarity:'épico',      price:1200, rewards: { minRyo: 340,  maxRyo: 1050,  xpBonus: 380,  itemChance: 0.6,  maxItemRarity: 'legendario' } },
+  { id:'c_tumbaga',   type:'chest', name:'Cofre de Tumbaga',  desc:'Reliquia ancestral. Aquí viene lo grande.',       rarity:'legendario', price:3000, rewards: { minRyo: 900,  maxRyo: 2600,  xpBonus: 800,  itemChance: 0.78, maxItemRarity: 'legendario' } },
+  { id:'c_ancestral', type:'chest', name:'Cofre Ancestral',   desc:'Los dioses Muiscas bendicen al que lo abre.',     rarity:'mítico',     price:8000, rewards: { minRyo: 2600, maxRyo: 6800,  xpBonus: 1600, itemChance: 0.95, maxItemRarity: 'mítico' } },
   // ── TÍTULOS ──────────────────────────────────────────────────
   { id:'t_iniciado',   type:'title',  name:'Iniciado',                    desc:'Apenas cogiendo el ritmo...',                      rarity:'común',      price:0    },
   { id:'t_pergamino',  type:'title',  name:'Portador del Pergamino',     desc:'Forjando tu primer pergamino...',                  rarity:'poco común', price:400  },
@@ -13136,6 +13142,29 @@ const SHOP_UNLOCKS = {
   t_leyenda:   { desc: 'Completa 25 simulacros para desbloquear', check: s => (s.icfesHistory || []).length >= 25, price: 2000 },
   f_supernova: { desc: 'Alcanza 30 días de racha para desbloquear', check: s => (s.streakDays || 0) >= 30, price: 10000 },
 };
+
+// Probabilidad de botín POR RAREZA: común muy probable, mítico rarísimo.
+const RARITY_WEIGHTS = { 'común': 50, 'poco común': 26, 'raro': 14, 'épico': 7, 'legendario': 2.5, 'mítico': 0.5 };
+const RARITY_ORDER_ASC = ['común', 'poco común', 'raro', 'épico', 'legendario', 'mítico'];
+// Elige un cosmético NUEVO con probabilidad según su rareza, hasta la rareza
+// máxima del cofre. Devuelve null si el jugador ya tiene todo lo disponible.
+function rollChestItem(maxRarity, appState) {
+  const maxIdx = RARITY_ORDER_ASC.indexOf(maxRarity);
+  if (maxIdx < 0) return null;
+  const permitidas = RARITY_ORDER_ASC.slice(0, maxIdx + 1);
+  const owned = new Set(appState?.inventory || []);
+  const disp = (r) => SHOP_ITEMS.filter(i => i.rarity === r && i.type !== 'chest' && i.type !== 'item'
+    && i.price > 0 && !owned.has(i.id) && !SHOP_UNLOCKS[i.id]);
+  // Rareza objetivo por peso
+  const total = permitidas.reduce((s, r) => s + (RARITY_WEIGHTS[r] || 0), 0);
+  let roll = Math.random() * total, target = permitidas[0];
+  for (const r of permitidas) { roll -= (RARITY_WEIGHTS[r] || 0); if (roll <= 0) { target = r; break; } }
+  // Intenta la rareza objetivo; si no queda stock, baja y luego sube
+  const ti = permitidas.indexOf(target);
+  const intentos = [target, ...permitidas.slice(0, ti).reverse(), ...permitidas.slice(ti + 1)];
+  for (const r of intentos) { const pool = disp(r); if (pool.length) return pool[Math.floor(Math.random() * pool.length)]; }
+  return null;
+}
 
 // Bundles: packs temáticos con su propia sección en el escaparate
 const SHOP_BUNDLES = [
@@ -14831,12 +14860,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     const xp  = rw.xpBonus || 0;
     let item = null;
     if ((rw.itemChance || 0) > 0 && Math.random() < rw.itemChance) {
-      const maxRank = RARITY_RANK.indexOf(chest.rarity);
-      const pool = SHOP_ITEMS.filter(i =>
-        i.type !== 'chest' && i.type !== 'item' && i.price > 0 &&
-        RARITY_RANK.indexOf(i.rarity) <= maxRank &&
-        !(appState.inventory || []).includes(i.id));
-      if (pool.length) item = pool[Math.floor(Math.random() * pool.length)];
+      item = rollChestItem(rw.maxItemRarity || chest.rarity, appState); // ponderado por rareza
     }
     setAppState(s => ({
       ...s,
