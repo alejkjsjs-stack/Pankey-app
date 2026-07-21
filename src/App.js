@@ -13002,10 +13002,14 @@ function rollChestItem(maxRarity, appState) {
 
 // Bundles: packs temáticos con su propia sección en el escaparate
 const SHOP_BUNDLES = [
-  { id: 'bd_aspirante', name: 'El Kit del Aspirante',   desc: 'Cofre de Plata + Kodachi de Hielo + Tinto Doble',
-    price: 1200, rarity: 'raro', items: ['c_silver', 'i_freeze', 'i_tinto'] },
-  { id: 'bd_leyenda',   name: 'El Combo del Legendario', desc: 'Cofre de Tumbaga + Escudo de Arepa + Pergamino del Maestro',
-    price: 8000, rarity: 'legendario', items: ['c_tumbaga', 'i_arepa', 'i_boost'] },
+  { id: 'bd_aspirante', name: 'El Kit del Aspirante',    desc: 'Cofre de Plata + Kodachi + Tinto Doble',
+    price: 1200, rarity: 'raro',       items: ['c_silver', 'i_freeze', 'i_tinto'],            linea: 'El morral lleno pa\' arrancar la expedición.' },
+  { id: 'bd_racha',     name: 'El Combo Anti-Bajón',     desc: 'Cofre de Bronce + Kodachi + Escudo de Arepa',
+    price: 900,  rarity: 'raro',       items: ['c_bronze', 'i_freeze', 'i_arepa'],            linea: 'Que no se te apague ni de vacaciones.' },
+  { id: 'bd_sabio',     name: 'El Pack del Sabio',       desc: 'Cofre de Oro + Pergamino + Comodín + Repaso',
+    price: 2600, rarity: 'épico',      items: ['c_gold', 'i_boost', 'i_comodin', 'i_repaso'], linea: 'Estudia menos, rinde más en el ICFES.' },
+  { id: 'bd_leyenda',   name: 'El Combo del Legendario', desc: 'Cofre de Tumbaga + Escudo + Pergamino',
+    price: 8000, rarity: 'legendario', items: ['c_tumbaga', 'i_arepa', 'i_boost'],            linea: 'Pa\' los que ya son leyenda del páramo.' },
 ];
 
 // Oferta del día: 1 ítem aleatorio con 30% de descuento, cambia cada 24h
@@ -14977,7 +14981,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     const slides = [
       { tipo: 'oferta', item: oferta.item, precio: oferta.precio },
       ...rarest.map(item => ({ tipo: 'item', item })),
-      ...SHOP_BUNDLES.map(b => ({ tipo: 'bundle', bundle: b })),
+      // Los combos ya no van en el carrusel: tienen su propia sección de cartas grandes.
     ];
     const slideColor = (s) => (RARITY_META[(s.item || s.bundle).rarity] || RARITY_META['común']).color;
     const heroColor = slideColor(slides[Math.min(heroIdx, slides.length - 1)]);
@@ -15391,6 +15395,45 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                   <span className="bz-card__price">
                     <span className="bz-card__old">{item.price.toLocaleString()}</span>
                     <PkIc n="empanada" s={11} c="#FFCF6B" />{precio.toLocaleString()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ══ COMBOS DEL PÁRAMO — cartas grandes (rompe la repetición de cartas chicas) ══ */}
+        <div style={{ padding: '16px 20px 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
+            <span className="bz-sec" style={{ color: '#FFCF6B' }}>Combos del Páramo</span>
+            <span className="bz-timer">ahorra en grande</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+            {SHOP_BUNDLES.map(b => {
+              const rc = (RARITY_META[b.rarity] || RARITY_META['común']).color;
+              const valor = b.items.reduce((s, id) => { const it = SHOP_ITEMS.find(x => x.id === id); return s + (it?.price || 0); }, 0);
+              const ahorro = valor > b.price ? Math.round((1 - b.price / valor) * 100) : 0;
+              const alcanza = (appState.ryo || 0) >= b.price;
+              return (
+                <button key={b.id} className="bz-combo" onClick={() => { FX.play('tap'); setBundleConfirm(b); }} style={{ '--rc': rc }}>
+                  <span className="bz-combo__prevs">
+                    {b.items.slice(0, 3).map((id, idx) => {
+                      const it = SHOP_ITEMS.find(x => x.id === id); if (!it) return null;
+                      return <span key={id} className="bz-combo__prev" style={{ zIndex: 3 - idx }}><BazarPreview item={it} size={42} C={C} user={user} appState={appState} /></span>;
+                    })}
+                    {b.items.length > 3 && <span className="bz-combo__more">+{b.items.length - 3}</span>}
+                  </span>
+                  <span className="bz-combo__tx">
+                    <span className="bz-combo__k" style={{ color: rc }}>{(RARITY_META[b.rarity] || {}).label} · COMBO</span>
+                    <b>{b.name}</b>
+                    <small>{b.linea || b.desc}</small>
+                  </span>
+                  <span className="bz-combo__buy">
+                    {ahorro > 0 && <span className="bz-combo__save">−{ahorro}%</span>}
+                    {ahorro > 0 && <span className="bz-combo__old">{valor.toLocaleString()}</span>}
+                    <span className="bz-combo__price" style={{ color: alcanza ? '#FFCF6B' : '#7C6E74' }}>
+                      <PkIc n="empanada" s={12} c={alcanza ? '#FFCF6B' : '#7C6E74'} />{b.price.toLocaleString()}
+                    </span>
                   </span>
                 </button>
               );
