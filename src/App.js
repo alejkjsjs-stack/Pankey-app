@@ -10000,12 +10000,12 @@ const FIRE_SKINS = {
 const fireSkinFilter = (id) => (FIRE_SKINS[id] || FIRE_SKINS.default).filter;
 
 // Mini-llama viva con el color equipado (para Perfil y tabla del Combo).
-function MiniFuego({ color, size = 26 }) {
+function MiniFuego({ color, anim = 'normal', size = 26 }) {
   const esc = (size / 118).toFixed(3);
   return (
     <span style={{ position: 'relative', width: size, height: size, display: 'inline-block', overflow: 'hidden',
       filter: fireSkinFilter(color), flexShrink: 0, verticalAlign: 'middle' }} aria-hidden="true">
-      <span className="fire" style={{ position: 'absolute', left: '50%', bottom: -Math.round(size * 0.16),
+      <span className={`fire fire--${anim || 'normal'}`} style={{ position: 'absolute', left: '50%', bottom: -Math.round(size * 0.16),
         transform: `translateX(-50%) scale(${esc})`, transformOrigin: 'center bottom',
         display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <span className="fl"><i /><i /><i /><i /></span>
@@ -10025,6 +10025,13 @@ const FUEGUITOS = [
   { colorId: 'rosa',      name: 'Candela Rosa',     rarity: 'épico',      price: 3200, linea: 'Bonita y peligrosa, como debe ser.' },
   { colorId: 'carmesi',   name: 'Sangre de Dragón', rarity: 'legendario', price: 6000, linea: 'Rojo de leyenda. Que se sepa en el barrio.',
     unlock: { desc: 'Alcanza 30 días de racha', check: s => (s.streakDays || 0) >= 30 } },
+];
+
+// Eje 2 del Fueguito: PERSONALIDAD (cómo se mueve la llama) → appState.fireAnim + clase CSS fire--<id>
+const ANIM_FUEGOS = [
+  { id: 'normal',  name: 'Normal',      rarity: 'común',  price: 0,    linea: 'El bailecito de siempre.' },
+  { id: 'calmado', name: 'Elegante',    rarity: 'raro',   price: 1200, linea: 'Se mueve lento y con clase.' },
+  { id: 'hiper',   name: 'Hiperactivo', rarity: 'épico',  price: 2500, linea: 'No se queda quieto ni un segundo.' },
 ];
 
 function FuegoRacha({ streak, C, week, sealed, isLight, enAltar = false, fireColor = null }) {
@@ -11996,7 +12003,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
         {/* ── 3. HÉROE ASCUA — fuego criatura + número gigante ── */}
         <div onPointerDown={fuegoDown} onPointerUp={fuegoUp} onPointerLeave={fuegoCancel}
           style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '4px 0 2px', animation: 'staggerRise 0.6s ease 0.16s both' }}>
-          <div className={`fire${enPeligro ? ' nervous' : ''}`} ref={fireRef}
+          <div className={`fire fire--${appState.fireAnim || 'normal'}${enPeligro ? ' nervous' : ''}`} ref={fireRef}
             style={{ transform: `scale(${(0.58 + Math.min(fire.id, 6) * 0.075).toFixed(3)})`,
               filter: [fireSkin !== 'none' ? fireSkin : '', fire.id === 0 ? 'grayscale(1) brightness(0.55)' : ''].filter(Boolean).join(' ') || 'none',
               transition: 'transform 0.45s var(--ez), filter 0.4s ease' }}>
@@ -14302,7 +14309,7 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
                       <Av name={u.name || '?'} sz={46} C={C} photoURL={u.appState?.photoURL || u.photoURL} frameData={u.appState?.equipped?.frame} />
                       {/* Llamita equipada de la persona */}
                       <span style={{ position: 'absolute', right: -4, bottom: -3 }}>
-                        <MiniFuego color={u.appState?.fireColor} size={22} />
+                        <MiniFuego color={u.appState?.fireColor} anim={u.appState?.fireAnim} size={22} />
                       </span>
                     </div>
 
@@ -14881,7 +14888,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
             <Av name={user?.name || '?'} sz={64} C={C} photoURL={appState.photoURL} frameData={myFrame} />
             {/* Tu llamita equipada */}
             <span style={{ position: 'absolute', right: -6, bottom: -4 }}>
-              <MiniFuego color={appState.fireColor} size={30} />
+              <MiniFuego color={appState.fireColor} anim={appState.fireAnim} size={30} />
             </span>
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.text, fontFamily: "'Fraunces',serif" }}>{user?.name || 'Usuario'}</div>
@@ -15059,6 +15066,23 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       } else {
         FX.play('poder'); FX.vibrate('light');
         setAppState(s => ({ ...s, fireColor: f.colorId === 'default' ? null : f.colorId }));
+      }
+    };
+
+    // Personalidad del fueguito (cómo se mueve)
+    const animOwned = appState.animOwned || [];
+    const tieneAnim = (id) => id === 'normal' || animOwned.includes(id);
+    const usarAnim = (a) => {
+      const equipado = (appState.fireAnim || 'normal') === a.id;
+      if (equipado) return;
+      if (!tieneAnim(a.id)) {
+        if ((appState.ryo || 0) < a.price) { FX.play('error'); FX.vibrate('error'); pushNotif?.('No te alcanzan las empanadas.'); return; }
+        FX.play('coin'); FX.vibrate('heavy');
+        setAppState(s => ({ ...s, ryo: (s.ryo || 0) - a.price, animOwned: [...(s.animOwned || []), a.id], fireAnim: a.id }));
+        pushNotif?.(`Personalidad: ${a.name}`); fireBoost();
+      } else {
+        FX.play('poder'); FX.vibrate('light');
+        setAppState(s => ({ ...s, fireAnim: a.id }));
       }
     };
 
@@ -15489,6 +15513,27 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                   ) : (
                     <span className="bz-card__price"><PkIc n="empanada" s={11} c="#FFCF6B" />{(f.unlock ? Math.round(f.price * 0.5) : f.price).toLocaleString()}</span>
                   )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Eje 2: Personalidad (cómo se mueve la llama) */}
+          <div style={{ display: 'flex', gap: 8, padding: '10px 20px 2px' }}>
+            {ANIM_FUEGOS.map(a => {
+              const eq = (appState.fireAnim || 'normal') === a.id;
+              const owned = tieneAnim(a.id);
+              const rc = (RARITY_META[a.rarity] || RARITY_META['común']).color;
+              return (
+                <button key={a.id} onClick={() => usarAnim(a)} className={`bz-anim${eq ? ' bz-anim--on' : ''}`} style={{ '--rc': rc }}>
+                  <span className="bz-anim__f">
+                    <span className={`fire fire--${a.id}`}><span className="fl"><i /><i /><i /><i /></span></span>
+                  </span>
+                  <b>{a.name}</b>
+                  {eq ? <small style={{ color: '#34D399' }}>✓</small>
+                    : owned ? <small>Usar</small>
+                    : a.price === 0 ? <small style={{ color: '#34D399' }}>Gratis</small>
+                    : <small style={{ color: '#FFCF6B' }}>◈{a.price}</small>}
                 </button>
               );
             })}
