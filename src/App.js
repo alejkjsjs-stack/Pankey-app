@@ -10511,6 +10511,56 @@ function CofreSVG({ lv, open, size = 96 }) {
 //  SHOW DE APERTURA — cofre comprado en la tienda
 //  (tiembla → grieta de luz → explosión → flash → recompensa)
 // ─────────────────────────────────────────────
+// Efecto de duelo: VICTORIA (al ganar) o ENTRADA (al aparecer). Full-screen, ~1.9s.
+function DueloFX({ effect, onDone }) {
+  const fx = effect?.fx || 'empanadas';
+  const col = effect?.color || '#FFCF6B';
+  const kind = effect?.type || 'victory';
+  useEffect(() => {
+    try { FX.play(kind === 'entrance' ? 'poder' : 'win'); FX.vibrate('heavy'); } catch (e) {}
+    const t = setTimeout(() => onDone?.(), 1900);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const rnd = useMemo(() => Array.from({ length: 22 }, (_, i) => ({
+    left: (i * 37) % 100, del: ((i % 8) * 0.09).toFixed(2), dur: (1.1 + (i % 6) * 0.16).toFixed(2), rot: (i * 47) % 360, size: 16 + (i % 5) * 5,
+  })), []);
+  const TRI = ['#FBBF24', '#2563EB', '#EF4444'];
+  return (
+    <Portal>
+      <div className="dfx">
+        {fx === 'empanadas' && rnd.map((p, i) => (
+          <span key={i} className="dfx-fall" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`, '--er': `${p.rot}deg` }}>
+            <PkIc n="empanada" s={p.size + 6} c="#FFCF6B" />
+          </span>
+        ))}
+        {fx === 'tricolor' && rnd.map((p, i) => (
+          <span key={i} className="dfx-fall" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`, '--er': `${p.rot}deg`,
+            width: 9, height: 15, borderRadius: 2, background: TRI[i % 3] }} />
+        ))}
+        {fx === 'llamarada' && (
+          <div className="dfx-center">
+            <div className="dfx-burst" style={{ background: `radial-gradient(circle, ${col}, ${col}00 70%)` }} />
+            <span className="dfx-seal"><PkIc n="flame" s={100} c={col} /></span>
+            {rnd.slice(0, 16).map((p, i) => <span key={i} className="dfx-spark" style={{ '--a': `${(i / 16) * 360}deg`, background: col, animationDelay: `${p.del}s` }} />)}
+          </div>
+        )}
+        {fx === 'finisimo' && (
+          <div className="dfx-center"><div className="dfx-slam" style={{ color: col, textShadow: `0 0 30px ${col}` }}>¡FINÍSIMO!</div></div>
+        )}
+        {fx === 'llamas' && (
+          <div className="dfx-flames">{rnd.slice(0, 14).map((p, i) => <span key={i} className="dfx-flame" style={{ left: `${4 + i * 7}%`, animationDelay: `${p.del}s` }}><PkIc n="flame" s={44 + (i % 3) * 16} c={i % 2 ? '#FF6B54' : '#FFCF6B'} /></span>)}</div>
+        )}
+        {fx === 'cielo' && (
+          <div className="dfx-center"><span className="dfx-drop"><PkIc n="people" s={72} c={col} /></span><div className="dfx-shock" style={{ borderColor: col }} /></div>
+        )}
+        {fx === 'portal' && (
+          <div className="dfx-center"><div className="dfx-portal" style={{ borderColor: col, boxShadow: `0 0 40px ${col}, inset 0 0 40px ${col}` }} /><span className="dfx-portalman"><PkIc n="target" s={56} c={col} /></span></div>
+        )}
+      </div>
+    </Portal>
+  );
+}
+
 // Reveal Ascua compartido: 3 golpes → explota y desaparece → objeto con su preview.
 // Sirve para cofres comprados, bundles y el regalo. lvColors = CHEST_SHOP_COLORS.
 function ChestShopShow({ chest, premio, onClose, appState, user }) {
@@ -11190,6 +11240,10 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   const [tGlobal, setTGlobal] = useState(180);
   const [done, setDone]       = useState(false);
   const [resultado, setResultado] = useState(null); // { win, tie, emp, xp, rs }
+  const [entradaFX, setEntradaFX] = useState(false);  // efecto de Entrada al aparecer (fase vs)
+  const [victoriaFX, setVictoriaFX] = useState(false); // efecto de Victoria al ganar
+  useEffect(() => { if (phase === 'vs' && appState.equipped?.entrance) setEntradaFX(true); }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (phase === 'result' && resultado?.win && appState.equipped?.victory) setVictoriaFX(true); }, [phase, resultado]); // eslint-disable-line react-hooks/exhaustive-deps
   const ghostTimers = useRef([]);
   const createdRef  = useRef(false);
   const startedRef  = useRef(false);
@@ -11477,6 +11531,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   if (phase === 'vs') {
     return (
       <Portal>
+      {entradaFX && appState.equipped?.entrance && <DueloFX effect={appState.equipped.entrance} onDone={() => setEntradaFX(false)} />}
       <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 22, padding: 24 }}>
           <div style={{ textAlign: 'center', animation: 'slideUpIn 0.5s ease both' }}>
@@ -11665,6 +11720,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   );
   return (
     <Portal>
+    {victoriaFX && appState.equipped?.victory && <DueloFX effect={appState.equipped.victory} onDone={() => setVictoriaFX(false)} />}
     <div className="fi" style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', padding: 24, maxWidth: 340, width: '100%' }}>
         <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 4, marginBottom: 14,
@@ -12928,6 +12984,15 @@ const SHOP_ITEMS = [
   { id:'i_arepa',      type:'item',   name:'Escudo de Arepa',        desc:'Si pierdes un duelo, no pierdes tus empanadas apostadas.',     rarity:'raro',       price:600 },
   { id:'i_comodin',    type:'item',   name:'La Pregunta de Comodín', desc:'Una pregunta de tu próximo simulacro se marca correcta.',      rarity:'raro',       price:800 },
   { id:'i_ghost',      type:'item',   name:'Modo Fantasma',          desc:'Desapareces del ranking general por 48 horas.',                rarity:'épico',      price:1200 },
+  // ── VICTORIAS (efecto al ganar un duelo, delante del rival) ──
+  { id:'v_empanadas', type:'victory', name:'Lluvia de Empanadas', desc:'Cuando ganas, que llueva plata en la pantalla.',   rarity:'raro',       price:1200, fx:'empanadas', color:'#FFCF6B' },
+  { id:'v_llamarada', type:'victory', name:'Llamarada',           desc:'Estallas en fuego con tu sello. Puro drama.',       rarity:'épico',      price:2400, fx:'llamarada', color:'#FF6B54' },
+  { id:'v_tricolor',  type:'victory', name:'Fiesta Tricolor',     desc:'Confeti amarillo, azul y rojo. ¡Selección!',        rarity:'raro',       price:1500, fx:'tricolor',  color:'#FBBF24' },
+  { id:'v_finisimo',  type:'victory', name:'¡FINÍSIMO!',          desc:'Un letrero gigante que lo dice todo.',              rarity:'legendario', price:4000, fx:'finisimo',  color:'#FF2E4C' },
+  // ── ENTRADAS (cómo apareces en el duelo, antes de empezar) ──
+  { id:'e_llamas',    type:'entrance', name:'Entre Llamas',       desc:'Apareces envuelto en candela.',                     rarity:'raro',       price:1300, fx:'llamas', color:'#FF6B54' },
+  { id:'e_cielo',     type:'entrance', name:'Caído del Cielo',    desc:'Bajas del cielo y aterrizas con fuerza.',           rarity:'épico',      price:2600, fx:'cielo',  color:'#7BB3FF' },
+  { id:'e_portal',    type:'entrance', name:'Portal del Páramo',  desc:'Un portal se abre y sales tú.',                     rarity:'legendario', price:4200, fx:'portal', color:'#C084FC' },
 ];
 
 // Ícono de cada poder (PkIc, cero emojis)
@@ -13093,6 +13158,18 @@ function BazarPreview({ item, size = 60, C, user, appState }) {
       <PkIc n={PODER_ICONS[item.id] || 'star'} s={Math.round(size * 0.42)} c={rc}/>
     </div>
   );
+  if (item.type === 'victory' || item.type === 'entrance') {
+    const ic = { empanadas: 'empanada', llamarada: 'flame', tricolor: 'star', finisimo: 'swords',
+      llamas: 'flame', cielo: 'people', portal: 'target' }[item.fx] || 'flame';
+    const col = item.color || rc;
+    return (
+      <div style={{ width: size - 6, height: size - 6, borderRadius: 14, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: `radial-gradient(circle at 34% 28%, ${col}33, transparent 72%)`,
+        boxShadow: `inset 0 0 0 1.5px ${col}55, 0 0 16px ${col}30`, animation: 'breathe 2.6s ease-in-out infinite' }}>
+        <PkIc n={ic} s={Math.round(size * 0.44)} c={col}/>
+      </div>
+    );
+  }
   // título
   return (
     <div className={item.rarity === 'mítico' ? 'title-mythic' : item.rarity === 'legendario' ? 'title-legendary' : ''}
@@ -14691,6 +14768,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [chestShow, setChestShow] = useState(null); // { chest, premio } → show de apertura
   const [bazarCat, setBazarCat] = useState('chest'); // categoría activa del Bazar
   const [catFull, setCatFull] = useState(null);      // categoría abierta en "Ver todo" (grid completo)
+  const [previewFX, setPreviewFX] = useState(null);  // preview del efecto de victoria/entrada al equipar
   const [heroIdx, setHeroIdx] = useState(0);         // slide activo del escaparate
   const [bundleConfirm, setBundleConfirm] = useState(null); // pack pendiente de confirmar
   const [, setBazarTick] = useState(0);              // tick del countdown de la oferta
@@ -14772,6 +14850,8 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
 
     pushNotif?.(`¡${item.name} comprado y equipado!`);
     onCoinBurst?.(-item.price);
+    // Victorias/Entradas: vista previa del efecto al comprarlo
+    if (item.type === 'victory' || item.type === 'entrance') setPreviewFX(item);
   };
 
   // Logro por comprar el primer Kodachi de Hielo
@@ -14797,6 +14877,8 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     FX.play('success'); FX.vibrate('medium'); // ✨ Sonido brillante al ponerte un marco o título
     setAppState(s => ({ ...s, equipped: { ...(s.equipped || {}), [item.type]: item } }));
     pushNotif?.(`${item.name} equipado.`);
+    // Victorias/Entradas: muestra una vista previa del efecto al equiparlo
+    if (item.type === 'victory' || item.type === 'entrance') setPreviewFX(item);
   };
 
   const useStreakFreeze = () => {
@@ -15009,11 +15091,13 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
 
     // ZONA 2 — CATEGORÍAS
     const CATS = [
-      { id: 'chest',  label: 'Cofres' },
-      { id: 'frame',  label: 'Marcos' },
-      { id: 'title',  label: 'Títulos' },
-      { id: 'banner', label: 'Paisajes' },
-      { id: 'item',   label: 'Poderes' },
+      { id: 'chest',    label: 'Cofres' },
+      { id: 'frame',    label: 'Marcos' },
+      { id: 'title',    label: 'Títulos' },
+      { id: 'banner',   label: 'Paisajes' },
+      { id: 'victory',  label: 'Victorias' },
+      { id: 'entrance', label: 'Entradas' },
+      { id: 'item',     label: 'Poderes' },
     ];
     const catColor = (cid) => {
       const its = SHOP_ITEMS.filter(i => i.type === cid);
@@ -15185,6 +15269,9 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 0, margin: '-20px -20px 0' }}>
         {chestShow && (
           <ChestShopShow chest={chestShow.chest} premio={chestShow.premio} appState={appState} user={user} onClose={() => setChestShow(null)} />
+        )}
+        {previewFX && (
+          <DueloFX effect={previewFX} onDone={() => setPreviewFX(null)} />
         )}
         {selectedShopItem && (
           <ShopItemModal C={C} isLight={isLight} item={selectedShopItem} appState={appState} user={user} onBuy={buyItem} onEquip={equipItem} onClose={() => setSelectedShopItem(null)} />
