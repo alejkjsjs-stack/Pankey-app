@@ -14786,6 +14786,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [bazarCat, setBazarCat] = useState('chest'); // categoría activa del Bazar
   const [catFull, setCatFull] = useState(null);      // categoría abierta en "Ver todo" (grid completo)
   const [previewFX, setPreviewFX] = useState(null);  // preview del efecto de victoria/entrada al equipar
+  const [fueTab, setFueTab] = useState('color');     // eje activo del Fueguito: color | forma | anim
   const [heroIdx, setHeroIdx] = useState(0);         // slide activo del escaparate
   const [bundleConfirm, setBundleConfirm] = useState(null); // pack pendiente de confirmar
   const [, setBazarTick] = useState(0);              // tick del countdown de la oferta
@@ -14950,6 +14951,66 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   if (view === 'oracle') return <OracleView C={C} isLight={isLight} appState={appState} user={user} pushNotif={pushNotif} onBack={() => setView('settings')} />;
 
   // ── VISTA: TALLER DE AVATAR (NUEVO) ─────────────────────────
+  if (view === 'inventory') {
+    const TIPOS = [
+      { t: 'frame', label: 'Marcos' }, { t: 'banner', label: 'Paisajes' }, { t: 'title', label: 'Títulos' },
+      { t: 'victory', label: 'Victorias' }, { t: 'entrance', label: 'Entradas' },
+    ];
+    const owned = new Set(appState.inventory || []);
+    const grupos = TIPOS.map(g => ({ ...g, items: SHOP_ITEMS.filter(i => i.type === g.t && owned.has(i.id)) })).filter(g => g.items.length);
+    const nFueg = (appState.fireOwned || []).length + (appState.formaOwned || []).length + (appState.animOwned || []).length;
+    const total = grupos.reduce((s, g) => s + g.items.length, 0) + nFueg;
+    const equipInv = (item) => {
+      FX.play('success'); FX.vibrate('medium');
+      setAppState(s => ({ ...s, equipped: { ...(s.equipped || {}), [item.type]: item } }));
+      if (item.type === 'victory' || item.type === 'entrance') setPreviewFX(item);
+      else pushNotif?.(`${item.name} equipado.`);
+    };
+    return (
+      <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {previewFX && <DueloFX effect={previewFX} onDone={() => setPreviewFX(null)} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0' }}>
+          <button onClick={() => setView('profile')} style={{ background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><PkIc n="left" s={17} c={C.text} /></button>
+          <div>
+            <div className="serif" style={{ fontSize: 22, fontWeight: 800, color: C.text }}>Mi Inventario</div>
+            <div style={{ fontSize: 11, color: C.textMuted }}>{total} objeto{total !== 1 ? 's' : ''} conseguido{total !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+        {total === 0 && (
+          <div style={{ textAlign: 'center', color: C.textMuted, fontSize: 13, padding: '40px 20px', lineHeight: 1.6 }}>
+            Todavía no tienes nada equipable. Abre cofres o compra en el Bazar y aquí aparecerá tu botín.
+          </div>
+        )}
+        {grupos.map(g => (
+          <div key={g.t}>
+            <div className="bz-sec" style={{ color: C.accent, padding: '0 2px 10px' }}>{g.label}</div>
+            <div className="bz-grid">
+              {g.items.map(item => {
+                const isEq = appState.equipped?.[item.type]?.id === item.id;
+                const rc = (RARITY_META[item.rarity] || {}).color || C.accent;
+                return (
+                  <button key={item.id} className={`bz-card${isEq ? ' bz-card--eq' : ''}`} onClick={() => equipInv(item)} style={{ '--rc': rc, width: 'auto' }}>
+                    <span className="bz-card__rare" style={{ color: rc }}>{(RARITY_META[item.rarity] || {}).label}</span>
+                    <span className="bz-card__prev"><BazarPreview item={item} size={54} C={C} user={user} appState={appState} /></span>
+                    <span className="bz-card__name">{item.name}</span>
+                    <span className="bz-card__owned" style={{ color: isEq ? '#34D399' : rc }}>{isEq ? '✓ Equipado' : 'Equipar'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {nFueg > 0 && (
+          <div>
+            <div className="bz-sec" style={{ color: '#FF6B54', padding: '0 2px 8px' }}>Fueguito</div>
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>
+              Tienes {nFueg} estilo{nFueg !== 1 ? 's' : ''} de fueguito (color, forma y movimiento). Cámbialos en el Bazar → Fueguito.
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
   if (view === 'taller') return <TallerAvatar C={C} appState={appState} setAppState={setAppState} onBack={() => setView('profile')} />;
 
   // ── VISTA: AMIGOS ───────────────────────────────────────────
@@ -15002,15 +15063,15 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           <div style={{ fontSize: 22, fontWeight: 800, color: C.text, fontFamily: "'Fraunces',serif" }}>{user?.name || 'Usuario'}</div>
           <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>{myTitle}</div>
           <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>@{user?.code}</div>
-          {/* BOTÓN PARA ABRIR EL TALLER */}
-          <button onClick={() => setView('taller')} style={{
+          {/* BOTÓN: MI INVENTARIO (todo lo que has comprado) */}
+          <button onClick={() => setView('inventory')} style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: `linear-gradient(135deg, ${C.accent}, ${C.amberMid})`,
             border: 'none', borderRadius: 12, padding: '10px 18px',
             color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
             boxShadow: `0 6px 20px ${C.accent}40`, marginBottom: 16, fontFamily: 'inherit'
           }}>
-            <PkIc n="eye" s={16} c="#fff" /> Forjar Avatar
+            <PkIc n="mochila" s={16} c="#fff" /> Mi Inventario
           </button>
 
           {/* ✅ FIXED: XP bar usando appState.xp */}
@@ -15617,6 +15678,13 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
             <span className="bz-sec" style={{ color: '#FF6B54' }}>Fueguito</span>
             <span className="bz-timer" style={{ color: '#FF6B54', background: 'rgba(255,107,84,.12)' }}>siempre a la vista</span>
           </div>
+          {/* Selector de eje: Color / Forma / Movimiento (así no se ven tantos fueguitos juntos) */}
+          <div className="fue-tabs">
+            {[['color', 'Color'], ['forma', 'Forma'], ['anim', 'Movimiento']].map(([id, label]) => (
+              <button key={id} className={`fue-tab${fueTab === id ? ' fue-tab--on' : ''}`} onClick={() => { FX.play('select'); setFueTab(id); }}>{label}</button>
+            ))}
+          </div>
+          {fueTab === 'color' && (
           <div className="bz-shelf">
             {FUEGUITOS.map(f => {
               const rc = (RARITY_META[f.rarity] || RARITY_META['común']).color;
@@ -15647,9 +15715,11 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
               );
             })}
           </div>
+          )}
 
           {/* Eje 3: Forma (silueta de la llama) */}
-          <div style={{ display: 'flex', gap: 8, padding: '10px 20px 0' }}>
+          {fueTab === 'forma' && (
+          <div style={{ display: 'flex', gap: 8, padding: '10px 20px 4px' }}>
             {FORMA_FUEGOS.map(fo => {
               const eq = (appState.fireForma || 'clasica') === fo.id;
               const owned = tieneForma(fo.id);
@@ -15668,9 +15738,11 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
               );
             })}
           </div>
+          )}
 
           {/* Eje 2: Personalidad (cómo se mueve la llama) */}
-          <div style={{ display: 'flex', gap: 8, padding: '10px 20px 2px' }}>
+          {fueTab === 'anim' && (
+          <div style={{ display: 'flex', gap: 8, padding: '10px 20px 4px' }}>
             {ANIM_FUEGOS.map(a => {
               const eq = (appState.fireAnim || 'normal') === a.id;
               const owned = tieneAnim(a.id);
@@ -15689,6 +15761,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
               );
             })}
           </div>
+          )}
         </div>
 
         {/* ══ ESTANTERÍAS DEL CATÁLOGO (una fila horizontal por categoría) ══ */}
