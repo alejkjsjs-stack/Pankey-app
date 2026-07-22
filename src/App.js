@@ -10511,23 +10511,26 @@ function CofreSVG({ lv, open, size = 96 }) {
 //  SHOW DE APERTURA — cofre comprado en la tienda
 //  (tiembla → grieta de luz → explosión → flash → recompensa)
 // ─────────────────────────────────────────────
-// Efecto de duelo: VICTORIA (al ganar) o ENTRADA (al aparecer). Full-screen, ~1.9s.
-function DueloFX({ effect, onDone }) {
+// Efecto de duelo: VICTORIA (al ganar) o ENTRADA (al aparecer). ~1.9s.
+// side: 'full' (centrado) | 'left' | 'right' (para el lado de cada jugador en el VS).
+function DueloFX({ effect, onDone, side = 'full', silent = false }) {
   const fx = effect?.fx || 'empanadas';
   const col = effect?.color || '#FFCF6B';
   const kind = effect?.type || 'victory';
   useEffect(() => {
-    try { FX.play(kind === 'entrance' ? 'poder' : 'win'); FX.vibrate('heavy'); } catch (e) {}
+    if (!silent) { try { FX.play(kind === 'entrance' ? 'poder' : 'win'); FX.vibrate('heavy'); } catch (e) {} }
     const t = setTimeout(() => onDone?.(), 1900);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const sideStyle = side === 'left' ? { transform: 'translateX(-25%) scale(.82)', transformOrigin: 'center' }
+    : side === 'right' ? { transform: 'translateX(25%) scale(.82)', transformOrigin: 'center' } : null;
   const rnd = useMemo(() => Array.from({ length: 22 }, (_, i) => ({
     left: (i * 37) % 100, del: ((i % 8) * 0.09).toFixed(2), dur: (1.1 + (i % 6) * 0.16).toFixed(2), rot: (i * 47) % 360, size: 16 + (i % 5) * 5,
   })), []);
   const TRI = ['#FBBF24', '#2563EB', '#EF4444'];
   return (
     <Portal>
-      <div className="dfx">
+      <div className="dfx" style={sideStyle || undefined}>
         {fx === 'empanadas' && rnd.map((p, i) => (
           <span key={i} className="dfx-fall" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`, '--er': `${p.rot}deg` }}>
             <PkIc n="empanada" s={p.size + 6} c="#FFCF6B" />
@@ -11251,6 +11254,17 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   const meCode = user?.code;
   const myLevel = computeLevel(appState.xp || 0).level;
 
+  // [LÓGICA NUEVA] Snapshot de cosméticos para compartir en el duelo (foto/marco/banner/entrada/victoria)
+  const snapCosm = (s) => JSON.parse(JSON.stringify({
+    photo: s?.photoURL || null,
+    frame: s?.equipped?.frame || null,
+    banner: s?.equipped?.banner || null,
+    title: s?.equipped?.title?.name || null,
+    entrance: s?.equipped?.entrance || null,
+    victory: s?.equipped?.victory || null,
+  }));
+  const miCosm = snapCosm(appState);
+
   const lanzarVS = () => {
     setPhase('found'); FX.play('success'); FX.vibrate('medium');
     setTimeout(() => { setPhase('vs'); FX.play('duelStart'); FX.vibrate('heavy'); }, 1300);
@@ -11289,7 +11303,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     if (fbOK() && meCode) {
       const qRef = FB().ref(FB().db, `flashQueue/${meCode}`);
       try {
-        FB().set(qRef, { code: meCode, name: user?.name || 'Parcero', xp: appState.xp || 0, ts: Date.now() });
+        FB().set(qRef, { code: meCode, name: user?.name || 'Parcero', xp: appState.xp || 0, ts: Date.now(), cosm: miCosm });
         FB().onDisconnect(qRef).remove();
       } catch (e) {}
 
@@ -11310,8 +11324,8 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
           const id = `${meCode}__${rq.code}__${now}`;
           const data = {
             id, ts: now,
-            a: { code: meCode, name: user?.name || 'Parcero', xp: appState.xp || 0 },
-            b: { code: rq.code, name: rq.name || 'Rival', xp: rq.xp || 0 },
+            a: { code: meCode, name: user?.name || 'Parcero', xp: appState.xp || 0, cosm: miCosm },
+            b: { code: rq.code, name: rq.name || 'Rival', xp: rq.xp || 0, cosm: rq.cosm || null },
             scores: { [meCode]: 0, [rq.code]: 0 },
             prog: { [meCode]: 0, [rq.code]: 0 },
           };
@@ -11345,6 +11359,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
                 name: `Fantasma de @${u.code}`,
                 acc: tot > 0 ? Math.min(0.85, Math.max(0.3, cor / tot)) : 0.5,
                 xp: u.appState?.xp || 0,
+                cosm: snapCosm(u.appState),
               };
             }
           }
@@ -11368,7 +11383,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
       const r = snap.val();
       setRoom(r);
       const el = r.a?.code === meCode ? r.b : r.a;
-      if (el) setRival(prev => prev || { code: el.code, name: el.name, ghost: false, xp: el.xp || 0 });
+      if (el) setRival(prev => prev || { code: el.code, name: el.name, ghost: false, xp: el.xp || 0, cosm: el.cosm || null });
     });
     return () => unsub && unsub();
   }, [roomId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -11461,43 +11476,27 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     return (
       <Portal>
       <div className="fi" style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', padding: 24 }}>
-          {/* Dos siluetas girando/acercándose con las espadas al centro */}
-          <div style={{ position: 'relative', width: 210, height: 130, margin: '0 auto 24px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 26 }}>
-            {[0, 1, 2].map(i => (
-              <div key={i} style={{ position: 'absolute', left: '50%', top: '50%', width: 120, height: 120,
-                marginLeft: -60, marginTop: -60, borderRadius: '50%',
-                border: '2px solid rgba(232,116,58,0.4)',
-                animation: `groundFlicker ${1.6 + i * 0.5}s ease-in-out infinite ${i * 0.4}s`,
-                transform: `scale(${1 + i * 0.22})` }}/>
-            ))}
-            {/* Tu silueta */}
-            <div style={{ position: 'relative', animation: 'vsApproachL 1.4s ease-in-out infinite alternate' }}>
-              <Av name={user?.name || 'Tú'} sz={62} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
-            </div>
-            <div style={{ position: 'relative', zIndex: 2, animation: 'urgentPulse 1.2s ease-in-out infinite' }}>
-              <PkIc n="swords" s={30} c="#E8743A"/>
-            </div>
-            {/* Silueta misteriosa del rival */}
-            <div style={{ position: 'relative', width: 62, height: 62, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #2A2D45, #14162A)',
-              border: '2px dashed rgba(165,180,252,0.4)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: 'vsApproachR 1.4s ease-in-out infinite alternate' }}>
-              <span style={{ fontSize: 26, fontWeight: 900, color: 'rgba(165,180,252,0.6)' }}>?</span>
+        <div style={{ textAlign: 'center', padding: 24, position: 'relative', zIndex: 1 }}>
+          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 4, color: '#FF6B54', marginBottom: 4 }}>DUELO FLASH</div>
+          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 300, color: '#F6F1F2', marginBottom: 26 }}>
+            Buscando rival<span className="dsrch-dots"><i>.</i><i>.</i><i>.</i></span>
+          </div>
+          {/* Radar + tu carta al centro */}
+          <div className="dsrch-radar">
+            <span className="dsrch-ring" /><span className="dsrch-ring" style={{ animationDelay: '.7s' }} /><span className="dsrch-ring" style={{ animationDelay: '1.4s' }} />
+            <span className="dsrch-sweep" />
+            <div className="dsrch-me">
+              <Av name={user?.name || 'Tú'} sz={78} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
+              <span style={{ position: 'absolute', right: -3, bottom: -2, zIndex: 3 }}><MiniFuego color={appState.fireColor} anim={appState.fireAnim} forma={appState.fireForma} size={24} /></span>
             </div>
           </div>
-          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 3, color: '#E8743A', marginBottom: 8 }}>DUELO FLASH</div>
-          <div className="serif" style={{ fontSize: 24, fontWeight: 800, color: '#F5F2EB', marginBottom: 10 }}>
-            Buscando rival…
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#F6F1F2', marginTop: 22 }}>{(user?.name || 'Tú').split(' ')[0]} · Nv. {myLevel}</div>
+          <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.55)', lineHeight: 1.6, maxWidth: 260, margin: '8px auto 24px' }}>
+            5 preguntas · 3 minutos · marcador en vivo. Si nadie cae, sale un fantasma del más allá.
           </div>
-          <div style={{ fontSize: 12.5, color: 'rgba(245,242,235,0.6)', lineHeight: 1.6, maxWidth: 270, margin: '0 auto 26px' }}>
-            5 preguntas · 3 minutos · marcador en vivo. Si nadie aparece, te enfrentas a un fantasma del más allá.
-          </div>
-          <button onClick={abandonar} style={{ padding: '12px 28px', borderRadius: 13,
-            border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)',
-            color: 'rgba(245,242,235,0.75)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={abandonar} style={{ padding: '12px 28px', borderRadius: 14,
+            border: 'none', background: 'rgba(255,255,255,0.07)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.14)',
+            color: 'rgba(245,242,235,0.8)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
             Cancelar
           </button>
         </div>
@@ -11527,32 +11526,38 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     );
   }
 
-  // ══ VS ══
+  // ══ VS (estilo Clash Royale: dos cartas con foto/marco/banner + entrada de cada quien) ══
   if (phase === 'vs') {
+    const rc = rival?.cosm || {};
+    const miBanner = appState.equipped?.banner?.css || 'linear-gradient(135deg, #3A1622, #160A0E)';
+    const rivBanner = rc.banner?.css || 'linear-gradient(135deg, #16203A, #0A0C18)';
     return (
       <Portal>
-      {entradaFX && appState.equipped?.entrance && <DueloFX effect={appState.equipped.entrance} onDone={() => setEntradaFX(false)} />}
+      {/* Entradas: la tuya a la izquierda, la del rival a la derecha (no se cruzan) */}
+      {entradaFX && appState.equipped?.entrance && <DueloFX effect={appState.equipped.entrance} side="left" onDone={() => setEntradaFX(false)} />}
+      {entradaFX && rc.entrance && <DueloFX effect={rc.entrance} side="right" silent onDone={() => {}} />}
       <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 22, padding: 24 }}>
-          <div style={{ textAlign: 'center', animation: 'slideUpIn 0.5s ease both' }}>
-            <Av name={user?.name || 'Tú'} sz={74} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
-            <div style={{ fontSize: 13, fontWeight: 900, color: '#F5F2EB', marginTop: 10 }}>{(user?.name || 'Tú').split(' ')[0]}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#2D8A5E' }}>Nv.{myLevel}</div>
+        <div className="dvs">
+          {/* Tu carta */}
+          <div className="dvs-card dvs-card--l">
+            <div className="dvs-bn" style={{ background: miBanner }} />
+            <div className="dvs-av"><Av name={user?.name || 'Tú'} sz={70} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/></div>
+            <div className="dvs-name">{(user?.name || 'Tú').split(' ')[0]}</div>
+            <div className="dvs-title">{appState.equipped?.title?.name || 'Retador'}</div>
+            <div className="dvs-lvl" style={{ color: '#34D399' }}>NV. {myLevel}</div>
           </div>
-          <div className="serif" style={{ fontSize: 52, fontWeight: 900, color: '#E8743A',
-            textShadow: '0 0 34px rgba(232,116,58,0.6)', animation: 'vsSlam 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.3s both' }}>
-            VS
-          </div>
-          <div style={{ textAlign: 'center', animation: 'slideUpIn 0.5s ease 0.15s both' }}>
-            <div style={{ width: 74, height: 74, borderRadius: '50%', margin: '0 auto',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: rival?.ghost ? 'linear-gradient(135deg, #3A3D5C, #1E2038)' : 'linear-gradient(135deg, #E8743A, #C0392B)',
-              border: '2px solid rgba(255,255,255,0.2)' }}>
-              <PkIc n={rival?.ghost ? 'eye' : 'sombrero'} s={34} c={rival?.ghost ? '#A5B4FC' : '#fff'}/>
+          <div className="dvs-vs">VS</div>
+          {/* Carta del rival */}
+          <div className="dvs-card dvs-card--r">
+            <div className="dvs-bn" style={{ background: rivBanner }} />
+            <div className="dvs-av">
+              {(rival?.ghost && !rc.photo)
+                ? <div className="dvs-ghost"><PkIc n="eye" s={34} c="#A5B4FC"/></div>
+                : <Av name={rival?.name || 'Rival'} sz={70} C={C} photoURL={rc.photo} frameData={rc.frame}/>}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 900, color: '#F5F2EB', marginTop: 10, maxWidth: 110,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rival?.name || 'Rival'}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#E8743A' }}>Nv.{computeLevel(rival?.xp || 0).level}</div>
+            <div className="dvs-name">{(rival?.name || 'Rival').split(' ')[0]}</div>
+            <div className="dvs-title">{rc.title || (rival?.ghost ? 'Del más allá' : 'Rival')}</div>
+            <div className="dvs-lvl" style={{ color: '#FF6B54' }}>NV. {computeLevel(rival?.xp || 0).level}</div>
           </div>
         </div>
       </div>
