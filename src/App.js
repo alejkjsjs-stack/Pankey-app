@@ -10523,14 +10523,17 @@ function DueloFX({ effect, onDone, side = 'full', silent = false }) {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const sideStyle = side === 'left' ? { transform: 'translateX(-25%) scale(.82)', transformOrigin: 'center' }
-    : side === 'right' ? { transform: 'translateX(25%) scale(.82)', transformOrigin: 'center' } : null;
+    : side === 'right' ? { transform: 'translateX(25%) scale(.82)', transformOrigin: 'center' }
+    : side === 'top' ? { transform: 'translateY(-26%) scale(.8)', transformOrigin: 'center' }
+    : side === 'bottom' ? { transform: 'translateY(26%) scale(.8)', transformOrigin: 'center' } : null;
   const rnd = useMemo(() => Array.from({ length: 22 }, (_, i) => ({
     left: (i * 37) % 100, del: ((i % 8) * 0.09).toFixed(2), dur: (1.1 + (i % 6) * 0.16).toFixed(2), rot: (i * 47) % 360, size: 16 + (i % 5) * 5,
   })), []);
   const TRI = ['#FBBF24', '#2563EB', '#EF4444'];
   return (
     <Portal>
-      <div className="dfx" style={sideStyle || undefined}>
+      <div className={`dfx${side === 'full' ? ' dfx--shake' : ''}`} style={sideStyle || undefined}>
+        <div className="dfx-flash2" style={{ background: `radial-gradient(circle at center, ${col}55, transparent 60%)` }} />
         {fx === 'empanadas' && rnd.map((p, i) => (
           <span key={i} className="dfx-fall" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`, '--er': `${p.rot}deg` }}>
             <PkIc n="empanada" s={p.size + 6} c="#FFCF6B" />
@@ -11267,8 +11270,8 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 
   const lanzarVS = () => {
     setPhase('found'); FX.play('success'); FX.vibrate('medium');
-    setTimeout(() => { setPhase('vs'); FX.play('duelStart'); FX.vibrate('heavy'); }, 1300);
-    setTimeout(() => setPhase('play'), 3900);
+    setTimeout(() => { setPhase('vs'); FX.play('duelStart'); FX.vibrate('heavy'); }, 1200);
+    setTimeout(() => setPhase('play'), 5000);
   };
 
   const arrancarGhost = (ghost) => {
@@ -11526,38 +11529,47 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     );
   }
 
-  // ══ VS (estilo Clash Royale: dos cartas con foto/marco/banner + entrada de cada quien) ══
+  // ══ VS (Clash Royale: banderas arriba/abajo con foto/marco/banner + entrada de cada quien) ══
   if (phase === 'vs') {
     const rc = rival?.cosm || {};
-    const miBanner = appState.equipped?.banner?.css || 'linear-gradient(135deg, #3A1622, #160A0E)';
-    const rivBanner = rc.banner?.css || 'linear-gradient(135deg, #16203A, #0A0C18)';
+    const miBanner = appState.equipped?.banner?.css || 'linear-gradient(135deg, #3A1622 0%, #7A1E30 100%)';
+    const rivBanner = rc.banner?.css || 'linear-gradient(135deg, #16203A 0%, #2A3A6E 100%)';
+    const rivLvl = computeLevel(rival?.xp || 0).level;
     return (
       <Portal>
-      {/* Entradas: la tuya a la izquierda, la del rival a la derecha (no se cruzan) */}
-      {entradaFX && appState.equipped?.entrance && <DueloFX effect={appState.equipped.entrance} side="left" onDone={() => setEntradaFX(false)} />}
-      {entradaFX && rc.entrance && <DueloFX effect={rc.entrance} side="right" silent onDone={() => {}} />}
-      <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="dvs">
-          {/* Tu carta */}
-          <div className="dvs-card dvs-card--l">
-            <div className="dvs-bn" style={{ background: miBanner }} />
-            <div className="dvs-av"><Av name={user?.name || 'Tú'} sz={70} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/></div>
-            <div className="dvs-name">{(user?.name || 'Tú').split(' ')[0]}</div>
-            <div className="dvs-title">{appState.equipped?.title?.name || 'Retador'}</div>
-            <div className="dvs-lvl" style={{ color: '#34D399' }}>NV. {myLevel}</div>
-          </div>
-          <div className="dvs-vs">VS</div>
-          {/* Carta del rival */}
-          <div className="dvs-card dvs-card--r">
-            <div className="dvs-bn" style={{ background: rivBanner }} />
-            <div className="dvs-av">
+      {/* Entradas: la del rival ARRIBA, la tuya ABAJO (no se cruzan; el rival ve la tuya) */}
+      {entradaFX && rc.entrance && <DueloFX effect={rc.entrance} side="top" silent onDone={() => {}} />}
+      {entradaFX && appState.equipped?.entrance && <DueloFX effect={appState.equipped.entrance} side="bottom" onDone={() => setEntradaFX(false)} />}
+      <div style={{ ...fondo, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <div className="dvs2">
+          {/* RIVAL (arriba) */}
+          <div className="dvs2-flag dvs2-flag--top">
+            <div className="dvs2-bn" style={{ background: rivBanner }} />
+            <div className="dvs2-av">
               {(rival?.ghost && !rc.photo)
-                ? <div className="dvs-ghost"><PkIc n="eye" s={34} c="#A5B4FC"/></div>
-                : <Av name={rival?.name || 'Rival'} sz={70} C={C} photoURL={rc.photo} frameData={rc.frame}/>}
+                ? <div className="dvs2-ghost"><PkIc n="eye" s={40} c="#A5B4FC"/></div>
+                : <Av name={rival?.name || 'Rival'} sz={94} C={C} photoURL={rc.photo} frameData={rc.frame}/>}
             </div>
-            <div className="dvs-name">{(rival?.name || 'Rival').split(' ')[0]}</div>
-            <div className="dvs-title">{rc.title || (rival?.ghost ? 'Del más allá' : 'Rival')}</div>
-            <div className="dvs-lvl" style={{ color: '#FF6B54' }}>NV. {computeLevel(rival?.xp || 0).level}</div>
+            <div className="dvs2-info">
+              <div className="dvs2-name">{rival?.name || 'Rival'}</div>
+              <div className="dvs2-sub"><PkIc n="flame" s={11} c="#FF6B54"/> Nv. {rivLvl}{rc.title ? ` · ${rc.title}` : rival?.ghost ? ' · Del más allá' : ''}</div>
+            </div>
+          </div>
+
+          {/* Escudo VS */}
+          <div className="dvs2-shield"><span>VS</span></div>
+
+          {/* TÚ (abajo) */}
+          <div className="dvs2-flag dvs2-flag--bot">
+            <div className="dvs2-bn" style={{ background: miBanner }} />
+            <div className="dvs2-av">
+              <Av name={user?.name || 'Tú'} sz={94} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
+              <span style={{ position: 'absolute', right: -4, bottom: -2, zIndex: 3 }}><MiniFuego color={appState.fireColor} anim={appState.fireAnim} forma={appState.fireForma} size={28} /></span>
+            </div>
+            <div className="dvs2-info dvs2-info--r">
+              <div className="dvs2-name">{user?.name || 'Tú'}</div>
+              <div className="dvs2-sub">{appState.equipped?.title?.name || 'Retador'} · Nv. {myLevel} <PkIc n="flame" s={11} c="#34D399"/></div>
+            </div>
           </div>
         </div>
       </div>
