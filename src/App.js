@@ -15169,13 +15169,11 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
 
     // ZONA 2 — CATEGORÍAS
     const CATS = [
-      { id: 'chest',    label: 'Cofres' },
-      { id: 'frame',    label: 'Marcos' },
-      { id: 'title',    label: 'Títulos' },
-      { id: 'banner',   label: 'Paisajes' },
-      { id: 'victory',  label: 'Victorias' },
-      { id: 'entrance', label: 'Entradas' },
-      { id: 'item',     label: 'Poderes' },
+      { id: 'chest',  label: 'Cofres' },
+      { id: 'frame',  label: 'Marcos' },
+      { id: 'title',  label: 'Títulos' },
+      { id: 'banner', label: 'Paisajes' },
+      { id: 'item',   label: 'Poderes' },
     ];
     const catColor = (cid) => {
       const its = SHOP_ITEMS.filter(i => i.type === cid);
@@ -15763,6 +15761,45 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           </div>
           )}
         </div>
+
+        {/* ══ VICTORIAS Y ENTRADAS — cartas con previsualización (tócalas para verlas) ══ */}
+        {['victory', 'entrance'].map(tipo => {
+          const its = SHOP_ITEMS.filter(i => i.type === tipo).sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity));
+          const label = tipo === 'victory' ? 'Victorias' : 'Entradas';
+          const acc = tipo === 'victory' ? '#FFCF6B' : '#FF6B54';
+          const ICS = { empanadas: 'empanada', llamarada: 'flame', tricolor: 'star', finisimo: 'swords', llamas: 'flame', cielo: 'people', portal: 'target' };
+          return (
+            <div key={tipo} style={{ padding: '12px 0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
+                <span className="bz-sec" style={{ color: acc }}>{label}</span>
+                <span className="bz-timer" style={{ color: acc, background: 'rgba(255,150,80,.12)' }}>tócala para verla</span>
+              </div>
+              <div className="bz-shelf">
+                {its.map(item => {
+                  const rc = (RARITY_META[item.rarity] || {}).color;
+                  const owned = (appState.inventory || []).includes(item.id);
+                  const isEq = appState.equipped?.[item.type]?.id === item.id;
+                  const rank = rankOf(item.rarity);
+                  return (
+                    <div key={item.id} className={`bz-fxc${rank <= 1 ? ' bz-fxc--hot' : ''}`} style={{ '--rc': rc }}>
+                      <button className="bz-fxc__prev" onClick={() => { FX.play('open'); FX.vibrate('light'); setPreviewFX(item); }}>
+                        <span className="bz-fxc__ic"><PkIc n={ICS[item.fx] || 'flame'} s={34} c={rc} /></span>
+                        <span className="bz-fxc__play">▶ Ver</span>
+                      </button>
+                      <span className="bz-fxc__rare" style={{ color: rc }}>{(RARITY_META[item.rarity] || {}).label}</span>
+                      <span className="bz-fxc__name">{item.name}</span>
+                      {isEq
+                        ? <span className="bz-fxc__eq">✓ Equipado</span>
+                        : owned
+                          ? <button className="bz-fxc__buy" onClick={() => equipItem(item)} style={{ color: rc, boxShadow: `inset 0 0 0 1px ${rc}66` }}>Equipar</button>
+                          : <button className="bz-fxc__buy" onClick={() => abrirItem(item)} style={{ color: rc, boxShadow: `inset 0 0 0 1px ${rc}66` }}><PkIc n="empanada" s={11} c={rc} />{item.price.toLocaleString()}</button>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
 
         {/* ══ ESTANTERÍAS DEL CATÁLOGO (una fila horizontal por categoría) ══ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 8 }}>

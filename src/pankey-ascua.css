@@ -369,6 +369,24 @@
 .bz-pack__name{font:700 11px/1 'Instrument Sans';color:var(--t2)}
 .bz-pack__price{font:800 13px/1 'Instrument Sans';color:var(--t1);margin-top:2px}
 
+/* Victorias/Entradas: cartas grandes con previsualización */
+.bz-fxc{scroll-snap-align:start;flex:none;width:158px;display:flex;flex-direction:column;align-items:center;gap:7px;
+  border-radius:20px;padding:12px 12px 13px;background:var(--gl-2);box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px var(--gl-bd)}
+.bz-fxc--hot{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px color-mix(in srgb,var(--rc) 55%,transparent),0 0 22px -6px var(--rc)}
+.bz-fxc__prev{position:relative;width:100%;height:88px;border:none;cursor:pointer;border-radius:14px;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--rc) 22%,transparent),transparent 72%),rgba(0,0,0,.35);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rc) 30%,transparent);overflow:hidden;transition:transform .12s var(--ez)}
+.bz-fxc__prev:active{transform:scale(.96)}
+.bz-fxc__ic{filter:drop-shadow(0 0 10px currentColor);animation:breathe 2.6s ease-in-out infinite}
+.bz-fxc__play{position:absolute;bottom:6px;right:8px;font:800 9px/1 'Instrument Sans';color:var(--rc);
+  background:rgba(0,0,0,.5);border-radius:99px;padding:3px 7px}
+.bz-fxc__rare{font:800 8px/1 'Instrument Sans';letter-spacing:1.2px}
+.bz-fxc__name{font:700 12px/1.2 'Instrument Sans';color:var(--t1);text-align:center;min-height:28px;display:flex;align-items:center}
+.bz-fxc__buy{display:inline-flex;align-items:center;gap:4px;border:none;cursor:pointer;border-radius:99px;padding:6px 13px;
+  font:800 12px/1 'Instrument Sans';background:rgba(255,255,255,.05);transition:transform .12s var(--ez)}
+.bz-fxc__buy:active{transform:scale(.94)}
+.bz-fxc__eq{font:800 12px/1 'Instrument Sans';color:#34D399;padding:6px 0}
+
 /* "Ver todo" + grid de la categoría */
 /* Selector de eje del fueguito (Color / Forma / Movimiento) */
 .fue-tabs{display:flex;gap:6px;padding:0 20px 8px}
