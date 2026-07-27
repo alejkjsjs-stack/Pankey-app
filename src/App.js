@@ -9476,7 +9476,14 @@ async function fetchGeminiQuestions(subjects, count, opts = {}) {
   const dificultad = opts.dificultad || 'Alta';
 
   // Instrucción visual: los modos rápidos piden preguntas compactas sin contextos largos
-  const reglaVisual = opts.compact
+  const reglaVisual = opts.duelo
+    ? `🚨 MODO DUELO 1v1 (ágil PERO visual, como el examen real) 🚨
+Es un duelo con reloj: preguntas rápidas PERO con la MISMA variedad visual del ICFES.
+- Usa TODOS los tipos, variados entre las preguntas: "texto" (bibliografía CORTA, máx 2 frases), "ingles" (aviso/diálogo corto), "tabla", "grafica" (barras o geometría), "caricatura" (una viñeta con su globo), "mapa". Y alguna "simple".
+- Que ~2 de cada 3 preguntas traigan apoyo visual; NO repitas el mismo tipo seguido.
+- Todo debe leerse en segundos: textos máx 2 frases, tablas máx 4 filas, gráficas máx 4 barras/figura simple.
+- El enunciado ("text") máximo 28 palabras; cada opción máximo 12 palabras.`
+    : opts.compact
     ? `🚨 MODO ÁGIL (con tiempo) 🚨
 Estas preguntas son para un modo con reloj: deben resolverse rápido, PERO igual pueden traer apoyo visual corto.
 - "tipo"/"context" permitidos: SOLO "tabla", "grafica" (barras o geometría), "mapa" corto o "simple". PROHIBIDO "texto", "ingles" y "caricatura" (nada de lecturas largas).
@@ -10511,58 +10518,257 @@ function CofreSVG({ lv, open, size = 96 }) {
 //  SHOW DE APERTURA — cofre comprado en la tienda
 //  (tiembla → grieta de luz → explosión → flash → recompensa)
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  ENTRADAS DEL DUELO — motor de partículas en CANVAS
+//  (partículas suaves con glow aditivo; nada de bordes rectos ni parpadeo)
+//  fx: 'llamas' | 'cielo' | 'portal'   side: 'top' (rival, cae) | 'bottom' (tú, sube)
+// ─────────────────────────────────────────────
+function EntranceCanvas({ fx = 'llamas', side = 'bottom', color = '#FF6B54' }) {
+  const ref = useRef(null);
+  const isTop = side === 'top';
+  useEffect(() => {
+    const cv = ref.current; if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let W = 0, H = 0;
+    const resize = () => {
+      W = cv.clientWidth || window.innerWidth;
+      H = cv.clientHeight || Math.round(window.innerHeight * 0.62);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.imageSmoothingEnabled = true;
+    };
+    resize();
+
+    const dir = isTop ? 1 : -1; // +1 baja (rival arriba), -1 sube (tú abajo)
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const rgba = (hex, a) => {
+      const h = (hex || '#ffffff').replace('#', '');
+      const f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+      const n = parseInt(f, 16);
+      return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+    };
+    // sprite circular suave (degradado radial) reutilizable
+    const makeSprite = (stops) => {
+      const s = 64, o = document.createElement('canvas'); o.width = o.height = s;
+      const c = o.getContext('2d'), g = c.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+      stops.forEach(([p, col]) => g.addColorStop(p, col));
+      c.fillStyle = g; c.beginPath(); c.arc(s / 2, s / 2, s / 2, 0, 6.2832); c.fill();
+      return o;
+    };
+    // paletas de sprites por efecto
+    const S = {
+      fireHot: makeSprite([[0, 'rgba(255,249,232,0.95)'], [0.35, 'rgba(255,206,112,0.7)'], [1, 'rgba(255,110,60,0)']]),
+      fireMid: makeSprite([[0, 'rgba(255,192,112,0.9)'], [0.42, 'rgba(255,120,60,0.5)'], [1, 'rgba(255,60,40,0)']]),
+      fireDeep: makeSprite([[0, 'rgba(255,120,72,0.85)'], [0.46, 'rgba(230,52,52,0.4)'], [1, 'rgba(150,26,40,0)']]),
+      ember: makeSprite([[0, 'rgba(255,244,206,1)'], [0.4, 'rgba(255,182,92,0.7)'], [1, 'rgba(255,120,50,0)']]),
+      white: makeSprite([[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(214,236,255,0.6)'], [1, 'rgba(140,190,255,0)']]),
+      blue: makeSprite([[0, 'rgba(224,242,255,0.95)'], [0.42, 'rgba(122,182,255,0.5)'], [1, 'rgba(70,132,255,0)']]),
+      violet: makeSprite([[0, 'rgba(246,232,255,0.95)'], [0.4, 'rgba(192,132,252,0.6)'], [1, 'rgba(139,92,246,0)']]),
+      violet2: makeSprite([[0, 'rgba(216,180,254,0.9)'], [0.5, 'rgba(139,92,246,0.45)'], [1, 'rgba(88,28,135,0)']]),
+    };
+    const bandCol = fx === 'llamas' ? '#FF5A38' : fx === 'cielo' ? '#7AB6FF' : (color || '#B07BFF');
+
+    const parts = [];
+    const t0 = performance.now();
+    const DUR = 2800, FADE = 650, CAP = 340;
+    let raf, last = t0, accA = 0, accB = 0;
+
+    const lifeAlpha = (p) => {
+      const lr = p.life / p.ttl, fin = 0.14, fout = 0.72;
+      if (lr < fin) return lr / fin;
+      if (lr > fout) return Math.max(0, 1 - (lr - fout) / (1 - fout));
+      return 1;
+    };
+    const startY = () => isTop ? rand(-24, 26) : H - rand(-24, 26);
+
+    const spawnFlame = () => {
+      const roll = Math.random();
+      parts.push({ k: 'flame', sp: roll < 0.5 ? S.fireHot : roll < 0.78 ? S.fireMid : S.fireDeep,
+        x: rand(0, W), y: startY(), vx: rand(-12, 12), vy: dir * rand(58, 128),
+        r: rand(17, 40), life: 0, ttl: rand(0.75, 1.5), phase: rand(0, 6.28), phSp: rand(2.6, 5.2), amp: rand(10, 26), grow: -0.42 });
+    };
+    const spawnEmber = () => {
+      parts.push({ k: 'dot', sp: S.ember, x: rand(0, W), y: startY(), vx: rand(-16, 16), vy: dir * rand(150, 300),
+        r: rand(1.4, 3.6), life: 0, ttl: rand(0.9, 1.8), phase: rand(0, 6.28), phSp: rand(3, 6), amp: rand(6, 16), grow: -0.2, flick: 1 });
+    };
+    const spawnStreak = () => {
+      parts.push({ k: 'comet', sp: Math.random() < 0.5 ? S.white : S.blue, x: rand(0, W), y: isTop ? rand(-30, 0) : H + rand(0, 30),
+        vx: rand(-30, 30), vy: dir * rand(620, 1000), r: rand(3.5, 7), life: 0, ttl: rand(0.5, 0.9), phase: 0, phSp: 0, amp: 0, grow: -0.1 });
+    };
+    const spawnSpark = () => {
+      parts.push({ k: 'twinkle', sp: S.white, x: rand(0, W), y: isTop ? rand(0, H * 0.5) : rand(H * 0.5, H),
+        vx: rand(-6, 6), vy: dir * rand(8, 26), r: rand(2.2, 5), life: 0, ttl: rand(0.7, 1.3), phase: rand(0, 6.28), phSp: rand(6, 10), amp: 3, grow: 0 });
+    };
+    const spawnOrb = () => {
+      parts.push({ k: 'dot', sp: Math.random() < 0.5 ? S.violet : S.violet2, x: rand(0, W), y: startY(),
+        vx: rand(-8, 8), vy: dir * rand(90, 210), r: rand(3, 8), life: 0, ttl: rand(1, 1.9), phase: rand(0, 6.28), phSp: rand(3.5, 7), amp: rand(18, 44), grow: -0.1, flick: 0 });
+    };
+
+    function frame(now) {
+      const dt = Math.min((now - last) / 1000, 0.05); last = now;
+      const el = now - t0, emitting = el < DUR - 250;
+      ctx.clearRect(0, 0, W, H);
+
+      // ── base de energía en el borde: siempre presente (sin huecos), con impacto al inicio ──
+      ctx.globalCompositeOperation = 'lighter';
+      const pulse = 0.11 + 0.045 * Math.sin(el / 260) + Math.max(0, 1 - el / 480) * 0.55;
+      const bandH = H * 0.46;
+      const g = isTop
+        ? ctx.createLinearGradient(0, 0, 0, bandH)
+        : ctx.createLinearGradient(0, H, 0, H - bandH);
+      g.addColorStop(0, rgba(bandCol, Math.min(0.9, pulse)));
+      g.addColorStop(0.5, rgba(bandCol, pulse * 0.28));
+      g.addColorStop(1, rgba(bandCol, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(0, isTop ? 0 : H - bandH, W, bandH);
+
+      // ── emisión continua ──
+      if (emitting) {
+        if (fx === 'llamas') { accA += 60 * dt; accB += 78 * dt;
+          while (accA >= 1 && parts.length < CAP) { spawnFlame(); accA--; }
+          while (accB >= 1 && parts.length < CAP) { spawnEmber(); accB--; }
+        } else if (fx === 'cielo') { accA += 24 * dt; accB += 38 * dt;
+          while (accA >= 1 && parts.length < CAP) { spawnStreak(); accA--; }
+          while (accB >= 1 && parts.length < CAP) { spawnSpark(); accB--; }
+        } else { accA += 68 * dt;
+          while (accA >= 1 && parts.length < CAP) { spawnOrb(); accA--; }
+        }
+      }
+
+      // ── actualizar + dibujar ──
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p = parts[i];
+        p.life += dt;
+        if (p.life >= p.ttl) { parts.splice(i, 1); continue; }
+        p.phase += p.phSp * dt;
+        p.x += (p.vx + Math.sin(p.phase) * p.amp) * dt;
+        p.y += p.vy * dt;
+        let a = lifeAlpha(p);
+        if (p.k === 'twinkle') a *= 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(p.phase));
+        if (p.flick) a *= 0.7 + 0.3 * Math.sin(p.phase * 1.7);
+        const r = p.r * (1 + p.grow * (p.life / p.ttl));
+        if (p.k === 'comet') {
+          const spd = Math.hypot(p.vx, p.vy) || 1, ux = -p.vx / spd, uy = -p.vy / spd;
+          const tail = Math.min(120, spd * 0.11), steps = 7;
+          for (let s = 0; s < steps; s++) {
+            const f = s / steps, rr = r * (1 - f * 0.82);
+            ctx.globalAlpha = a * (1 - f) * 0.85;
+            ctx.drawImage(p.sp, p.x + ux * tail * f - rr, p.y + uy * tail * f - rr, rr * 2, rr * 2);
+          }
+          ctx.globalAlpha = a;
+          ctx.drawImage(S.white, p.x - r * 1.25, p.y - r * 1.25, r * 2.5, r * 2.5);
+        } else {
+          ctx.globalAlpha = a;
+          ctx.drawImage(p.sp, p.x - r, p.y - r, r * 2, r * 2);
+        }
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+
+      // fundido global suave al final
+      cv.style.opacity = el > DUR - FADE ? String(Math.max(0, 1 - (el - (DUR - FADE)) / FADE)) : '1';
+      if (el < DUR + 80) raf = requestAnimationFrame(frame);
+      else ctx.clearRect(0, 0, W, H);
+    }
+    raf = requestAnimationFrame(frame);
+    window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return <canvas ref={ref} className={`dfxc dfxc--${isTop ? 'top' : 'bot'}`} aria-hidden="true" />;
+}
+
 // Efecto de duelo: VICTORIA (al ganar) o ENTRADA (al aparecer). ~1.9s.
 // side: 'full' (centrado) | 'left' | 'right' (para el lado de cada jugador en el VS).
 function DueloFX({ effect, onDone, side = 'full', silent = false }) {
   const fx = effect?.fx || 'empanadas';
   const col = effect?.color || '#FFCF6B';
   const kind = effect?.type || 'victory';
+  const firedRef = useRef(false);
   useEffect(() => {
     if (!silent) { try { FX.play(kind === 'entrance' ? 'poder' : 'win'); FX.vibrate('heavy'); } catch (e) {} }
-    const t = setTimeout(() => onDone?.(), 1900);
+    // Duración fija: deja terminar la animación más larga (lluvias ~2.7s) y blinda onDone contra doble disparo
+    const t = setTimeout(() => { if (!firedRef.current) { firedRef.current = true; onDone?.(); } }, 2800);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const sideStyle = side === 'left' ? { transform: 'translateX(-25%) scale(.82)', transformOrigin: 'center' }
-    : side === 'right' ? { transform: 'translateX(25%) scale(.82)', transformOrigin: 'center' }
-    : side === 'top' ? { transform: 'translateY(-26%) scale(.8)', transformOrigin: 'center' }
-    : side === 'bottom' ? { transform: 'translateY(26%) scale(.8)', transformOrigin: 'center' } : null;
-  const rnd = useMemo(() => Array.from({ length: 22 }, (_, i) => ({
-    left: (i * 37) % 100, del: ((i % 8) * 0.09).toFixed(2), dur: (1.1 + (i % 6) * 0.16).toFixed(2), rot: (i * 47) % 360, size: 16 + (i % 5) * 5,
+  const rnd = useMemo(() => Array.from({ length: 34 }, (_, i) => ({
+    left: (i * 37) % 100, del: ((i % 10) * 0.06).toFixed(2), dur: (1.5 + (i % 7) * 0.16).toFixed(2),
+    rot: (i * 47) % 360, size: 16 + (i % 5) * 5, sx: `${((i % 5) - 2) * 26}px`,
   })), []);
   const TRI = ['#FBBF24', '#2563EB', '#EF4444'];
+
+  // ── ENTRADAS: motor de partículas en canvas (cae desde arriba = rival / sube desde abajo = tú) ──
+  if (kind === 'entrance') {
+    return (
+      <Portal>
+        <EntranceCanvas fx={fx} side={side === 'top' ? 'top' : 'bottom'} color={col} />
+      </Portal>
+    );
+  }
+
+  // ── VICTORIAS: pantalla completa ──
+  const rays = fx === 'finisimo'; // el legendario lleva rayos de luz
   return (
     <Portal>
-      <div className={`dfx${side === 'full' ? ' dfx--shake' : ''}`} style={sideStyle || undefined}>
-        <div className="dfx-flash2" style={{ background: `radial-gradient(circle at center, ${col}55, transparent 60%)` }} />
+      <div className={`dfx${side === 'full' ? ' dfx--shake' : ''}`}>
+        {/* Capa base de luz */}
+        <div className="dfx-flash" style={{ background: `radial-gradient(circle at center, ${col}66, transparent 62%)` }} />
+        {side === 'full' && <div className="dfx-white" />}
+        {rays && <div className="dfx-rays" style={{ color: col }} />}
+
         {fx === 'empanadas' && rnd.map((p, i) => (
-          <span key={i} className="dfx-fall" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`, '--er': `${p.rot}deg` }}>
+          <span key={i} className="dfx-fall dfx-fall--sway" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`,
+            '--er': `${p.rot}deg`, '--sx': p.sx, filter: 'drop-shadow(0 0 8px #FFCF6B)' }}>
             <PkIc n="empanada" s={p.size + 6} c="#FFCF6B" />
           </span>
         ))}
         {fx === 'tricolor' && rnd.map((p, i) => (
-          <span key={i} className="dfx-fall" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`, '--er': `${p.rot}deg`,
-            width: 9, height: 15, borderRadius: 2, background: TRI[i % 3] }} />
+          <span key={i} className="dfx-fall dfx-fall--sway" style={{ left: `${p.left}%`, animationDelay: `${p.del}s`, animationDuration: `${p.dur}s`,
+            '--er': `${p.rot}deg`, '--sx': p.sx,
+            width: i % 3 === 0 ? 9 : 11, height: i % 3 === 0 ? 9 : 16, borderRadius: i % 3 === 0 ? '50%' : 2,
+            background: TRI[i % 3], boxShadow: `0 0 8px ${TRI[i % 3]}` }} />
         ))}
         {fx === 'llamarada' && (
           <div className="dfx-center">
             <div className="dfx-burst" style={{ background: `radial-gradient(circle, ${col}, ${col}00 70%)` }} />
-            <span className="dfx-seal"><PkIc n="flame" s={100} c={col} /></span>
-            {rnd.slice(0, 16).map((p, i) => <span key={i} className="dfx-spark" style={{ '--a': `${(i / 16) * 360}deg`, background: col, animationDelay: `${p.del}s` }} />)}
+            <span className="dfx-ring" style={{ color: col }} />
+            <span className="dfx-ring" style={{ color: col, animationDelay: '.18s' }} />
+            <span className="dfx-seal"><PkIc n="flame" s={110} c={col} /></span>
+            {rnd.slice(0, 20).map((p, i) => <span key={i} className="dfx-spark" style={{ '--a': `${(i / 20) * 360}deg`, '--d': `${200 + (i % 4) * 40}px`, background: col, color: col, animationDelay: `${(i % 5) * 0.04}s` }} />)}
           </div>
         )}
         {fx === 'finisimo' && (
-          <div className="dfx-center"><div className="dfx-slam" style={{ color: col, textShadow: `0 0 30px ${col}` }}>¡FINÍSIMO!</div></div>
-        )}
-        {fx === 'llamas' && (
-          <div className="dfx-flames">{rnd.slice(0, 14).map((p, i) => <span key={i} className="dfx-flame" style={{ left: `${4 + i * 7}%`, animationDelay: `${p.del}s` }}><PkIc n="flame" s={44 + (i % 3) * 16} c={i % 2 ? '#FF6B54' : '#FFCF6B'} /></span>)}</div>
-        )}
-        {fx === 'cielo' && (
-          <div className="dfx-center"><span className="dfx-drop"><PkIc n="people" s={72} c={col} /></span><div className="dfx-shock" style={{ borderColor: col }} /></div>
-        )}
-        {fx === 'portal' && (
-          <div className="dfx-center"><div className="dfx-portal" style={{ borderColor: col, boxShadow: `0 0 40px ${col}, inset 0 0 40px ${col}` }} /><span className="dfx-portalman"><PkIc n="target" s={56} c={col} /></span></div>
+          <div className="dfx-center">
+            {rnd.slice(0, 16).map((p, i) => <span key={i} className="dfx-spark" style={{ '--a': `${(i / 16) * 360}deg`, '--d': '260px', background: col, color: col, animationDelay: `${0.2 + (i % 4) * 0.04}s` }} />)}
+            <div className="dfx-slam" style={{ color: col, textShadow: `0 0 30px ${col}, 0 0 60px ${col}` }}>
+              ¡FINÍSIMO!<span className="dfx-shine" />
+            </div>
+          </div>
         )}
       </div>
+    </Portal>
+  );
+}
+
+// Vista previa de un efecto (entrada/victoria) en la tienda/inventario: pantalla completa,
+// con fondo oscurecido y nombre, para que SÍ se aprecie. La entrada se muestra desde arriba Y abajo.
+function FXPreview({ item, onDone }) {
+  const isEntrance = item?.type === 'entrance';
+  return (
+    <Portal>
+      <div className="fxprev" onClick={onDone}>
+        <div className="fxprev-label">
+          <div className="fxprev-name">{item?.name || 'Efecto'}</div>
+          <div className="fxprev-hint">Vista previa · toca para cerrar</div>
+        </div>
+      </div>
+      {isEntrance ? (
+        <>
+          <DueloFX effect={item} side="top" silent onDone={() => {}} />
+          <DueloFX effect={item} side="bottom" onDone={onDone} />
+        </>
+      ) : (
+        <DueloFX effect={item} onDone={onDone} />
+      )}
     </Portal>
   );
 }
@@ -11231,6 +11437,26 @@ function RetoDelDia({ C, appState, setAppState, onClose, onMissionReward, unlock
 // ─────────────────────────────────────────────
 //  CAPA 4 — DUELO FLASH (matchmaking + fantasma)
 // ─────────────────────────────────────────────
+// Fondo atmosférico del duelo: brasas flotando + latido de aura + viñeta (reskin puro, va detrás del contenido)
+function DuelAmbient({ calm = false }) {
+  const embers = useMemo(() => Array.from({ length: calm ? 9 : 18 }, (_, i) => ({
+    left: (i * 53) % 100, dur: (7 + (i % 6) * 1.7).toFixed(2), del: (-(i % 9) * 1.2).toFixed(2),
+    dx: `${((i % 5) - 2) * 16}px`, size: 2 + (i % 3),
+    c: i % 3 === 0 ? '#FFCF6B' : i % 2 === 0 ? '#FF6B54' : '#FF2E4C',
+  })), [calm]);
+  return (
+    <div className="damb" aria-hidden="true">
+      <div className="damb-aura" style={calm ? { opacity: 0.4 } : undefined} />
+      {embers.map((e, i) => (
+        <span key={i} className="damb-ember" style={{ left: `${e.left}%`, width: e.size, height: e.size,
+          background: e.c, boxShadow: `0 0 7px ${e.c}, 0 0 12px ${e.c}`,
+          animationDuration: `${e.dur}s`, animationDelay: `${e.del}s`, '--dx': e.dx }} />
+      ))}
+      <div className="damb-vig" />
+    </div>
+  );
+}
+
 function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMissionReward, unlockSecret, pushNotif, onConfirm }) {
   const [phase, setPhase]     = useState('search'); // search | found | vs | play | result
   const [rival, setRival]     = useState(null);
@@ -11247,9 +11473,15 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   const [done, setDone]       = useState(false);
   const [resultado, setResultado] = useState(null); // { win, tie, emp, xp, rs }
   const [entradaFX, setEntradaFX] = useState(false);  // efecto de Entrada al aparecer (fase vs)
-  const [victoriaFX, setVictoriaFX] = useState(false); // efecto de Victoria al ganar
-  useEffect(() => { if (phase === 'vs' && appState.equipped?.entrance) setEntradaFX(true); }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (phase === 'result' && resultado?.win && appState.equipped?.victory) setVictoriaFX(true); }, [phase, resultado]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Las entradas se disparan si CUALQUIERA de los dos tiene una (el rival ve la tuya y tú la suya).
+  useEffect(() => {
+    if (phase === 'vs' && (appState.equipped?.entrance || rival?.cosm?.entrance)) {
+      setEntradaFX(true);
+      const t = setTimeout(() => setEntradaFX(false), 2900);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
   const ghostTimers = useRef([]);
   const createdRef  = useRef(false);
   const startedRef  = useRef(false);
@@ -11268,6 +11500,12 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   }));
   const miCosm = snapCosm(appState);
 
+  // Preguntas del duelo por IA (Gemini) con tipos ricos, precargadas mientras se busca rival.
+  // Banco estático como respaldo si Gemini falla. iaRef = null | 'loading' | array de 5.
+  const DUELO_SUBJECTS = ['Matemáticas', 'Lectura Crítica', 'Ciencias Sociales', 'Ciencias Naturales', 'Inglés'];
+  const iaRef = useRef(null);
+  const iaListas = () => (Array.isArray(iaRef.current) && iaRef.current.length >= 3) ? iaRef.current.slice(0, 5) : null;
+
   const lanzarVS = () => {
     setPhase('found'); FX.play('success'); FX.vibrate('medium');
     setTimeout(() => { setPhase('vs'); FX.play('duelStart'); FX.vibrate('heavy'); }, 1200);
@@ -11276,7 +11514,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 
   const arrancarGhost = (ghost) => {
     if (startedRef.current) return; startedRef.current = true;
-    const qset = seededShuffle(ICFES_QUESTIONS, hashStr(`ghost-${Date.now()}`)).slice(0, 5);
+    const qset = iaListas() || seededShuffle(ICFES_QUESTIONS, hashStr(`ghost-${Date.now()}`)).slice(0, 5);
     setQs(qset); setRival(ghost); setRoomId(null);
     let acum = 3000;
     qset.forEach((q, i) => {
@@ -11291,10 +11529,19 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     lanzarVS();
   };
 
-  const arrancarReal = (id) => {
+  const arrancarReal = async (id) => {
     if (startedRef.current) return; startedRef.current = true;
-    setQs(seededShuffle(ICFES_QUESTIONS, hashStr(id)).slice(0, 5));
     setRoomId(id);
+    // Preguntas IA que el creador dejó en la sala → mismas para ambos. Si no hay, banco sembrado (igual para ambos por el mismo id).
+    let qset = null;
+    if (fbOK()) {
+      try {
+        const snap = await FB().get(FB().ref(FB().db, `flashRooms/${id}/questions`));
+        if (snap.exists()) { const v = snap.val(); if (Array.isArray(v) && v.length >= 3) qset = v.slice(0, 5); }
+      } catch (e) {}
+    }
+    if (!qset) qset = seededShuffle(ICFES_QUESTIONS, hashStr(id)).slice(0, 5);
+    setQs(qset);
     lanzarVS();
   };
 
@@ -11302,6 +11549,14 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   useEffect(() => {
     if (phase !== 'search') return undefined;
     let unsubQ = null, unsubM = null, ghostTO = null;
+
+    // Precargar preguntas IA (tipos ricos) en paralelo a la búsqueda: cuando arranque el duelo ya están listas.
+    if (iaRef.current == null) {
+      iaRef.current = 'loading';
+      fetchGeminiQuestions(DUELO_SUBJECTS, 5, { duelo: true, dificultad: 'Alta' })
+        .then(ia => { iaRef.current = (Array.isArray(ia) && ia.length >= 5) ? ia.slice(0, 5) : null; })
+        .catch(() => { iaRef.current = null; });
+    }
 
     if (fbOK() && meCode) {
       const qRef = FB().ref(FB().db, `flashQueue/${meCode}`);
@@ -11335,6 +11590,9 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
           (async () => {
             try {
               await FB().set(FB().ref(FB().db, `flashRooms/${id}`), data);
+              // El creador comparte las preguntas IA (si ya están listas) para que AMBOS resuelvan las mismas.
+              const iaShared = iaListas();
+              if (iaShared) { try { await FB().set(FB().ref(FB().db, `flashRooms/${id}/questions`), JSON.parse(JSON.stringify(iaShared))); } catch (e) {} }
               await FB().set(FB().ref(FB().db, `flashMatch/${rq.code}`), { roomId: id, ts: now });
               await FB().set(FB().ref(FB().db, `flashMatch/${meCode}`), { roomId: id, ts: now });
               await FB().set(FB().ref(FB().db, `flashQueue/${meCode}`), null);
@@ -11472,36 +11730,54 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   };
 
   const fondo = { position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-    background: 'linear-gradient(180deg, #140505 0%, #1E0A08 50%, #120607 100%)' };
+    background: 'radial-gradient(ellipse 92% 62% at 50% 30%, #1c0709 0%, #0c0405 52%, #050203 100%)' };
 
-  // ══ BUSCANDO ══
+  // ══ BUSCANDO (estilo Clash adaptado a Pankey: lupa + emblema + liga + dato) ══
   if (phase === 'search') {
+    const LIGAS = [
+      { min: 0, n: 'Aprendiz del Páramo' }, { min: 5, n: 'Bachiller en Ascuas' },
+      { min: 10, n: 'Pilo de la Loma' }, { min: 16, n: 'Sabio Tricolor' }, { min: 24, n: 'Leyenda del Páramo' },
+    ];
+    const liga = LIGAS.slice().reverse().find(l => myLevel >= l.min) || LIGAS[0];
+    const DATOS = [
+      'El ICFES evalúa 5 áreas: Lectura Crítica, Matemáticas, Sociales, Ciencias e Inglés.',
+      'Responder rápido y bien alarga tu racha y engorda el botín.',
+      'En Lectura Crítica, la clave suele estar en lo que el autor NO dice.',
+      'Un tinto y a darle: la constancia rinde más que la trasnochada.',
+      'Nadie sabe qué rival te toca… hasta puede salir un fantasma del más allá.',
+      'En Matemáticas, descarta lo imposible antes de ponerte a calcular.',
+    ];
+    const dato = DATOS[(myLevel + (user?.name || 'x').length) % DATOS.length];
     return (
       <Portal>
-      <div className="fi" style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', padding: 24, position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 4, color: '#FF6B54', marginBottom: 4 }}>DUELO FLASH</div>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 300, color: '#F6F1F2', marginBottom: 26 }}>
-            Buscando rival<span className="dsrch-dots"><i>.</i><i>.</i><i>.</i></span>
+      <div className="fi" style={{ ...fondo, background: 'radial-gradient(120% 85% at 50% 16%, #3a0f0c 0%, #1a0708 46%, #070303 80%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="dsq-silh dsq-silh--l" /><div className="dsq-silh dsq-silh--r" />
+        <DuelAmbient />
+        <div className="dsq">
+          {/* Header: lupa + Buscando rival */}
+          <div className="dsq-head">
+            <span className="dsq-mag" />
+            <span className="dsq-title">Buscando rival<span className="dsrch-dots"><i>.</i><i>.</i></span></span>
           </div>
-          {/* Radar + tu carta al centro */}
-          <div className="dsrch-radar">
-            <span className="dsrch-ring" /><span className="dsrch-ring" style={{ animationDelay: '.7s' }} /><span className="dsrch-ring" style={{ animationDelay: '1.4s' }} />
-            <span className="dsrch-sweep" />
-            <div className="dsrch-me">
-              <Av name={user?.name || 'Tú'} sz={78} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
-              <span style={{ position: 'absolute', right: -3, bottom: -2, zIndex: 3 }}><MiniFuego color={appState.fireColor} anim={appState.fireAnim} forma={appState.fireForma} size={24} /></span>
+          {/* Emblema central: tu campamento */}
+          <div className="dsq-card">
+            <span className="dsq-card-glow" />
+            <span className="dsq-scan" />
+            <span className="dsq-pedestal" />
+            <div className="dsq-emblem">
+              <Av name={user?.name || 'Tú'} sz={104} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
+              <span className="dsq-fire"><MiniFuego color={appState.fireColor} anim={appState.fireAnim} forma={appState.fireForma} size={30} /></span>
             </div>
           </div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#F6F1F2', marginTop: 22 }}>{(user?.name || 'Tú').split(' ')[0]} · Nv. {myLevel}</div>
-          <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,0.55)', lineHeight: 1.6, maxWidth: 260, margin: '8px auto 24px' }}>
-            5 preguntas · 3 minutos · marcador en vivo. Si nadie cae, sale un fantasma del más allá.
+          {/* Placa de liga */}
+          <div className="dsq-liga">{liga.n} · Nv {myLevel}</div>
+          {/* Cancelar */}
+          <button className="dsq-cancel" onClick={abandonar}>Cancelar</button>
+          {/* Dato */}
+          <div className="dsq-dato">
+            <div className="dsq-dato-t">DATO</div>
+            <div className="dsq-dato-x">{dato}</div>
           </div>
-          <button onClick={abandonar} style={{ padding: '12px 28px', borderRadius: 14,
-            border: 'none', background: 'rgba(255,255,255,0.07)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.14)',
-            color: 'rgba(245,242,235,0.8)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Cancelar
-          </button>
         </div>
       </div>
       </Portal>
@@ -11510,18 +11786,24 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
 
   // ══ ¡RIVAL ENCONTRADO! ══
   if (phase === 'found') {
+    const rcF = rival?.cosm || {};
+    const rivLvlF = computeLevel(rival?.xp || 0).level;
     return (
       <Portal>
-      <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'fixed', inset: 0, background: '#E8743A', pointerEvents: 'none',
-          animation: 'foundFlash 0.9s ease-out both' }}/>
-        <div style={{ textAlign: 'center', animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-          <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: 3, color: '#F5F2EB',
-            textShadow: '0 0 40px rgba(232,116,58,0.8)' }}>
-            ¡RIVAL ENCONTRADO!
+      <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <DuelAmbient />
+        <div className="dfound-flash" />
+        <div className="dfound">
+          <div className="dfound-ring" />
+          <div className="dfound-av">
+            {(rival?.ghost && !rcF.photo)
+              ? <div className="dvs2-ghost" style={{ width: 116, height: 116 }}><PkIc n="eye" s={48} c="#A5B4FC"/></div>
+              : <Av name={rival?.name || 'Rival'} sz={116} C={C} photoURL={rcF.photo} frameData={rcF.frame}/>}
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#E8743A', marginTop: 10 }}>
-            {rival?.name || 'Rival'}
+          <div className="dfound-tag">RIVAL ENCONTRADO</div>
+          <div className="dfound-name">{rival?.name || 'Rival'}</div>
+          <div className="dfound-sub">
+            <PkIc n="flame" s={12} c="#FF6B54"/> Nv. {rivLvlF}{rcF.title ? ` · ${rcF.title}` : rival?.ghost ? ' · Del más allá' : ''}
           </div>
         </div>
       </div>
@@ -11537,11 +11819,16 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     const rivLvl = computeLevel(rival?.xp || 0).level;
     return (
       <Portal>
-      {/* Entradas: la del rival ARRIBA, la tuya ABAJO (no se cruzan; el rival ve la tuya) */}
+      {/* Entradas direccionales: la del RIVAL cae desde ARRIBA, la TUYA sube desde ABAJO (cada quien ve la del otro) */}
       {entradaFX && rc.entrance && <DueloFX effect={rc.entrance} side="top" silent onDone={() => {}} />}
-      {entradaFX && appState.equipped?.entrance && <DueloFX effect={appState.equipped.entrance} side="bottom" onDone={() => setEntradaFX(false)} />}
+      {entradaFX && appState.equipped?.entrance && <DueloFX effect={appState.equipped.entrance} side="bottom" onDone={() => {}} />}
       <div style={{ ...fondo, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <div className="dvs2">
+        <DuelAmbient />
+        <div className="dvs2" style={{ position: 'relative', zIndex: 1 }}>
+          {/* Choque central: rayos giratorios + estallido + rayo de energía */}
+          <span className="dvs2-rays" />
+          <span className="dvs2-burst" />
+          <span className="dvs2-bolt" />
           {/* RIVAL (arriba) */}
           <div className="dvs2-flag dvs2-flag--top">
             <div className="dvs2-bn" style={{ background: rivBanner }} />
@@ -11587,7 +11874,8 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     return (
       <Portal>
       <div style={fondo}>
-        <div style={{ maxWidth: 430, margin: '0 auto', padding: '72px 20px 40px', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+        <DuelAmbient calm />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 430, margin: '0 auto', padding: '72px 20px 40px', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Marcador en vivo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ flex: 1, padding: '9px 13px', borderRadius: 13, background: 'rgba(45,138,94,0.12)',
@@ -11650,6 +11938,12 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
             </div>
           ) : (
             <>
+              {/* Contexto visual rico (tabla / gráfica / geometría / caricatura / texto / mapa) igual que el simulacro */}
+              {q.context && (
+                <div style={{ marginBottom: 12 }}>
+                  <IcfesVisualContext context={q.context} accent={meta.color || '#FF6B54'} />
+                </div>
+              )}
               <div style={{ background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: 16, padding: '14px 15px', marginBottom: 12 }}>
                 <div style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 99, marginBottom: 8,
@@ -11698,106 +11992,102 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     );
   }
 
-  // ══ RESULTADO: podio 1er / 2do puesto ══
+  // ══ RESULTADO estilo Clash Royale: bandera GANADOR arriba + perdedor abajo + botín ══
   const r = resultado || { win: false, tie: false, emp: 0, xp: 0, rs: rivalScore };
-  const yoPrimero = r.win || r.tie;
-  const Medalla = ({ oro, delay }) => (
-    <div style={{ width: 30, height: 30, borderRadius: '50%', margin: '0 auto 6px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: oro
-        ? 'radial-gradient(circle at 35% 30%, #FFE9A8, #D4AF37 60%, #8A6410)'
-        : 'radial-gradient(circle at 35% 30%, #F1F5F9, #AEB8C2 60%, #64748B)',
-      boxShadow: oro ? '0 0 16px rgba(212,175,55,0.6)' : '0 0 10px rgba(174,184,194,0.4)',
-      animation: `medalDrop 0.7s cubic-bezier(0.34,1.56,0.64,1) ${delay}s both` }}>
-      <span style={{ fontSize: 13, fontWeight: 900, color: oro ? '#3A2A08' : '#1E293B' }}>{oro ? '1' : '2'}</span>
-    </div>
-  );
-  const Podio = ({ nombre, score, color, primero, delay, foto, frame }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 120 }}>
-      <Medalla oro={primero} delay={delay + 0.35}/>
-      {foto !== undefined
-        ? <Av name={nombre} sz={48} C={C} photoURL={foto} frameData={frame}/>
-        : (
-          <div style={{ width: 48, height: 48, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #3A3D5C, #1E2038)', border: '2px solid rgba(255,255,255,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PkIc n="sombrero" s={22} c="#A5B4FC"/>
-          </div>
-        )}
-      <div style={{ fontSize: 11.5, fontWeight: 900, color: '#F5F2EB', marginTop: 6, maxWidth: 110,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombre}</div>
-      <div style={{ fontSize: 30, fontWeight: 900, color, lineHeight: 1.1 }}>{score}</div>
-      <div style={{ width: '100%', height: primero ? 54 : 28, marginTop: 8, borderRadius: '8px 8px 0 0',
-        background: primero
-          ? 'linear-gradient(180deg, rgba(212,175,55,0.4), rgba(212,175,55,0.08))'
-          : 'linear-gradient(180deg, rgba(174,184,194,0.25), rgba(174,184,194,0.05))',
-        border: `1px solid ${primero ? 'rgba(212,175,55,0.5)' : 'rgba(174,184,194,0.3)'}`, borderBottom: 'none',
-        transformOrigin: '50% 100%', animation: `podiumRise 0.55s cubic-bezier(0.22,1,0.36,1) ${delay}s both` }}/>
-    </div>
-  );
+  const rc = rival?.cosm || {};
+  const winStreak = appState.flashWinStreak || 0;
+  const me = { name: (user?.name || 'Tú'), score: myScore, photo: appState.photoURL, frame: appState.equipped?.frame,
+    lvl: myLevel, title: appState.equipped?.title?.name || 'Retador', ghost: false };
+  const op = { name: (rival?.name || 'Rival'), score: r.rs, photo: rc.photo, frame: rc.frame,
+    lvl: computeLevel(rival?.xp || 0).level, title: rc.title || (rival?.ghost ? 'Del más allá' : 'Rival'), ghost: rival?.ghost };
+  // Arriba = ganador (o yo si empate); abajo = el otro
+  const top = r.tie ? me : (r.win ? me : op);
+  const bot = r.tie ? op : (r.win ? op : me);
+  const topMode = r.tie ? 'tie' : 'win';
+  const botMode = r.tie ? 'tie' : 'lose';
+  const titleTxt = r.win ? '¡VICTORIA!' : r.tie ? '¡EMPATE!' : 'DERROTA';
+  const titleCol = r.win ? '#FFD75E' : r.tie ? '#5CB8FF' : '#FF6B6B';
+
+  const VicFlag = ({ p, mode, pos }) => {
+    const win = mode === 'win', tie = mode === 'tie';
+    const bn = win ? 'linear-gradient(135deg,#7A4E12 0%,#C9962F 52%,#8A6410 100%)'
+      : tie ? 'linear-gradient(135deg,#153048 0%,#2E6C97 55%,#153048 100%)'
+      : 'linear-gradient(135deg,#241016 0%,#3A1C24 100%)';
+    return (
+      <div className={`vic-flag vic-flag--${pos}${win ? ' vic-flag--win' : ''}`}>
+        <div className="vic-bn" style={{ background: bn }} />
+        <div className="vic-av">
+          {(p.ghost && !p.photo)
+            ? <div className="dvs2-ghost" style={{ width: 72, height: 72 }}><PkIc n="eye" s={30} c="#A5B4FC"/></div>
+            : <Av name={p.name} sz={72} C={C} photoURL={p.photo} frameData={p.frame}/>}
+        </div>
+        <div className={`vic-info${pos === 'bot' ? ' vic-info--r' : ''}`}>
+          {win && <div className="vic-ribbon">GANADOR</div>}
+          {tie && <div className="vic-ribbon vic-ribbon--tie">EMPATE</div>}
+          <div className="vic-name">{p.name}</div>
+          <div className="vic-sub">Nv. {p.lvl} · {p.title}</div>
+        </div>
+        <div className="vic-score" style={{ color: win ? '#FFE08A' : tie ? '#9FD8FF' : 'rgba(255,255,255,.55)' }}>{p.score}</div>
+      </div>
+    );
+  };
+
   return (
     <Portal>
-    {victoriaFX && appState.equipped?.victory && <DueloFX effect={appState.equipped.victory} onDone={() => setVictoriaFX(false)} />}
     <div className="fi" style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center', padding: 24, maxWidth: 340, width: '100%' }}>
-        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 4, marginBottom: 14,
-          color: r.win ? '#D4AF37' : r.tie ? '#2E86AB' : '#EF4444' }}>
-          {r.win ? '¡VICTORIA!' : r.tie ? 'EMPATE' : 'DERROTA'}
+      <DuelAmbient />
+      {/* Confeti de celebración (solo al ganar) */}
+      {r.win && (
+        <div className="vic-conf" aria-hidden="true">
+          {Array.from({ length: 38 }).map((_, i) => {
+            const c = ['#FFD75E', '#FF6B54', '#4ADE80', '#5CB8FF', '#F5F2EB'][i % 5];
+            return <span key={i} style={{ left: `${(i * 37) % 100}%`, width: i % 3 ? 6 : 8, height: i % 3 ? 11 : 8,
+              background: c, borderRadius: i % 3 ? 2 : '50%', animationDelay: `${((i % 12) * 0.11).toFixed(2)}s`,
+              animationDuration: `${(1.8 + (i % 6) * 0.22).toFixed(2)}s`, '--sx': `${((i % 5) - 2) * 26}px`, '--rot': `${(i * 47) % 360}deg` }} />;
+          })}
         </div>
+      )}
+      <div className="vic" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="vic-title" style={{ color: titleCol, textShadow: `0 0 34px ${titleCol}99, 0 2px 12px rgba(0,0,0,.6)` }}>{titleTxt}</div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 14, marginBottom: 16 }}>
-          {yoPrimero ? (
-            <>
-              <Podio nombre={(user?.name || 'Tú').split(' ')[0]} score={myScore} color="#2D8A5E" primero delay={0.1}
-                foto={appState.photoURL} frame={appState.equipped?.frame}/>
-              <Podio nombre={rival?.name || 'Rival'} score={r.rs} color="#E8743A" primero={false} delay={0.25}/>
-            </>
-          ) : (
-            <>
-              <Podio nombre={rival?.name || 'Rival'} score={r.rs} color="#E8743A" primero delay={0.1}/>
-              <Podio nombre={(user?.name || 'Tú').split(' ')[0]} score={myScore} color="#2D8A5E" primero={false} delay={0.25}
-                foto={appState.photoURL} frame={appState.equipped?.frame}/>
-            </>
-          )}
-        </div>
+        <VicFlag p={top} mode={topMode} pos="top" />
+        <div className="vic-vs">VS</div>
+        <VicFlag p={bot} mode={botMode} pos="bot" />
 
-        {(r.emp > 0 || r.xp > 0) && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14, padding: '8px 18px', borderRadius: 99,
-            background: 'rgba(212,175,55,0.10)', border: '1px solid rgba(212,175,55,0.3)', marginBottom: 12 }}>
+        {/* Botín */}
+        {(r.emp > 0 || r.xp > 0 || (winStreak >= 2 && r.win)) && (
+          <div className="vic-rewards">
             {r.emp > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 900, color: '#D4AF37' }}>
-                <PkIc n="empanada" s={14} c="#D4AF37"/>+{r.emp}
-              </span>
+              <div className="vic-tile">
+                <div className="vic-tile__ic"><PkIc n="empanada" s={30} c="#FFCF6B"/></div>
+                <div className="vic-tile__v">+{r.emp}</div>
+                <div className="vic-tile__l">Empanadas</div>
+              </div>
             )}
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#A78BFA' }}>+{r.xp} XP</span>
-          </div>
-        )}
-        {(appState.flashWinStreak || 0) >= 2 && r.win && (
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#E8743A', marginBottom: 10 }}>
-            {appState.flashWinStreak} victorias seguidas
+            <div className="vic-tile">
+              <div className="vic-tile__ic"><PkIc n="star" s={27} c="#A78BFA"/></div>
+              <div className="vic-tile__v" style={{ color: '#C4B5FD' }}>+{r.xp}</div>
+              <div className="vic-tile__l">XP</div>
+            </div>
+            {winStreak >= 2 && r.win && (
+              <div className="vic-tile vic-tile--hot">
+                <div className="vic-tile__ic"><PkIc n="flame" s={27} c="#FF6B54"/></div>
+                <div className="vic-tile__v" style={{ color: '#FF8A6B' }}>x{winStreak}</div>
+                <div className="vic-tile__l">Racha</div>
+              </div>
+            )}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-          <button onClick={onRematch} style={{ flex: 1.3, padding: '15px', borderRadius: 15, border: 'none',
-            background: 'linear-gradient(135deg, #E8743A, #C0392B)', color: '#fff', fontSize: 14, fontWeight: 900,
-            cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: 8, boxShadow: '0 6px 20px rgba(232,116,58,0.35)' }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          <button onClick={onRematch} className="vic-btn vic-btn--pri">
             <PkIc n="swords" s={16} c="#fff"/> Otro duelo
           </button>
-          <button onClick={onClose} style={{ flex: 1, padding: '15px', borderRadius: 15,
-            border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)',
-            color: '#F5F2EB', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Listo
-          </button>
+          <button onClick={onClose} className="vic-btn vic-btn--sec">Listo</button>
         </div>
         <button onClick={() => { FX.play('tap'); shareWhatsApp(
           `PANKEY ⚔️ Duelo Flash\n${r.win ? `Le gané ${myScore}–${r.rs} a ${rival?.name || 'mi rival'}` : r.tie ? `Empaté ${myScore}–${r.rs} con ${rival?.name || 'mi rival'}` : `Caí ${myScore}–${r.rs} ante ${rival?.name || 'mi rival'}, pero vuelvo`}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Podrás conmigo? → pankey.vercel.app`
-        ); }} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          width: '100%', marginTop: 10, padding: '13px', borderRadius: 15,
-          border: '1px solid rgba(37,211,102,0.45)', background: 'rgba(37,211,102,0.12)',
-          color: '#4ADE80', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+        ); }} className="vic-btn vic-btn--wa">
           <PkIc n="msg" s={15} c="#4ADE80"/> Compartir por WhatsApp
         </button>
       </div>
@@ -13001,11 +13291,6 @@ const SHOP_ITEMS = [
   { id:'i_arepa',      type:'item',   name:'Escudo de Arepa',        desc:'Si pierdes un duelo, no pierdes tus empanadas apostadas.',     rarity:'raro',       price:600 },
   { id:'i_comodin',    type:'item',   name:'La Pregunta de Comodín', desc:'Una pregunta de tu próximo simulacro se marca correcta.',      rarity:'raro',       price:800 },
   { id:'i_ghost',      type:'item',   name:'Modo Fantasma',          desc:'Desapareces del ranking general por 48 horas.',                rarity:'épico',      price:1200 },
-  // ── VICTORIAS (efecto al ganar un duelo, delante del rival) ──
-  { id:'v_empanadas', type:'victory', name:'Lluvia de Empanadas', desc:'Cuando ganas, que llueva plata en la pantalla.',   rarity:'raro',       price:1200, fx:'empanadas', color:'#FFCF6B' },
-  { id:'v_llamarada', type:'victory', name:'Llamarada',           desc:'Estallas en fuego con tu sello. Puro drama.',       rarity:'épico',      price:2400, fx:'llamarada', color:'#FF6B54' },
-  { id:'v_tricolor',  type:'victory', name:'Fiesta Tricolor',     desc:'Confeti amarillo, azul y rojo. ¡Selección!',        rarity:'raro',       price:1500, fx:'tricolor',  color:'#FBBF24' },
-  { id:'v_finisimo',  type:'victory', name:'¡FINÍSIMO!',          desc:'Un letrero gigante que lo dice todo.',              rarity:'legendario', price:4000, fx:'finisimo',  color:'#FF2E4C' },
   // ── ENTRADAS (cómo apareces en el duelo, antes de empezar) ──
   { id:'e_llamas',    type:'entrance', name:'Entre Llamas',       desc:'Apareces envuelto en candela.',                     rarity:'raro',       price:1300, fx:'llamas', color:'#FF6B54' },
   { id:'e_cielo',     type:'entrance', name:'Caído del Cielo',    desc:'Bajas del cielo y aterrizas con fuerza.',           rarity:'épico',      price:2600, fx:'cielo',  color:'#7BB3FF' },
@@ -14954,7 +15239,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   if (view === 'inventory') {
     const TIPOS = [
       { t: 'frame', label: 'Marcos' }, { t: 'banner', label: 'Paisajes' }, { t: 'title', label: 'Títulos' },
-      { t: 'victory', label: 'Victorias' }, { t: 'entrance', label: 'Entradas' },
+      { t: 'entrance', label: 'Entradas' },
     ];
     const owned = new Set(appState.inventory || []);
     const grupos = TIPOS.map(g => ({ ...g, items: SHOP_ITEMS.filter(i => i.type === g.t && owned.has(i.id)) })).filter(g => g.items.length);
@@ -14968,7 +15253,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     };
     return (
       <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {previewFX && <DueloFX effect={previewFX} onDone={() => setPreviewFX(null)} />}
+        {previewFX && <FXPreview item={previewFX} onDone={() => setPreviewFX(null)} />}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0' }}>
           <button onClick={() => setView('profile')} style={{ background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><PkIc n="left" s={17} c={C.text} /></button>
           <div>
@@ -15347,7 +15632,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           <ChestShopShow chest={chestShow.chest} premio={chestShow.premio} appState={appState} user={user} onClose={() => setChestShow(null)} />
         )}
         {previewFX && (
-          <DueloFX effect={previewFX} onDone={() => setPreviewFX(null)} />
+          <FXPreview item={previewFX} onDone={() => setPreviewFX(null)} />
         )}
         {selectedShopItem && (
           <ShopItemModal C={C} isLight={isLight} item={selectedShopItem} appState={appState} user={user} onBuy={buyItem} onEquip={equipItem} onClose={() => setSelectedShopItem(null)} />
@@ -15762,12 +16047,12 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           )}
         </div>
 
-        {/* ══ VICTORIAS Y ENTRADAS — cartas con previsualización (tócalas para verlas) ══ */}
-        {['victory', 'entrance'].map(tipo => {
+        {/* ══ ENTRADAS — cartas con previsualización (tócalas para verlas) ══ */}
+        {['entrance'].map(tipo => {
           const its = SHOP_ITEMS.filter(i => i.type === tipo).sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity));
-          const label = tipo === 'victory' ? 'Victorias' : 'Entradas';
-          const acc = tipo === 'victory' ? '#FFCF6B' : '#FF6B54';
-          const ICS = { empanadas: 'empanada', llamarada: 'flame', tricolor: 'star', finisimo: 'swords', llamas: 'flame', cielo: 'people', portal: 'target' };
+          const label = 'Entradas';
+          const acc = '#FF6B54';
+          const ICS = { llamas: 'flame', cielo: 'people', portal: 'target' };
           return (
             <div key={tipo} style={{ padding: '12px 0 4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
