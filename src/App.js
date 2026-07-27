@@ -11507,9 +11507,9 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   const iaListas = () => (Array.isArray(iaRef.current) && iaRef.current.length >= 3) ? iaRef.current.slice(0, 5) : null;
 
   const lanzarVS = () => {
-    setPhase('found'); FX.play('success'); FX.vibrate('medium');
-    setTimeout(() => { setPhase('vs'); FX.play('duelStart'); FX.vibrate('heavy'); }, 1200);
-    setTimeout(() => setPhase('play'), 5000);
+    // Directo de "Buscando" a VS (sin pantalla intermedia de "rival encontrado")
+    setPhase('vs'); FX.play('duelStart'); FX.vibrate('heavy');
+    setTimeout(() => setPhase('play'), 4000);
   };
 
   const arrancarGhost = (ghost) => {
@@ -11784,32 +11784,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
     );
   }
 
-  // ══ ¡RIVAL ENCONTRADO! ══
-  if (phase === 'found') {
-    const rcF = rival?.cosm || {};
-    const rivLvlF = computeLevel(rival?.xp || 0).level;
-    return (
-      <Portal>
-      <div style={{ ...fondo, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <DuelAmbient />
-        <div className="dfound-flash" />
-        <div className="dfound">
-          <div className="dfound-ring" />
-          <div className="dfound-av">
-            {(rival?.ghost && !rcF.photo)
-              ? <div className="dvs2-ghost" style={{ width: 116, height: 116 }}><PkIc n="eye" s={48} c="#A5B4FC"/></div>
-              : <Av name={rival?.name || 'Rival'} sz={116} C={C} photoURL={rcF.photo} frameData={rcF.frame}/>}
-          </div>
-          <div className="dfound-tag">RIVAL ENCONTRADO</div>
-          <div className="dfound-name">{rival?.name || 'Rival'}</div>
-          <div className="dfound-sub">
-            <PkIc n="flame" s={12} c="#FF6B54"/> Nv. {rivLvlF}{rcF.title ? ` · ${rcF.title}` : rival?.ghost ? ' · Del más allá' : ''}
-          </div>
-        </div>
-      </div>
-      </Portal>
-    );
-  }
+  // (La pantalla intermedia "rival encontrado" se eliminó: va directo de Buscando a VS)
 
   // ══ VS (Clash Royale: banderas arriba/abajo con foto/marco/banner + entrada de cada quien) ══
   if (phase === 'vs') {
