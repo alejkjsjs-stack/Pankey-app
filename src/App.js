@@ -1315,7 +1315,9 @@ const ENERGY_REFILL_MS = 24 * 60 * 60 * 1000; // recarga completa cada 24h
 // Energía efectiva considerando la recarga pendiente (por si el efecto aún no corre)
 function getEnergyNow(appState) {
   const max = ENERGY_MAX;
-  if (appState?.isPro) return { energy: max, max, unlimited: true, msLeft: 0, willRefill: false };
+  // Energía SIN LÍMITE para todos por ahora (se quitó el gasto de energía).
+  return { energy: max, max, unlimited: true, msLeft: 0, willRefill: false };
+  // eslint-disable-next-line no-unreachable
   const last = appState?.energyLastRefill || 0;
   const willRefill = !last || (Date.now() - last) >= ENERGY_REFILL_MS;
   if (willRefill) return { energy: max, max, unlimited: false, msLeft: 0, willRefill: true };
@@ -3097,6 +3099,7 @@ export default function App() {
   const [energyModalOpen, setEnergyModalOpen] = useState(false); // modal de energía / invitación a Pro
   const [energyTick, setEnergyTick] = useState(0); // fuerza recomputar el contador de recarga
   const [tiendaRealOpen, setTiendaRealOpen] = useState(false); // Tienda Real (Pro + recargas)
+  const [proScreenOpen, setProScreenOpen] = useState(false); // pantalla de venta Pankey Pro
   const [partnerPhotoURL, setPartnerPhotoURL] = useState(null);
   const [fbLoaded, setFbLoaded]   = useState(false);
   const [ambientOn, setAmbientOn] = useState(saved?.ambientOn ?? true); // música de fondo ON por defecto (se respeta si la apagaron)
@@ -3624,9 +3627,10 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     try { await FB().set(FB().ref(FB().db, `partnerRequests/${user.code}/${fromCode}`), null); } catch (e) {}
   };
 
-  // ── Energía (Módulo 2): consume 1 al iniciar simulacro; false si está en 0 ──
+  // ── Energía: SIN LÍMITE por ahora — nunca bloquea, no descuenta ──
   const consumeEnergy = () => {
-    if (appState.isPro) return true; // Pankey Pro: energía ilimitada
+    return true;
+    // eslint-disable-next-line no-unreachable
     const info = getEnergyNow(appState);
     if (info.energy <= 0) return false; // bloqueado
     setAppState(s => {
@@ -3641,8 +3645,8 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     return true;
   };
 
-  // Abrir Pankey Pro → Tienda Real (Módulo 4)
-  const openPro = () => { setEnergyModalOpen(false); setTiendaRealOpen(true); };
+  // Abrir Pankey Pro → pantalla de venta (cinematográfica)
+  const openPro = () => { setEnergyModalOpen(false); setProScreenOpen(true); };
 
   // ── Compras (Módulo 4). El cobro REAL va con pasarela + verificación en servidor (Módulo 5).
   //    Por ahora no acreditamos nada en el cliente: sería falso e inseguro. ──
@@ -3846,7 +3850,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <InicioTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} onGoTab={(id) => { if (id === 'perfil') goPerfil('profile'); else setTab(id); }} onGoShop={() => setTab('tienda')} onMissionReward={triggerCoinBurst} onCoinBurst={triggerCoinBurst} pushNotif={pushNotif} onConfirm={handleConfirm} onOpenEnergy={() => setEnergyModalOpen(true)} onOpenTienda={() => setTiendaRealOpen(true)} onOpenIdentity={() => setIdentityMenu(true)} onStartSimulacro={() => { setTab('icfes'); setIcfesStartNonce(n => n + 1); }} />
         </div>
         <div style={{ display: tab === 'icfes' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} onConsumeEnergy={consumeEnergy} onEnergyBlocked={() => setEnergyModalOpen(true)} startNonce={icfesStartNonce} />
+          <IcfesTab C={C} isLight={isLight} user={user} appState={appState} setAppState={setAppState} setGlobalSenseiQ={setGlobalSenseiQ} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} pushNotif={pushNotif} onConfirm={handleConfirm} onConsumeEnergy={consumeEnergy} onEnergyBlocked={() => setEnergyModalOpen(true)} startNonce={icfesStartNonce} onOpenPro={openPro} />
         </div>
         <div style={{ display: tab === 'books' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} partnerReqs={partnerReqs} onSendPartnerRequest={handleSendPartnerRequest} onAcceptPartnerRequest={handleAcceptPartnerRequest} onDeclinePartnerRequest={handleDeclinePartnerRequest} />
@@ -3864,6 +3868,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
 
       {energyModalOpen && <EnergiaModal C={C} appState={appState} onClose={() => setEnergyModalOpen(false)} onOpenPro={openPro} />}
       {tiendaRealOpen && <TiendaReal C={C} appState={appState} onClose={() => setTiendaRealOpen(false)} onBuyPro={handleBuyPro} onBuyPack={handleBuyPack} />}
+      {proScreenOpen && <PankeyProScreen C={C} appState={appState} user={user} onClose={() => setProScreenOpen(false)} onActivate={() => { handleBuyPro(); setProScreenOpen(false); }} />}
 
       {/* Nav bar (Ascua) — íconos + labels, activo en rojo con glow, punto "live" en Combo */}
       <div style={{
@@ -12788,8 +12793,385 @@ function ResultadosShow({ result, appState, onDetalle, onRetry, onBack }) {
   );
 }
 
-function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked, startNonce = 0 }) {
+// ═════════════════════════════════════════════
+//  PANKEY PRO — "El Sabio que te conoce"
+// ═════════════════════════════════════════════
+// Las 8 funciones Pro (metadatos compartidos por la pantalla de venta y el Centro del Sabio)
+const PRO_FUNCS = [
+  { id:'adn',     ic:'sabio',   name:'ADN del ICFES',        desc:'Tu análisis más profundo: por subtema y patrones de error.', color:'#A78BFA', ready:true },
+  { id:'plan',    ic:'target',  name:'Plan de Batalla',      desc:'Fecha, meta y minutos → tu camino diario al puntaje.',       color:'#FF6B54', ready:false },
+  { id:'srs',     ic:'scroll',  name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:false },
+  { id:'sensei',  ic:'msg',     name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:false },
+  { id:'diag',    ic:'icfes',   name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
+  { id:'live',    ic:'people',  name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
+  { id:'banco',   ic:'mochila', name:'Banco por Tema',       desc:'Preguntas de UN subtema + años anteriores.',                 color:'#C084FC', ready:false },
+  { id:'reporte', ic:'flame',   name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:false },
+];
+
+// Análisis real del rendimiento a partir de icfesHistory + weakStats + modeStats.
+function computeAdn(appState) {
+  const dom = dominioPorMateria(appState);
+  const areas = Object.keys(SUBJECT_META).map(s => ({
+    subject: s, ...dom[s], color: SUBJECT_META[s].color, short: SUBJECT_META[s].short,
+  }));
+  const conDatos = areas.filter(a => (a.t || 0) >= 4);
+  const ordenados = [...conDatos].sort((a, b) => b.pct - a.pct);
+  const fuerte = ordenados[0] || null;
+  const debil = ordenados[ordenados.length - 1] || null;
+  const comps = Object.entries(appState.weakStats || {})
+    .map(([k, v]) => { const [subject, nivel] = k.split('·'); return { subject, nivel, c: v.c, t: v.t, pct: v.t ? Math.round(100 * v.c / v.t) : 0, color: (SUBJECT_META[subject] || {}).color || '#FF6B54' }; })
+    .filter(x => x.t >= 3);
+  const compsDebiles = [...comps].sort((a, b) => a.pct - b.pct).slice(0, 5);
+  const peorComp = compsDebiles[0] || null;
+  const hist = (appState.icfesHistory || []).filter(r => typeof r.score === 'number');
+  const totalSims = hist.length;
+  const totalPreg = hist.reduce((s, r) => s + (r.total || 0), 0);
+  const totalOk = hist.reduce((s, r) => s + (r.correct || 0), 0);
+  const best = hist.reduce((m, r) => Math.max(m, r.score || 0), 0);
+  const avg = totalSims ? Math.round(hist.reduce((s, r) => s + (r.score || 0), 0) / totalSims) : 0;
+  let tendencia = 'estable', delta = 0;
+  if (totalSims >= 4) {
+    const mitad = Math.floor(totalSims / 2);
+    const viejos = hist.slice(0, mitad), nuevos = hist.slice(mitad);
+    const avgV = viejos.reduce((s, r) => s + (r.score || 0), 0) / viejos.length;
+    const avgN = nuevos.reduce((s, r) => s + (r.score || 0), 0) / nuevos.length;
+    delta = Math.round(avgN - avgV);
+    tendencia = delta > 8 ? 'subiendo' : delta < -8 ? 'bajando' : 'estable';
+  }
+  const qScore = ((dom['Matemáticas'] || {}).pct + (dom['Ciencias Naturales'] || {}).pct) / 2;
+  const vScore = ((dom['Lectura Crítica'] || {}).pct + (dom['Ciencias Sociales'] || {}).pct) / 2;
+  let perfil = { name: 'Explorador del Saber', desc: 'Apenas empiezas a mostrar tu forma. Haz más simulacros y el Sabio te leerá mejor.' };
+  if (conDatos.length >= 3) {
+    if (qScore - vScore > 10) perfil = { name: 'Mente Cuantitativa', desc: 'Brillas con números y datos concretos. Tu reto está en interpretar textos: ahí ganarás los puntos que faltan.' };
+    else if (vScore - qScore > 10) perfil = { name: 'Mente Analítica', desc: 'Lees e interpretas como pocos. Si le metes disciplina al cálculo, subes de rango rapidísimo.' };
+    else perfil = { name: 'Todoterreno', desc: 'Estás parejo en todo — un perfil difícil de romper. El Sabio afinará los detalles para exprimir cada punto.' };
+  }
+  const puntosEnJuego = debil ? Math.round((100 - debil.pct) * 0.9) : 0;
+  return { areas, ordenados, fuerte, debil, compsDebiles, peorComp, totalSims, totalPreg, totalOk, best, avg, tendencia, delta, perfil, puntosEnJuego };
+}
+
+// ADN del ICFES — deck estilo "Wrapped": tap derecha avanza, izquierda retrocede.
+function AdnIcfes({ C, appState, user, onClose, onPractice }) {
+  const d = useMemo(() => computeAdn(appState), [appState]);
+  const [step, setStep] = useState(0);
+  const sinDatos = d.totalSims < 1 || d.ordenados.length < 1;
+
+  if (sinDatos) {
+    return (
+      <Portal>
+        <div className="adn-wrap adn-wrap--empty">
+          <button className="adn-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+          <div style={{ textAlign: 'center', padding: 28, maxWidth: 320 }}>
+            <div style={{ filter: 'drop-shadow(0 0 24px rgba(167,139,250,.6))', marginBottom: 14 }}><PkIc n="sabio" s={76} c="#A78BFA" /></div>
+            <div className="serif" style={{ fontSize: 22, fontWeight: 800, color: '#F6F1F2', marginBottom: 8 }}>Aún no puedo leer tu ADN</div>
+            <div style={{ fontSize: 13.5, color: 'rgba(246,241,242,.66)', lineHeight: 1.6, marginBottom: 22 }}>
+              Necesito que hagas al menos un simulacro para empezar a ver tus patrones. Cuando tengas unos cuantos, este análisis se vuelve oro puro.
+            </div>
+            <button className="pro-cta" onClick={() => { onClose?.(); onPractice?.(); }}>Hacer un simulacro</button>
+          </div>
+        </div>
+      </Portal>
+    );
+  }
+
+  const Bars = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 300 }}>
+      {d.areas.map(a => (
+        <div key={a.subject}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, marginBottom: 4 }}>
+            <span style={{ color: '#F6F1F2' }}>{a.subject}</span>
+            <span style={{ color: a.color }}>{(a.t || 0) >= 4 ? `${a.pct}%` : '—'}</span>
+          </div>
+          <div style={{ height: 9, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}>
+            <div className="adn-fill" style={{ width: `${(a.t || 0) >= 4 ? a.pct : 0}%`, background: `linear-gradient(90deg, ${a.color}, ${a.color}bb)`, boxShadow: `0 0 10px ${a.color}80` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const cards = [
+    // 0 — portada
+    <div className="adn-c" key="p">
+      <div className="adn-badge">ADN DEL ICFES</div>
+      <div style={{ filter: 'drop-shadow(0 0 30px rgba(167,139,250,.7))', margin: '10px 0' }}><PkIc n="sabio" s={92} c="#A78BFA" /></div>
+      <div className="adn-h">El Sabio analizó tus <b style={{ color: '#A78BFA' }}>{d.totalSims}</b> {d.totalSims === 1 ? 'prueba' : 'pruebas'}</div>
+      <div className="adn-sub">Esto es lo que nadie más ha visto de tu forma de estudiar.</div>
+      <div className="adn-tap">toca para revelar →</div>
+    </div>,
+    // 1 — resumen
+    <div className="adn-c" key="r">
+      <div className="adn-k">EN TOTAL</div>
+      <div className="adn-big" style={{ color: '#FFCF6B' }}>{d.totalOk}<span style={{ fontSize: 22, color: 'rgba(255,255,255,.5)' }}>/{d.totalPreg}</span></div>
+      <div className="adn-sub">preguntas correctas en tu historia.</div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
+        <div className="adn-pill"><b style={{ color: '#34D399' }}>{d.best}</b><span>mejor puntaje</span></div>
+        <div className="adn-pill"><b style={{ color: '#5CB8FF' }}>{d.avg}</b><span>promedio</span></div>
+      </div>
+    </div>,
+    // 2 — por área
+    <div className="adn-c" key="a">
+      <div className="adn-k">TU MAPA POR ÁREA</div>
+      <div className="adn-h" style={{ marginBottom: 16 }}>Así estás parado hoy</div>
+      <Bars />
+    </div>,
+    // 3 — fuerte
+    <div className="adn-c" key="f">
+      <div className="adn-k">TU ARMA SECRETA</div>
+      <div className="adn-big" style={{ color: d.fuerte?.color }}>{d.fuerte?.pct}%</div>
+      <div className="adn-h">{d.fuerte?.subject}</div>
+      <div className="adn-sub">Es donde más brillas. Úsalo para sumar puntos seguros el día del examen.</div>
+    </div>,
+    // 4 — débil
+    <div className="adn-c" key="d">
+      <div className="adn-k" style={{ color: '#FF8A6B' }}>DONDE SE TE ESCAPAN LOS PUNTOS</div>
+      <div className="adn-big" style={{ color: d.debil?.color }}>{d.debil?.pct}%</div>
+      <div className="adn-h">{d.debil?.subject}</div>
+      <div className="adn-sub">Aquí hay <b style={{ color: '#FF8A6B' }}>~{d.puntosEnJuego} puntos</b> esperándote. El Sabio sabe cómo recuperarlos.</div>
+      <button className="pro-cta pro-cta--sm" onClick={(e) => { e.stopPropagation(); onClose?.(); onPractice?.(d.debil ? [d.debil.subject] : null); }}>Practicar {d.debil?.subject} →</button>
+    </div>,
+    // 5 — por competencia
+    (d.compsDebiles.length ? (
+      <div className="adn-c" key="c">
+        <div className="adn-k">POR COMPETENCIA <span style={{ color: '#A78BFA' }}>(solo Pro lo ve así)</span></div>
+        <div className="adn-h" style={{ marginBottom: 14 }}>Tus 5 puntos más flojos</div>
+        <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {d.compsDebiles.map((c, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.09)', borderRadius: 12, padding: '9px 12px' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: '#F6F1F2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nivel}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}>{c.subject}</div>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 900, color: c.pct < 50 ? '#FF6B6B' : '#FFCF6B' }}>{c.pct}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : (
+      <div className="adn-c" key="c">
+        <div className="adn-k">POR COMPETENCIA</div>
+        <div className="adn-h">Sigue jugando modos</div>
+        <div className="adn-sub">Con más práctica por competencia, aquí verás el desglose fino de cada subtema.</div>
+      </div>
+    )),
+    // 6 — patrón de error
+    <div className="adn-c" key="pt">
+      <div className="adn-k" style={{ color: '#FF8A6B' }}>EL PATRÓN QUE NO VES</div>
+      <div style={{ filter: 'drop-shadow(0 0 18px rgba(255,110,84,.5))', margin: '6px 0 12px' }}><PkIc n="eye" s={54} c="#FF8A6B" /></div>
+      <div className="adn-h" style={{ fontSize: 18 }}>
+        {d.peorComp
+          ? <>Fallas más en <b style={{ color: d.peorComp.color }}>{d.peorComp.nivel}</b> de {d.peorComp.subject}: solo aciertas el {d.peorComp.pct}%.</>
+          : <>Aún no tengo un patrón claro. Un par de simulacros más y te digo exactamente qué se te repite.</>}
+      </div>
+      {d.peorComp && <div className="adn-sub">No es que "seas malo en {d.peorComp.subject}". Es este subtema específico. Eso se arregla rápido.</div>}
+    </div>,
+    // 7 — tendencia
+    <div className="adn-c" key="t">
+      <div className="adn-k">TU TENDENCIA</div>
+      <div style={{ fontSize: 60, margin: '4px 0' }}>
+        <PkIc n={d.tendencia === 'subiendo' ? 'flame' : d.tendencia === 'bajando' ? 'leaf' : 'target'} s={64} c={d.tendencia === 'subiendo' ? '#34D399' : d.tendencia === 'bajando' ? '#FF8A6B' : '#5CB8FF'} />
+      </div>
+      <div className="adn-h">
+        {d.tendencia === 'subiendo' ? `Vas subiendo: +${d.delta} pts` : d.tendencia === 'bajando' ? `Vas bajando: ${d.delta} pts` : 'Vas estable'}
+      </div>
+      <div className="adn-sub">
+        {d.tendencia === 'subiendo' ? 'Lo que estás haciendo funciona. No sueltes el ritmo.' : d.tendencia === 'bajando' ? 'Ojo: bajaste últimamente. El Sabio ajustaría tu plan para retomar.' : 'Ni subes ni bajas. Un empujón enfocado te dispara.'}
+      </div>
+    </div>,
+    // 8 — perfil
+    <div className="adn-c" key="pf">
+      <div className="adn-k">TU PERFIL DE ESTUDIANTE</div>
+      <div className="adn-perfil">{d.perfil.name}</div>
+      <div className="adn-sub" style={{ maxWidth: 300 }}>{d.perfil.desc}</div>
+    </div>,
+    // 9 — compartir
+    <div className="adn-c" key="s">
+      <div className="adn-badge">MI ADN · PANKEY PRO</div>
+      <div className="adn-perfil" style={{ fontSize: 24, margin: '10px 0 4px' }}>{d.perfil.name}</div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', margin: '12px 0 18px' }}>
+        <div className="adn-pill"><b style={{ color: '#FFCF6B' }}>{d.best}</b><span>mejor</span></div>
+        <div className="adn-pill"><b style={{ color: d.fuerte?.color }}>{d.fuerte?.short}</b><span>tu fuerte</span></div>
+        <div className="adn-pill"><b style={{ color: '#FF8A6B' }}>{d.debil?.short}</b><span>tu reto</span></div>
+      </div>
+      <button className="pro-cta" onClick={(e) => { e.stopPropagation(); FX.play('tap'); shareWhatsApp(`Mi ADN del ICFES (Pankey Pro) 🧬\nPerfil: ${d.perfil.name}\nMejor puntaje: ${d.best}/500\nMi fuerte: ${d.fuerte?.subject}\nMi reto: ${d.debil?.subject}\n\nEstudia con el Sabio que te conoce → pankey.vercel.app`); }}>
+        <PkIc n="msg" s={16} c="#3a2405" /> Compartir mi ADN
+      </button>
+    </div>,
+  ];
+
+  const N = cards.length;
+  const go = (dir) => setStep(s => Math.max(0, Math.min(N - 1, s + dir)));
+  return (
+    <Portal>
+      <div className="adn-wrap" onClick={(e) => { if (e.clientX < window.innerWidth * 0.28) go(-1); else go(1); }}>
+        <div className="adn-bars">{cards.map((_, i) => <span key={i} className={i <= step ? 'on' : ''} />)}</div>
+        <button className="adn-x" onClick={(e) => { e.stopPropagation(); onClose(); }}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+        <div key={step} className="adn-card">{cards[step]}</div>
+        {step < N - 1 && <div className="adn-hint">toca →</div>}
+      </div>
+    </Portal>
+  );
+}
+
+// Pantalla de venta de Pankey Pro (cinematográfica, full-screen).
+function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
+  const [plan, setPlan] = useState('anual');
+  return (
+    <Portal>
+      <div className="prosell">
+        <button className="prosell-x" onClick={onClose}><PkIc n="x" s={20} c="#F6F1F2" /></button>
+        <div className="prosell-scroll">
+          {/* Encabezado */}
+          <div className="prosell-hero">
+            <div className="prosell-halo" />
+            <div className="prosell-badge"><PkIc n="sabio" s={16} c="#3a2405" /> PANKEY PRO</div>
+            <div className="prosell-title serif">El Sabio que te conoce de verdad</div>
+            <div className="prosell-tag">No más práctica. Tu preparador personal, 24/7.</div>
+          </div>
+          {/* 8 funciones */}
+          <div className="prosell-sec">Lo que desbloqueas</div>
+          <div className="prosell-funcs">
+            {PRO_FUNCS.map(f => (
+              <div key={f.id} className="prosell-func" style={{ '--fc': f.color }}>
+                <span className="prosell-func__ic" style={{ background: `${f.color}1e`, boxShadow: `inset 0 0 0 1px ${f.color}44` }}><PkIc n={f.ic} s={22} c={f.color} /></span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="prosell-func__n">{f.name}</div>
+                  <div className="prosell-func__d">{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Argumento del precio */}
+          <div className="prosell-sec">Hagamos cuentas</div>
+          <div className="prosell-vs">
+            <div className="prosell-vs__c prosell-vs__c--bad">
+              <div className="prosell-vs__t">1 hora de tutor particular</div>
+              <div className="prosell-vs__p">$60.000</div>
+              <div className="prosell-vs__s">una sola vez</div>
+            </div>
+            <div className="prosell-vs__c prosell-vs__c--good">
+              <div className="prosell-vs__t">Pankey Pro · 1 año</div>
+              <div className="prosell-vs__p" style={{ color: '#FFE7A2' }}>$89.900</div>
+              <div className="prosell-vs__s">el Sabio, 365 días</div>
+            </div>
+          </div>
+          <div className="prosell-vsnote">Por el precio de <b>1.5 horas</b> con un tutor, tienes al Sabio <b>todo el año</b>.</div>
+          {/* Planes */}
+          <div className="prosell-sec">Elige tu plan</div>
+          <div className="prosell-plans">
+            <button className={`prosell-plan${plan === 'mensual' ? ' on' : ''}`} onClick={() => { FX.play('tap'); setPlan('mensual'); }}>
+              <div className="prosell-plan__n">Mensual</div>
+              <div className="prosell-plan__p">$12.900<span>/mes</span></div>
+              <div className="prosell-plan__s">Cancela cuando quieras</div>
+            </button>
+            <button className={`prosell-plan${plan === 'anual' ? ' on' : ''}`} onClick={() => { FX.play('tap'); setPlan('anual'); }}>
+              <div className="prosell-plan__pop">⭐ POPULAR</div>
+              <div className="prosell-plan__n">Anual</div>
+              <div className="prosell-plan__p">$7.491<span>/mes</span></div>
+              <div className="prosell-plan__s" style={{ color: '#34D399' }}>Ahorras $65.000</div>
+            </button>
+          </div>
+          {/* Garantía */}
+          <div className="prosell-guar">
+            <PkIc n="check" s={18} c="#34D399" />
+            <span><b>7 días gratis.</b> Si el Sabio no te ayuda de verdad, cancelas y no pagas nada. Sin preguntas.</span>
+          </div>
+          <div style={{ height: 96 }} />
+        </div>
+        {/* CTA sticky */}
+        <div className="prosell-cta-bar">
+          <button className="prosell-cta" onClick={() => { FX.play('levelUp'); FX.vibrate('success'); onActivate?.(plan); }}>
+            Probar 7 días gratis
+          </button>
+          <div className="prosell-cta__sub">Luego {plan === 'anual' ? '$89.900/año' : '$12.900/mes'} · cancela cuando quieras</div>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
+// Centro del Sabio — hub Pro (la nueva pestaña ICFES para quien SÍ es Pro).
+function CentroSabio({ C, appState, user, onOpenFunc, onPractice }) {
+  const d = useMemo(() => computeAdn(appState), [appState]);
+  const nombre = (user?.name || 'crack').split(' ')[0];
+  return (
+    <div className="csab">
+      <div className="csab-head">
+        <div className="csab-badge"><PkIc n="sabio" s={13} c="#3a2405" /> PANKEY PRO</div>
+        <div className="csab-hi serif">El Centro del Sabio</div>
+        <div className="csab-sub">Hola {nombre}, tu preparador personal ya tiene todo listo.</div>
+      </div>
+      {/* Snapshot rápido */}
+      <div className="csab-snap">
+        <div className="csab-snap__i"><b style={{ color: '#FFCF6B' }}>{d.best || '—'}</b><span>mejor puntaje</span></div>
+        <div className="csab-snap__i"><b style={{ color: d.fuerte?.color || '#5CB8FF' }}>{d.fuerte?.short || '—'}</b><span>tu fuerte</span></div>
+        <div className="csab-snap__i"><b style={{ color: '#FF8A6B' }}>{d.debil?.short || '—'}</b><span>tu reto</span></div>
+      </div>
+      {/* Funciones */}
+      <div className="csab-grid">
+        {PRO_FUNCS.map(f => (
+          <button key={f.id} className={`csab-card${f.ready ? '' : ' csab-card--soon'}`} style={{ '--fc': f.color }}
+            onClick={() => { FX.play(f.ready ? 'open' : 'tap'); onOpenFunc?.(f); }}>
+            <span className="csab-card__ic" style={{ background: `${f.color}1c`, boxShadow: `inset 0 0 0 1px ${f.color}40` }}><PkIc n={f.ic} s={24} c={f.color} /></span>
+            <div className="csab-card__n">{f.name}</div>
+            <div className="csab-card__d">{f.desc}</div>
+            {!f.ready && <span className="csab-card__soon">Pronto</span>}
+            {f.ready && <span className="csab-card__go" style={{ color: f.color }}>Abrir →</span>}
+          </button>
+        ))}
+      </div>
+      <button className="csab-practice" onClick={() => { FX.play('tap'); onPractice?.(); }}>
+        <PkIc n="icfes" s={17} c={C.text} /> Práctica libre (simulacro)
+      </button>
+    </div>
+  );
+}
+
+// Paywall del Centro del Sabio (lo que ve quien NO es Pro): preview borroso + CTA específico.
+function CentroSabioLock({ C, appState, user, onOpenPro }) {
+  const d = useMemo(() => computeAdn(appState), [appState]);
+  const nPruebas = d.totalSims;
+  const gancho = nPruebas > 0
+    ? `El Sabio ya analizó tus ${nPruebas} ${nPruebas === 1 ? 'prueba' : 'pruebas'}. Encontró dónde se te escapan ~${d.puntosEnJuego || 40} puntos.`
+    : 'El Sabio está listo para analizarte a fondo: por subtema, tus patrones de error y tu plan exacto.';
+  return (
+    <div className="csablock">
+      {/* Fondo: hub borroso */}
+      <div className="csablock-bg" aria-hidden="true">
+        <div className="csab-snap">
+          <div className="csab-snap__i"><b style={{ color: '#FFCF6B' }}>{d.best || 348}</b><span>mejor puntaje</span></div>
+          <div className="csab-snap__i"><b style={{ color: '#5CB8FF' }}>{d.fuerte?.short || 'CS'}</b><span>tu fuerte</span></div>
+          <div className="csab-snap__i"><b style={{ color: '#FF8A6B' }}>{d.debil?.short || 'MA'}</b><span>tu reto</span></div>
+        </div>
+        <div className="csab-grid">
+          {PRO_FUNCS.map(f => (
+            <div key={f.id} className="csab-card" style={{ '--fc': f.color }}>
+              <span className="csab-card__ic" style={{ background: `${f.color}1c` }}><PkIc n={f.ic} s={24} c={f.color} /></span>
+              <div className="csab-card__n">{f.name}</div>
+              <div className="csab-card__d">{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Overlay del candado */}
+      <div className="csablock-over">
+        <div className="csablock-card">
+          <div className="csablock-lock"><PkIc n="sabio" s={40} c="#FFE7A2" /></div>
+          <div className="csablock-badge">PANKEY PRO</div>
+          <div className="csablock-h serif">{gancho}</div>
+          <div className="csablock-sub">Aquí abajo está tu ADN, tu plan de batalla y 6 herramientas más — pero por ahora están borrosas.</div>
+          <button className="pro-cta" onClick={() => { FX.play('open'); FX.vibrate('medium'); onOpenPro?.(); }}>Ver mi análisis completo →</button>
+          <div className="csablock-price">Desde $12.900/mes · 7 días gratis · cancela cuando quieras</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked, startNonce = 0, onOpenPro }) {
   const [icfesScreen, setIcfesScreen] = useState('dashboard');
+  const [proFunc, setProFunc] = useState(null); // función Pro abierta (ej. 'adn')
   // Al entrar desde Inicio ("Empezar Simulacro") saltamos directo a configurar el simulacro
   useEffect(() => { if (startNonce > 0) setIcfesScreen('setup'); }, [startNonce]);
   const [activeQuestions, setActiveQuestions] = useState([]);
@@ -13119,18 +13501,23 @@ const SABIO_HYPE = [
     );
   }
 
-  // Tablero principal del Territorio
+  // ── Pestaña ICFES = "Centro del Sabio" (solo Pro). Sin Pro: paywall. ──
+  // El simulacro (setup/test/results) sí corre para todos porque se resuelve en las pantallas de arriba.
+  const abrirFunc = (f) => {
+    if (f.id === 'adn') { setProFunc('adn'); return; }
+    if (f.ready) { setProFunc(f.id); return; }
+    pushNotif?.(`«${f.name}» llega muy pronto — el Sabio lo está afinando.`);
+  };
+  const practicar = (subs) => { if (Array.isArray(subs) && subs.length) handleBeginTest(subs, 10); else setIcfesScreen('setup'); };
+
   return (
     <>
-      <IcfesDashboard C={C} isLight={isLight} appState={appState} setAppState={setAppState}
-        onStartSetup={() => setIcfesScreen('setup')}
-        onGoOracle={() => setIcfesScreen('oracle')}
-        onMissionReward={onCoinBurst}
-        onGoShop={() => pushNotif('Ve a Ajustes → La Tiendita para conseguir tu Kodachi de Hielo')}
-        onModo={(m) => { FX.play('duel'); FX.vibrate('medium'); setModoKey(k => k + 1); setModo(m); }}
-        onFlash={() => { FX.play('duel'); FX.vibrate('medium'); setFlashKey(k => k + 1); setFlashOpen(true); }}
-        onPracticeWeak={(subs) => handleBeginTest(subs, 10)}
-      />
+      {appState.isPro ? (
+        <CentroSabio C={C} appState={appState} user={user} onOpenFunc={abrirFunc} onPractice={() => setIcfesScreen('setup')} />
+      ) : (
+        <CentroSabioLock C={C} appState={appState} user={user} onOpenPro={onOpenPro} />
+      )}
+      {proFunc === 'adn' && <AdnIcfes C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
       {overlays}
     </>
   );

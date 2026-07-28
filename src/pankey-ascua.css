@@ -256,6 +256,125 @@
 .dsq-dato-t{font:900 12px/1 'Sora','Instrument Sans',sans-serif;color:#FFCF6B;letter-spacing:1.5px;margin-bottom:6px}
 .dsq-dato-x{font:600 12px/1.5 'Instrument Sans',sans-serif;color:rgba(245,242,235,.74)}
 
+/* ═══════════════ PANKEY PRO ═══════════════ */
+/* CTA dorado compartido */
+.pro-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 26px;border-radius:15px;border:none;cursor:pointer;font-family:inherit;
+  background:linear-gradient(180deg,#FFE7A2,#E0A93E 58%,#B4831E);color:#3a2405;font:900 15px/1 'Instrument Sans',sans-serif;letter-spacing:.2px;
+  box-shadow:0 10px 26px -8px rgba(224,169,62,.7),inset 0 1px 0 rgba(255,255,255,.6),inset 0 -3px 6px rgba(120,80,10,.35);transition:transform .1s}
+.pro-cta:active{transform:translateY(2px)}
+.pro-cta--sm{padding:11px 20px;font-size:13px;margin-top:16px}
+
+/* ── ADN del ICFES (deck estilo Wrapped) ── */
+.adn-wrap{position:fixed;inset:0;z-index:99992;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;
+  background:radial-gradient(130% 90% at 50% 12%,#2a1650 0%,#160a2e 44%,#0a0416 80%)}
+.adn-wrap--empty{cursor:default;background:radial-gradient(120% 85% at 50% 18%,#241344,#120a24 60%,#08040f)}
+.adn-bars{position:absolute;top:12px;left:14px;right:14px;display:flex;gap:5px;z-index:3}
+.adn-bars span{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.2);transition:background .3s}
+.adn-bars span.on{background:linear-gradient(90deg,#C4B5FD,#A78BFA)}
+.adn-x{position:absolute;top:24px;right:16px;z-index:4;width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(255,255,255,.1);display:grid;place-items:center}
+.adn-card{position:relative;z-index:2;width:100%;max-width:360px;padding:30px 26px;min-height:60vh;display:flex;align-items:center;justify-content:center}
+.adn-c{width:100%;display:flex;flex-direction:column;align-items:center;text-align:center;animation:adnIn .55s cubic-bezier(.2,1,.3,1) both}
+@keyframes adnIn{0%{opacity:0;transform:translateY(24px) scale(.96)}100%{opacity:1;transform:none}}
+.adn-badge{display:inline-block;padding:5px 13px;border-radius:99px;background:linear-gradient(90deg,#C4B5FD,#A78BFA);color:#1a0e30;font:900 10px/1.4 'Instrument Sans',sans-serif;letter-spacing:2px;margin-bottom:6px}
+.adn-k{font:900 11px/1.4 'Instrument Sans',sans-serif;letter-spacing:2px;color:rgba(196,181,253,.9);margin-bottom:10px;text-transform:uppercase}
+.adn-h{font:800 21px/1.28 'Sora','Instrument Sans',sans-serif;color:#F6F1F2;text-wrap:balance}
+.adn-sub{font:600 13px/1.6 'Instrument Sans',sans-serif;color:rgba(246,241,242,.66);margin-top:10px;max-width:290px;text-wrap:balance}
+.adn-big{font:900 68px/1 'Sora','Instrument Sans',sans-serif;margin:4px 0 6px;text-shadow:0 0 40px currentColor}
+.adn-pill{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.adn-pill b{font:900 22px/1 'Sora','Instrument Sans',sans-serif}
+.adn-pill span{font:700 9.5px/1 'Instrument Sans',sans-serif;color:rgba(255,255,255,.5);letter-spacing:.5px;text-transform:uppercase}
+.adn-perfil{font:900 30px/1.1 'Sora','Instrument Sans',sans-serif;background:linear-gradient(90deg,#FFE7A2,#C4B5FD);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:8px 0}
+.adn-fill{height:100%;border-radius:99px;animation:adnFill .9s cubic-bezier(.2,1,.3,1) both}
+@keyframes adnFill{0%{width:0!important}}
+.adn-tap,.adn-hint{font:700 11px/1 'Instrument Sans',sans-serif;color:rgba(255,255,255,.4);letter-spacing:1px}
+.adn-tap{margin-top:20px}
+.adn-hint{position:absolute;bottom:26px;right:24px;z-index:3;animation:adnPulse 1.6s ease-in-out infinite}
+@keyframes adnPulse{0%,100%{opacity:.35}50%{opacity:.9}}
+
+/* ── Pantalla de venta Pro ── */
+.prosell{position:fixed;inset:0;z-index:99993;display:flex;flex-direction:column;
+  background:radial-gradient(120% 80% at 50% 0%,#2b1a12 0%,#160d0a 44%,#080403 82%)}
+.prosell-x{position:absolute;top:20px;right:16px;z-index:5;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.1);display:grid;place-items:center}
+.prosell-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 18px}
+.prosell-hero{position:relative;text-align:center;padding:48px 6px 22px}
+.prosell-halo{position:absolute;left:50%;top:0;width:340px;height:260px;transform:translateX(-50%);pointer-events:none;
+  background:radial-gradient(ellipse at 50% 30%,rgba(224,169,62,.34),transparent 66%);animation:proHalo 4s ease-in-out infinite}
+@keyframes proHalo{0%,100%{opacity:.7}50%{opacity:1}}
+.prosell-badge{position:relative;display:inline-flex;align-items:center;gap:6px;padding:6px 15px;border-radius:99px;
+  background:linear-gradient(90deg,#FFE7A2,#E0A93E);color:#3a2405;font:900 12px/1 'Instrument Sans',sans-serif;letter-spacing:2px;box-shadow:0 6px 18px -4px rgba(224,169,62,.6)}
+.prosell-title{position:relative;font-size:29px;font-weight:800;line-height:1.15;color:#F6F1F2;margin:16px 0 8px;text-wrap:balance;text-shadow:0 0 40px rgba(224,169,62,.3)}
+.prosell-tag{position:relative;font:600 13.5px/1.5 'Instrument Sans',sans-serif;color:rgba(246,241,242,.68);max-width:300px;margin:0 auto}
+.prosell-sec{font:900 12px/1 'Instrument Sans',sans-serif;letter-spacing:2px;color:#FFCF6B;text-transform:uppercase;margin:26px 0 12px 4px}
+.prosell-funcs{display:flex;flex-direction:column;gap:9px}
+.prosell-func{display:flex;align-items:center;gap:13px;padding:13px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09)}
+.prosell-func__ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex-shrink:0}
+.prosell-func__n{font:800 14.5px/1.2 'Instrument Sans',sans-serif;color:#F6F1F2}
+.prosell-func__d{font:600 11.5px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.6);margin-top:3px}
+.prosell-vs{display:flex;gap:12px}
+.prosell-vs__c{flex:1;border-radius:16px;padding:16px 12px;text-align:center}
+.prosell-vs__c--bad{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1)}
+.prosell-vs__c--good{background:linear-gradient(180deg,rgba(224,169,62,.16),rgba(224,169,62,.05));border:1.5px solid rgba(224,169,62,.5);box-shadow:0 10px 30px -12px rgba(224,169,62,.5)}
+.prosell-vs__t{font:800 12px/1.3 'Instrument Sans',sans-serif;color:#F6F1F2;min-height:32px;display:flex;align-items:center;justify-content:center}
+.prosell-vs__p{font:900 26px/1 'Sora','Instrument Sans',sans-serif;color:#F6F1F2;margin:6px 0 2px}
+.prosell-vs__s{font:600 10.5px/1 'Instrument Sans',sans-serif;color:rgba(255,255,255,.5)}
+.prosell-vsnote{text-align:center;font:600 12.5px/1.6 'Instrument Sans',sans-serif;color:rgba(246,241,242,.7);margin-top:12px;text-wrap:balance}
+.prosell-vsnote b{color:#FFE7A2}
+.prosell-plans{display:flex;gap:12px}
+.prosell-plan{position:relative;flex:1;border-radius:16px;padding:16px 12px 14px;cursor:pointer;font-family:inherit;text-align:center;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.12);transition:.16s}
+.prosell-plan.on{border-color:#E0A93E;background:linear-gradient(180deg,rgba(224,169,62,.16),rgba(224,169,62,.04));box-shadow:0 10px 30px -12px rgba(224,169,62,.55)}
+.prosell-plan__pop{position:absolute;top:-9px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:3px 10px;border-radius:99px;background:linear-gradient(90deg,#FFE7A2,#E0A93E);color:#3a2405;font:900 8.5px/1 'Instrument Sans',sans-serif;letter-spacing:.5px}
+.prosell-plan__n{font:800 13px/1 'Instrument Sans',sans-serif;color:#F6F1F2;margin-bottom:6px}
+.prosell-plan__p{font:900 22px/1 'Sora','Instrument Sans',sans-serif;color:#F6F1F2}
+.prosell-plan__p span{font-size:12px;color:rgba(255,255,255,.5)}
+.prosell-plan__s{font:700 10px/1.3 'Instrument Sans',sans-serif;color:rgba(255,255,255,.55);margin-top:6px}
+.prosell-guar{display:flex;align-items:flex-start;gap:10px;margin-top:18px;padding:13px 15px;border-radius:14px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);font:600 12px/1.5 'Instrument Sans',sans-serif;color:rgba(246,241,242,.8)}
+.prosell-guar b{color:#6EE7B7}
+.prosell-cta-bar{padding:12px 18px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(8,4,3,0),rgba(8,4,3,.92) 32%);text-align:center}
+.prosell-cta{width:100%;padding:16px;border-radius:16px;border:none;cursor:pointer;font-family:inherit;
+  background:linear-gradient(180deg,#FFE7A2,#E0A93E 58%,#B4831E);color:#3a2405;font:900 16px/1 'Instrument Sans',sans-serif;letter-spacing:.3px;
+  box-shadow:0 10px 28px -8px rgba(224,169,62,.7),inset 0 1px 0 rgba(255,255,255,.6);animation:proCtaPulse 2.6s ease-in-out infinite}
+@keyframes proCtaPulse{0%,100%{box-shadow:0 10px 28px -8px rgba(224,169,62,.7),inset 0 1px 0 rgba(255,255,255,.6)}50%{box-shadow:0 12px 36px -6px rgba(224,169,62,.9),inset 0 1px 0 rgba(255,255,255,.6)}}
+.prosell-cta__sub{font:600 11px/1.3 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55);margin-top:8px}
+
+/* ── Centro del Sabio (hub Pro dentro de ICFES) ── */
+.csab{display:flex;flex-direction:column;gap:14px}
+.csab-head{text-align:center;padding:6px 0 2px}
+.csab-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:99px;background:linear-gradient(90deg,#FFE7A2,#E0A93E);color:#3a2405;font:900 10px/1 'Instrument Sans',sans-serif;letter-spacing:1.5px;box-shadow:0 6px 16px -5px rgba(224,169,62,.6)}
+.csab-hi{font-size:24px;font-weight:800;color:var(--t1,#F6F1F2);margin-top:10px}
+.csab-sub{font:600 12.5px/1.5 'Instrument Sans',sans-serif;color:var(--t3,#B9A9AF);margin-top:3px;text-wrap:balance}
+.csab-snap{display:flex;gap:9px;justify-content:center}
+.csab-snap__i{flex:1;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 6px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)}
+.csab-snap__i b{font:900 22px/1 'Sora','Instrument Sans',sans-serif}
+.csab-snap__i span{font:700 9px/1.2 'Instrument Sans',sans-serif;color:var(--t3,#7C6E74);text-transform:uppercase;letter-spacing:.5px}
+.csab-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.csab-card{position:relative;text-align:left;border-radius:16px;padding:14px;cursor:pointer;font-family:inherit;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.1);transition:transform .12s}
+.csab-card:active{transform:scale(.97)}
+.csab-card--soon{opacity:.72}
+.csab-card__ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:9px}
+.csab-card__n{font:800 13.5px/1.2 'Instrument Sans',sans-serif;color:#F6F1F2}
+.csab-card__d{font:600 10.5px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55);margin-top:4px;min-height:29px}
+.csab-card__soon{display:inline-block;margin-top:8px;padding:2px 9px;border-radius:99px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);font:800 9px/1.4 'Instrument Sans',sans-serif;letter-spacing:.5px}
+.csab-card__go{display:inline-block;margin-top:8px;font:900 10.5px/1.4 'Instrument Sans',sans-serif;letter-spacing:.3px}
+.csab-practice{display:flex;align-items:center;justify-content:center;gap:9px;padding:15px;border-radius:15px;cursor:pointer;font-family:inherit;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--t1,#F6F1F2);font:800 14px/1 'Instrument Sans',sans-serif}
+
+/* ── Paywall del Centro del Sabio (no-Pro) ── */
+.csablock{position:relative;min-height:70vh;border-radius:18px;overflow:hidden}
+.csablock-bg{padding:14px;filter:blur(7px) saturate(.85);opacity:.7;pointer-events:none;display:flex;flex-direction:column;gap:14px}
+.csablock-over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:radial-gradient(120% 90% at 50% 40%,rgba(10,5,4,.5),rgba(8,4,3,.86))}
+.csablock-card{width:100%;max-width:320px;text-align:center;border-radius:20px;padding:26px 22px;
+  background:linear-gradient(180deg,rgba(30,18,12,.86),rgba(18,10,8,.92));border:1px solid rgba(224,169,62,.34);
+  box-shadow:0 24px 60px -18px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.08)}
+.csablock-lock{filter:drop-shadow(0 0 22px rgba(224,169,62,.6));margin-bottom:8px}
+.csablock-badge{display:inline-block;padding:4px 12px;border-radius:99px;background:linear-gradient(90deg,#FFE7A2,#E0A93E);color:#3a2405;font:900 10px/1.4 'Instrument Sans',sans-serif;letter-spacing:2px;margin-bottom:12px}
+.csablock-h{font-size:18px;font-weight:800;line-height:1.32;color:#F6F1F2;text-wrap:balance}
+.csablock-sub{font:600 12.5px/1.55 'Instrument Sans',sans-serif;color:rgba(246,241,242,.62);margin:10px 0 20px;text-wrap:balance}
+.csablock-price{font:600 11px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.5);margin-top:12px}
+@media (prefers-reduced-motion:reduce){.adn-c,.adn-fill,.prosell-halo,.prosell-cta,.adn-hint{animation:none}}
+
 /* ══ RIVAL ENCONTRADO v2: reventón + avatar que aparece + datos ══ */
 .dfound-flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at center,rgba(232,116,58,.5),transparent 60%);animation:dfoundFlash 1s ease-out both}
 @keyframes dfoundFlash{0%{opacity:0}14%{opacity:1}100%{opacity:0}}
