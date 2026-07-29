@@ -12796,16 +12796,37 @@ function ResultadosShow({ result, appState, onDetalle, onRetry, onBack }) {
 // ═════════════════════════════════════════════
 //  PANKEY PRO — "El Sabio que te conoce"
 // ═════════════════════════════════════════════
+// Iconos PROPIOS de cada función Pro (glifos únicos, no reciclados de otras partes del app).
+function ProIcon({ id, s = 24, c = 'currentColor', sw = 1.7 }) {
+  const P = {
+    adn:     'M8 3C8 8 16 8 16 12 16 16 8 16 8 21 M16 3C16 8 8 8 8 12 8 16 16 16 16 21 M10 6.3h4 M9.4 12h5.2 M10 17.7h4',           // doble hélice
+    plan:    'M6 22V3.4 M6 4.2h12.6l-3.2 4 3.2 4H6',                                                                              // bandera de batalla
+    srs:     'M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z M12 7.4V12l3.1 1.9',                                                          // reloj (justo antes de olvidar)
+    sensei:  'M20 4H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3v4l4.6-4H20a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z M12 7.6l1 2.1 2.2.6-2.2.8-1 2.1-1-2.1-2.2-.8 2.2-.6z', // burbuja + chispa sabia
+    diag:    'M4 16a8 8 0 0 1 16 0 M12 16l4.6-4.6 M12 15a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z M6.3 10.4l.9.9 M12 6.6V7.9 M17.7 10.4l-.9.9', // gauge/predicción
+    live:    'M6.5 10.2a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2z M17.5 19a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2z M8.7 8.6l6.6 7 M3 20c.4-2 1.9-3.2 3.7-3.2 M14.3 7.4c.4-2 1.9-3.2 3.7-3.2', // dos nodos enlazados
+    banco:   'M3.4 5h17.2l-6.6 7.6V19l-4 2v-8.4z',                                                                                // embudo (filtrar por tema)
+    reporte: 'M4 5.5V20h15 M8 20v-5.5 M12.5 20v-9 M17 20v-6.5 M7 10l3.5-3.5 2.5 2.5 4-4',                                          // reporte con línea de progreso
+  };
+  const d = P[id];
+  if (!d) return null;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', flexShrink: 0 }}>
+      <path d={d} />
+    </svg>
+  );
+}
+
 // Las 8 funciones Pro (metadatos compartidos por la pantalla de venta y el Centro del Sabio)
 const PRO_FUNCS = [
-  { id:'adn',     ic:'sabio',   name:'ADN del ICFES',        desc:'Tu análisis más profundo: por subtema y patrones de error.', color:'#A78BFA', ready:true },
-  { id:'plan',    ic:'target',  name:'Plan de Batalla',      desc:'Fecha, meta y minutos → tu camino diario al puntaje.',       color:'#FF6B54', ready:false },
-  { id:'srs',     ic:'scroll',  name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:false },
-  { id:'sensei',  ic:'msg',     name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:false },
-  { id:'diag',    ic:'icfes',   name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
-  { id:'live',    ic:'people',  name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
-  { id:'banco',   ic:'mochila', name:'Banco por Tema',       desc:'Preguntas de UN subtema + años anteriores.',                 color:'#C084FC', ready:false },
-  { id:'reporte', ic:'flame',   name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:false },
+  { id:'adn',     pic:'adn',     name:'ADN del ICFES',        desc:'Tu análisis más profundo: por subtema y patrones de error.', color:'#A78BFA', ready:true },
+  { id:'plan',    pic:'plan',    name:'Plan de Batalla',      desc:'Fecha, meta y minutos → tu camino diario al puntaje.',       color:'#FF6B54', ready:true },
+  { id:'srs',     pic:'srs',     name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:false },
+  { id:'sensei',  pic:'sensei',  name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:false },
+  { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
+  { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
+  { id:'banco',   pic:'banco',   name:'Banco por Tema',       desc:'Preguntas de UN subtema + años anteriores.',                 color:'#C084FC', ready:false },
+  { id:'reporte', pic:'reporte', name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:false },
 ];
 
 // Análisis real del rendimiento a partir de icfesHistory + weakStats + modeStats.
@@ -13034,7 +13055,7 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
           <div className="prosell-funcs">
             {PRO_FUNCS.map(f => (
               <div key={f.id} className="prosell-func" style={{ '--fc': f.color }}>
-                <span className="prosell-func__ic" style={{ background: `${f.color}1e`, boxShadow: `inset 0 0 0 1px ${f.color}44` }}><PkIc n={f.ic} s={22} c={f.color} /></span>
+                <span className="prosell-func__ic" style={{ background: `${f.color}1e`, boxShadow: `inset 0 0 0 1px ${f.color}44` }}><ProIcon id={f.pic} s={22} c={f.color} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="prosell-func__n">{f.name}</div>
                   <div className="prosell-func__d">{f.desc}</div>
@@ -13091,41 +13112,77 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
   );
 }
 
-// Centro del Sabio — hub Pro (la nueva pestaña ICFES para quien SÍ es Pro).
-function CentroSabio({ C, appState, user, onOpenFunc, onPractice }) {
+// Preview del hub (compartido por el Centro del Sabio y su paywall borroso).
+function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
   const d = useMemo(() => computeAdn(appState), [appState]);
   const nombre = (user?.name || 'crack').split(' ')[0];
+  const adnF = PRO_FUNCS[0];
+  const otras = PRO_FUNCS.slice(1);
+  const bar = (pct, color) => (
+    <span className="csab-hero__bar"><i style={{ width: `${pct}%`, background: color }} /></span>
+  );
+  const click = (f) => !preview && (FX.play(f.ready ? 'open' : 'tap'), onOpenFunc?.(f));
+  const Tag = preview ? 'div' : 'button';
   return (
-    <div className="csab">
+    <>
       <div className="csab-head">
-        <div className="csab-badge"><PkIc n="sabio" s={13} c="#3a2405" /> PANKEY PRO</div>
+        <div className="csab-badge"><ProIcon id="adn" s={13} c="#3a2405" /> PANKEY PRO</div>
         <div className="csab-hi serif">El Centro del Sabio</div>
         <div className="csab-sub">Hola {nombre}, tu preparador personal ya tiene todo listo.</div>
       </div>
-      {/* Snapshot rápido */}
-      <div className="csab-snap">
-        <div className="csab-snap__i"><b style={{ color: '#FFCF6B' }}>{d.best || '—'}</b><span>mejor puntaje</span></div>
-        <div className="csab-snap__i"><b style={{ color: d.fuerte?.color || '#5CB8FF' }}>{d.fuerte?.short || '—'}</b><span>tu fuerte</span></div>
-        <div className="csab-snap__i"><b style={{ color: '#FF8A6B' }}>{d.debil?.short || '—'}</b><span>tu reto</span></div>
-      </div>
-      {/* Funciones */}
-      <div className="csab-grid">
-        {PRO_FUNCS.map(f => (
-          <button key={f.id} className={`csab-card${f.ready ? '' : ' csab-card--soon'}`} style={{ '--fc': f.color }}
-            onClick={() => { FX.play(f.ready ? 'open' : 'tap'); onOpenFunc?.(f); }}>
-            <span className="csab-card__ic" style={{ background: `${f.color}1c`, boxShadow: `inset 0 0 0 1px ${f.color}40` }}><PkIc n={f.ic} s={24} c={f.color} /></span>
-            <div className="csab-card__n">{f.name}</div>
-            <div className="csab-card__d">{f.desc}</div>
-            {!f.ready && <span className="csab-card__soon">Pronto</span>}
-            {f.ready && <span className="csab-card__go" style={{ color: f.color }}>Abrir →</span>}
-          </button>
+
+      {/* HERO — ADN grande con preview animado */}
+      <Tag className="csab-hero" onClick={preview ? undefined : () => click(adnF)}>
+        <span className="csab-hero__aura" />
+        <div className="csab-hero__top">
+          <span className="csab-hero__dna"><ProIcon id="adn" s={52} c="#C4B5FD" /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="csab-hero__k">ASÍ VA TU ADN, {String(nombre).toUpperCase()}</div>
+            <div className="csab-hero__perfil">{d.perfil.name}</div>
+          </div>
+        </div>
+        <div className="csab-hero__mini">
+          {d.ordenados.slice(0, 3).map(a => (
+            <div key={a.subject} className="csab-hero__row">
+              <span className="csab-hero__lab">{a.subject}</span>
+              {bar(a.pct, a.color)}
+              <span className="csab-hero__pct" style={{ color: a.color }}>{a.pct}%</span>
+            </div>
+          ))}
+          {d.ordenados.length === 0 && <div className="csab-hero__lab" style={{ opacity: .7 }}>Haz un simulacro y aquí verás tu perfil.</div>}
+        </div>
+        <span className="csab-hero__cta">Ver mi ADN completo <b>→</b></span>
+      </Tag>
+
+      {/* Resto de funciones — lista variada, cada una con su icono y color */}
+      <div className="csab-list">
+        {otras.map((f, i) => (
+          <Tag key={f.id} className={`csab-item${f.ready ? '' : ' csab-item--soon'}`} style={{ '--fc': f.color, animationDelay: `${0.05 * i}s` }}
+            onClick={preview ? undefined : () => click(f)}>
+            <span className="csab-item__stripe" />
+            <span className="csab-item__ic" style={{ background: `${f.color}18` }}><ProIcon id={f.pic} s={25} c={f.color} /></span>
+            <div className="csab-item__tx">
+              <div className="csab-item__n">{f.name}</div>
+              <div className="csab-item__d">{f.desc}</div>
+            </div>
+            <span className="csab-item__r" style={f.ready ? { color: f.color } : undefined}>{f.ready ? '→' : 'Pronto'}</span>
+          </Tag>
         ))}
       </div>
-      <button className="csab-practice" onClick={() => { FX.play('tap'); onPractice?.(); }}>
-        <PkIc n="icfes" s={17} c={C.text} /> Práctica libre (simulacro)
-      </button>
-    </div>
+
+      {!preview && (
+        <button className="csab-practice" onClick={() => { FX.play('tap'); onPractice?.(); }}>
+          <PkIc n="icfes" s={17} c={C_TEXT} /> Práctica libre (simulacro)
+        </button>
+      )}
+    </>
   );
+}
+const C_TEXT = '#F6F1F2';
+
+// Centro del Sabio — hub Pro (la nueva pestaña ICFES para quien SÍ es Pro).
+function CentroSabio({ C, appState, user, onOpenFunc, onPractice }) {
+  return <div className="csab"><CentroSabioBody appState={appState} user={user} onOpenFunc={onOpenFunc} onPractice={onPractice} /></div>;
 }
 
 // Paywall del Centro del Sabio (lo que ve quien NO es Pro): preview borroso + CTA específico.
@@ -13137,35 +13194,160 @@ function CentroSabioLock({ C, appState, user, onOpenPro }) {
     : 'El Sabio está listo para analizarte a fondo: por subtema, tus patrones de error y tu plan exacto.';
   return (
     <div className="csablock">
-      {/* Fondo: hub borroso */}
-      <div className="csablock-bg" aria-hidden="true">
-        <div className="csab-snap">
-          <div className="csab-snap__i"><b style={{ color: '#FFCF6B' }}>{d.best || 348}</b><span>mejor puntaje</span></div>
-          <div className="csab-snap__i"><b style={{ color: '#5CB8FF' }}>{d.fuerte?.short || 'CS'}</b><span>tu fuerte</span></div>
-          <div className="csab-snap__i"><b style={{ color: '#FF8A6B' }}>{d.debil?.short || 'MA'}</b><span>tu reto</span></div>
-        </div>
-        <div className="csab-grid">
-          {PRO_FUNCS.map(f => (
-            <div key={f.id} className="csab-card" style={{ '--fc': f.color }}>
-              <span className="csab-card__ic" style={{ background: `${f.color}1c` }}><PkIc n={f.ic} s={24} c={f.color} /></span>
-              <div className="csab-card__n">{f.name}</div>
-              <div className="csab-card__d">{f.desc}</div>
-            </div>
-          ))}
-        </div>
+      <div className="csablock-bg csab" aria-hidden="true">
+        <CentroSabioBody appState={appState} user={user} preview />
       </div>
-      {/* Overlay del candado */}
       <div className="csablock-over">
         <div className="csablock-card">
-          <div className="csablock-lock"><PkIc n="sabio" s={40} c="#FFE7A2" /></div>
+          <div className="csablock-lock"><ProIcon id="adn" s={40} c="#FFE7A2" /></div>
           <div className="csablock-badge">PANKEY PRO</div>
           <div className="csablock-h serif">{gancho}</div>
-          <div className="csablock-sub">Aquí abajo está tu ADN, tu plan de batalla y 6 herramientas más — pero por ahora están borrosas.</div>
+          <div className="csablock-sub">Aquí abajo está tu ADN, tu Plan de Batalla y 6 herramientas más — pero por ahora están borrosas.</div>
           <button className="pro-cta" onClick={() => { FX.play('open'); FX.vibrate('medium'); onOpenPro?.(); }}>Ver mi análisis completo →</button>
           <div className="csablock-price">Desde $12.900/mes · 7 días gratis · cancela cuando quieras</div>
         </div>
       </div>
     </div>
+  );
+}
+
+// Plan de Batalla (Pro) — onboarding + calendario + predicción de puntaje.
+function PlanBatalla({ C, appState, setAppState, user, onClose, onPractice }) {
+  const plan = appState.proPlan || null;
+  const d = useMemo(() => computeAdn(appState), [appState]);
+  const [examISO, setExamISO] = useState(plan?.examISO || '');
+  const [meta, setMeta] = useState(plan?.meta || 350);
+  const [minutes, setMinutes] = useState(plan?.minutes || 30);
+
+  const guardar = () => {
+    if (!examISO) return;
+    FX.play('levelUp'); FX.vibrate('success');
+    setAppState(s => ({ ...s, proPlan: { examISO, meta: Number(meta), minutes: Number(minutes), createdAt: Date.now() } }));
+  };
+
+  // ── ONBOARDING ──
+  if (!plan) {
+    const hoyISO = new Date().toISOString().slice(0, 10);
+    return (
+      <Portal>
+        <div className="plan-wrap">
+          <button className="plan-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+          <div className="plan-onb">
+            <span className="plan-onb__ic"><ProIcon id="plan" s={44} c="#FF8A6B" /></span>
+            <div className="plan-onb__h serif">Armemos tu Plan de Batalla</div>
+            <div className="plan-onb__s">3 datos y el Sabio te construye el camino exacto hasta tu examen.</div>
+
+            <div className="plan-fld">
+              <label>¿Cuándo es tu ICFES?</label>
+              <input type="date" min={hoyISO} value={examISO} onChange={e => setExamISO(e.target.value)} className="plan-input" />
+            </div>
+
+            <div className="plan-fld">
+              <label>Tu meta de puntaje: <b style={{ color: '#FFCF6B' }}>{meta}</b></label>
+              <input type="range" min="150" max="500" step="10" value={meta} onChange={e => setMeta(e.target.value)} className="plan-range" />
+              <div className="plan-range__ends"><span>150</span><span>500</span></div>
+            </div>
+
+            <div className="plan-fld">
+              <label>¿Cuántos minutos al día?</label>
+              <div className="plan-chips">
+                {[15, 30, 45, 60, 90].map(m => (
+                  <button key={m} className={`plan-chip${Number(minutes) === m ? ' on' : ''}`} onClick={() => { FX.play('tap'); setMinutes(m); }}>{m}′</button>
+                ))}
+              </div>
+            </div>
+
+            <button className={`pro-cta${examISO ? '' : ' pro-cta--off'}`} disabled={!examISO} onClick={guardar} style={{ marginTop: 8, width: '100%' }}>
+              Construir mi plan →
+            </button>
+          </div>
+        </div>
+      </Portal>
+    );
+  }
+
+  // ── PLAN GENERADO ──
+  const exam = new Date(plan.examISO + 'T00:00:00');
+  const dias = Math.max(0, Math.ceil((exam - new Date()) / 86400000));
+  const base = d.avg || 250;
+  const factor = Math.min(1, (plan.minutes / 60) * 0.55 + Math.min(dias, 60) / 130);
+  const proyectado = Math.min(500, Math.max(base, Math.round(base + (plan.meta - base) * factor)));
+  const brecha = Math.max(0, plan.meta - proyectado);
+  const pct = (v) => `${Math.max(4, Math.min(100, ((v - 150) / 350) * 100))}%`;
+  // Orden de materias por debilidad (la más floja primero)
+  const orden = [...d.areas].sort((a, b) => (a.pct || 0) - (b.pct || 0)).map(a => a.subject);
+  const focoSub = orden[0] || 'Matemáticas';
+  const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const hoyIdx = (new Date().getDay() + 6) % 7; // L=0
+  const examFmt = exam.toLocaleDateString('es-CO', { day: '2-digit', month: 'long' });
+
+  return (
+    <Portal>
+      <div className="plan-wrap plan-wrap--view">
+        <button className="plan-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+        <div className="plan-scroll">
+          <div className="plan-badge"><ProIcon id="plan" s={13} c="#3a2405" /> PLAN DE BATALLA</div>
+          {/* Cuenta regresiva */}
+          <div className="plan-count">
+            <div className="plan-count__n">{dias}</div>
+            <div className="plan-count__l">{dias === 1 ? 'día para tu examen' : 'días para tu examen'}</div>
+            <div className="plan-count__d"><PkIc n="target" s={12} c="#FF8A6B" /> El Gran Día · {examFmt}</div>
+          </div>
+
+          {/* Predicción */}
+          <div className="plan-pred">
+            <div className="plan-pred__top">
+              <span>Con tu ritmo llegarás a</span>
+              <b style={{ color: proyectado >= plan.meta ? '#34D399' : '#FFCF6B' }}>{proyectado} pts</b>
+            </div>
+            <div className="plan-pred__track">
+              <div className="plan-pred__fill" style={{ width: pct(proyectado) }} />
+              <div className="plan-pred__goal" style={{ left: pct(plan.meta) }} title="meta"><span>meta {plan.meta}</span></div>
+            </div>
+            <div className="plan-pred__note">
+              {brecha > 0
+                ? <>Faltan <b style={{ color: '#FF8A6B' }}>{brecha} pts</b> para tu meta — el Sabio puede cerrar esa brecha si cumples el plan.</>
+                : <>¡Vas sobrado para tu meta! El Sabio subirá el listón para exprimir cada punto.</>}
+            </div>
+          </div>
+
+          {/* Tarea de hoy */}
+          <div className="plan-sec">Tu tarea de hoy</div>
+          <div className="plan-today" style={{ '--fc': (SUBJECT_META[focoSub] || {}).color || '#FF6B54' }}>
+            <div className="plan-today__ic"><PkIc n="flame" s={22} c={(SUBJECT_META[focoSub] || {}).color || '#FF6B54'} /></div>
+            <div style={{ flex: 1 }}>
+              <div className="plan-today__n">{plan.minutes} min de {focoSub}</div>
+              <div className="plan-today__d">Es tu punto más flojo hoy. Cerrarlo es lo que más te sube el puntaje.</div>
+            </div>
+          </div>
+          <button className="pro-cta" style={{ width: '100%' }} onClick={() => { FX.play('duel'); onClose?.(); onPractice?.([focoSub]); }}>
+            Iniciar tarea de hoy →
+          </button>
+
+          {/* Semana */}
+          <div className="plan-sec">Tu semana</div>
+          <div className="plan-week">
+            {DIAS.map((dl, i) => {
+              const descanso = i === 6; // domingo, descanso
+              const sub = descanso ? null : orden[i % orden.length];
+              const meta2 = SUBJECT_META[sub] || {};
+              return (
+                <div key={i} className={`plan-day${i === hoyIdx ? ' on' : ''}${descanso ? ' plan-day--rest' : ''}`}>
+                  <span className="plan-day__l">{dl}</span>
+                  <span className="plan-day__dot" style={{ background: descanso ? 'rgba(255,255,255,.2)' : meta2.color }} />
+                  <span className="plan-day__s">{descanso ? 'Descanso' : (meta2.short || '—')}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <button className="plan-edit" onClick={() => { FX.play('tap'); setAppState(s => ({ ...s, proPlan: null })); }}>
+            Ajustar mi plan
+          </button>
+          <div style={{ height: 24 }} />
+        </div>
+      </div>
+    </Portal>
   );
 }
 
@@ -13518,6 +13700,7 @@ const SABIO_HYPE = [
         <CentroSabioLock C={C} appState={appState} user={user} onOpenPro={onOpenPro} />
       )}
       {proFunc === 'adn' && <AdnIcfes C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
+      {proFunc === 'plan' && <PlanBatalla C={C} appState={appState} setAppState={setAppState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
       {overlays}
     </>
   );
