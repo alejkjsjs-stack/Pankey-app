@@ -751,9 +751,33 @@ const FX = {
   init: function() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) this.ctx = new AC();
+      if (AC) { this.ctx = new AC(); this._buildBus(); }
     }
     if (this.ctx?.state === 'suspended') this.ctx.resume();
+  },
+
+  // Bus maestro: compresor (pega y da cuerpo) + reverb (espacio) → sonidos más satisfactorios
+  _buildBus: function() {
+    if (!this.ctx || this._master) return;
+    const ctx = this.ctx;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 26; comp.ratio.value = 3; comp.attack.value = 0.003; comp.release.value = 0.2;
+    const master = ctx.createGain(); master.gain.value = 0.82;
+    master.connect(comp); comp.connect(ctx.destination);
+    const rev = ctx.createConvolver(); rev.buffer = this._impulse(1.9, 3.2);
+    const revGain = ctx.createGain(); revGain.gain.value = 0.42;
+    rev.connect(revGain); revGain.connect(master);
+    this._master = master; this._rev = rev;
+  },
+  _impulse: function(dur, decay) {
+    const ctx = this.ctx, len = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay); }
+    return buf;
+  },
+  // Conecta un nodo al master (seco) y, con wet>0, manda una copia al reverb (húmedo)
+  _send: function(node, wet = 0) {
+    node.connect(this._master || this.ctx.destination);
+    if (wet > 0 && this._rev) { const s = this.ctx.createGain(); s.gain.value = wet; node.connect(s); s.connect(this._rev); }
   },
 
   // Pequeña variación aleatoria para que no suene robótico (±semitonos suaves)
@@ -762,7 +786,22 @@ const FX = {
     return base * factor;
   },
 
-  // ── PRIMITIVA: cuerda pulsada (tiple / arpa) ──
+  // ── PRIMITIVA: tono redondo y cálido (UI satisfactoria: tap, select, pop) ──
+  tone: function(freq, vol = 0.14, dur = 0.4, type = 'triangle', wet = 0.1) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator(), osc2 = this.ctx.createOscillator(), gain = this.ctx.createGain(), g2 = this.ctx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    osc2.type = 'sine'; osc2.frequency.value = freq * 2; g2.gain.value = 0.28; // armónico de brillo
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain); osc2.connect(g2); g2.connect(gain);
+    this._send(gain, wet);
+    osc.start(t); osc2.start(t); osc.stop(t + dur); osc2.stop(t + dur);
+  },
+
+  // ── PRIMITIVA: cuerda pulsada (tiple / arpa), más cálida ──
   pluck: function(freq, vol = 0.12, dur = 1.6, type = 'sawtooth') {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
@@ -772,29 +811,38 @@ const FX = {
     osc.type = type;
     osc.frequency.setValueAtTime(freq, t);
     filter.type = 'lowpass';
-    filter.Q.value = 1.4;
-    filter.frequency.setValueAtTime(freq * 6, t);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(freq * 1.1, 200), t + 0.25);
+    filter.Q.value = 1.1;
+    filter.frequency.setValueAtTime(freq * 5, t);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(freq * 1.1, 200), t + 0.28);
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(vol, t + 0.012);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+    osc.connect(filter); filter.connect(gain);
+    this._send(gain, 0.2);
     osc.start(t); osc.stop(t + dur);
   },
 
-  // ── PRIMITIVA: golpe de tambor (membrana: tambora / alegre / llamador) ──
+  // ── PRIMITIVA: golpe de tambor con click de ataque (más punch y cuerpo) ──
   drum: function(startFreq = 150, endFreq = 55, vol = 0.3, dur = 0.18) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(startFreq, t);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+    osc.frequency.setValueAtTime(startFreq * 1.7, t);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, t + dur * 0.9);
     gain.gain.setValueAtTime(vol, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    osc.connect(gain); gain.connect(this.ctx.destination);
+    osc.connect(gain);
+    this._send(gain, 0.06);
     osc.start(t); osc.stop(t + dur);
+    // click de ataque (transiente) → sensación de golpe seco
+    const cLen = Math.floor(this.ctx.sampleRate * 0.012), cb = this.ctx.createBuffer(1, cLen, this.ctx.sampleRate), cd = cb.getChannelData(0);
+    for (let i = 0; i < cLen; i++) cd[i] = (Math.random() * 2 - 1) * (1 - i / cLen);
+    const cs = this.ctx.createBufferSource(); cs.buffer = cb;
+    const cg = this.ctx.createGain(); cg.gain.value = vol * 0.5;
+    cs.connect(cg); this._send(cg, 0);
+    cs.start(t); cs.stop(t + 0.02);
   },
 
   // ── PRIMITIVA: shaker / maracas / guacharaca (ruido filtrado) ──
@@ -814,11 +862,12 @@ const FX = {
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(vol, t + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(hp); hp.connect(gain); gain.connect(this.ctx.destination);
+    src.connect(hp); hp.connect(gain);
+    this._send(gain, 0.12);
     src.start(t); src.stop(t + dur);
   },
 
-  // ── PRIMITIVA: campana FM (chime satisfactorio, brillante y con cola) ──
+  // ── PRIMITIVA: campana FM (chime satisfactorio, brillante y con cola de reverb) ──
   bell: function(freq, vol = 0.1, dur = 1.7, ratio = 2.0) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
@@ -830,13 +879,14 @@ const FX = {
     carrier.frequency.value = freq;
     mod.type = 'sine';
     mod.frequency.value = freq * ratio;
-    modGain.gain.setValueAtTime(freq * 1.3, t);
-    modGain.gain.exponentialRampToValueAtTime(1, t + dur * 0.75);
+    modGain.gain.setValueAtTime(freq * 1.1, t);
+    modGain.gain.exponentialRampToValueAtTime(1, t + dur * 0.7);
     mod.connect(modGain); modGain.connect(carrier.frequency);
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(vol, t + 0.006);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    carrier.connect(gain); gain.connect(this.ctx.destination);
+    carrier.connect(gain);
+    this._send(gain, 0.38);
     mod.start(t); carrier.start(t);
     mod.stop(t + dur); carrier.stop(t + dur);
   },
@@ -853,7 +903,21 @@ const FX = {
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(vol, t + dur * 0.3);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(gain); gain.connect(this.ctx.destination);
+    osc.connect(gain);
+    this._send(gain, 0.15);
+    osc.start(t); osc.stop(t + dur);
+  },
+
+  // ── PRIMITIVA: sub-golpe grave (impacto satisfactorio para logros/victorias) ──
+  sub: function(freq = 80, vol = 0.5, dur = 0.5) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(freq * 1.5, t);
+    osc.frequency.exponentialRampToValueAtTime(freq, t + dur * 0.6);
+    gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain); this._send(gain, 0);
     osc.start(t); osc.stop(t + dur);
   },
 
@@ -863,46 +927,43 @@ const FX = {
       if (!this.ctx) return;
 
       switch (sound) {
-        // Toque de tarjetas: tambor alegre seco y sutil
+        // Toque de tarjetas: blip redondo y suave (nada de tambor seco)
         case 'tap':
-          this.drum(this._vary(170), 70, 0.12, 0.12);
+          this.tone(this._vary(620, 8), 0.09, 0.12, 'triangle', 0.05);
           break;
 
-        // Navegación inferior: golpe un poco más redondo + shaker mínimo
+        // Navegación inferior: blip un poco más grave + cuerpo
         case 'nav':
-          this.drum(this._vary(140), 60, 0.16, 0.15);
-          this.shaker(0.05, 0.06, 7000);
+          this.tone(this._vary(440, 8), 0.09, 0.15, 'triangle', 0.08);
+          this.sub(120, 0.12, 0.1);
           break;
 
-        // Moneda/empanada: guacharaca/maracas que suena a plata + campanita brillante
+        // Moneda/empanada: "cha-ching" satisfactorio (dos campanas que suben + brillo)
         case 'coin': {
-          this.shaker(0.12, 0.07, 5500);
-          setTimeout(() => this.shaker(0.10, 0.06, 6500), 70);
-          setTimeout(() => { this.shaker(0.08, 0.05, 7500); this.bell(this._vary(1318.5, 8), 0.06, 1.2); }, 130);
+          this.bell(this._vary(1046.5, 6), 0.09, 0.9);
+          this.shaker(0.07, 0.05, 6500);
+          setTimeout(() => this.bell(this._vary(1568, 6), 0.10, 1.3), 85);
           break;
         }
 
-        // Acierto: acorde alegre ascendente de tiple + campana que corona
+        // Acierto: quinta mayor que sube (do→sol), cálida y clara
         case 'success': {
-          const root = this._vary(523.25, 15); // Do
-          [1, 1.26, 1.5, 2].forEach((mult, i) => {
-            setTimeout(() => this.pluck(root * mult, 0.11, 1.4, 'sawtooth'), i * 55);
-          });
-          setTimeout(() => this.bell(root * 2, 0.06, 1.4), 120);
+          const r = this._vary(659.25, 10);
+          this.tone(r, 0.10, 0.22, 'triangle', 0.1);
+          setTimeout(() => this.bell(r * 1.5, 0.09, 1.3), 75);
           break;
         }
 
-        // Selección (modo/misión): tick corto y satisfactorio
+        // Selección (modo/misión): tick corto, limpio y agradable
         case 'select': {
-          this.drum(this._vary(260), 120, 0.08, 0.06);
-          this.shaker(0.03, 0.02, 9000);
+          this.tone(this._vary(880, 8), 0.08, 0.08, 'triangle', 0.05);
           break;
         }
 
-        // Abrir hoja/menú: whoosh suave ascendente
+        // Abrir hoja/menú: whoosh suave ascendente + tono cálido que florece
         case 'open': {
-          this.sweep(240, 900, 0.06, 0.28, 'sine');
-          this.shaker(0.04, 0.12, 3500);
+          this.sweep(300, 950, 0.05, 0.28, 'sine');
+          setTimeout(() => this.tone(this._vary(659.25, 6), 0.06, 0.32, 'sine', 0.14), 55);
           break;
         }
 
@@ -932,10 +993,10 @@ const FX = {
           break;
         }
 
-        // Presionar "Siguiente": thunk con cuerpo (grave, corto, satisfactorio)
+        // Presionar "Siguiente": thock con cuerpo (tono corto + sub, satisfactorio)
         case 'next': {
-          this.drum(this._vary(190), 78, 0.26, 0.14);
-          this.shaker(0.035, 0.03, 6000);
+          this.tone(this._vary(392, 6), 0.09, 0.16, 'triangle', 0.07);
+          this.sub(120, 0.18, 0.13);
           break;
         }
 
@@ -946,12 +1007,13 @@ const FX = {
           break;
         }
 
-        // Recompensa satisfactoria: cascada de monedas + campanas ascendentes
+        // Recompensa satisfactoria: sub-golpe + cascada de monedas + campanas que suben
         case 'reward': {
-          this.shaker(0.12, 0.06, 5200);
-          setTimeout(() => this.shaker(0.11, 0.05, 6200), 60);
-          setTimeout(() => this.shaker(0.09, 0.05, 7200), 120);
-          [0, 1, 2].forEach(i => setTimeout(() => this.bell(this._vary(880 * Math.pow(1.26, i), 6), 0.09, 1.6), 140 + i * 90));
+          this.sub(75, 0.34, 0.5);
+          this.shaker(0.11, 0.06, 5200);
+          setTimeout(() => this.shaker(0.10, 0.05, 6200), 60);
+          setTimeout(() => this.shaker(0.08, 0.05, 7200), 120);
+          [0, 1, 2].forEach(i => setTimeout(() => this.bell(this._vary(880 * Math.pow(1.26, i), 6), 0.10, 1.7), 130 + i * 95));
           break;
         }
 
@@ -963,37 +1025,36 @@ const FX = {
           break;
         }
 
-        // Desbloqueo: golpe grave + dos campanas altas
+        // Desbloqueo: sub-golpe + dos campanas altas que coronan
         case 'unlock': {
-          this.drum(90, 45, 0.25, 0.3);
-          setTimeout(() => this.bell(this._vary(1046.5, 6), 0.1, 1.8), 160);
-          setTimeout(() => this.bell(this._vary(1318.5, 6), 0.08, 1.6), 300);
+          this.sub(80, 0.42, 0.55);
+          setTimeout(() => this.bell(this._vary(1046.5, 6), 0.1, 1.8), 150);
+          setTimeout(() => this.bell(this._vary(1568, 6), 0.09, 1.6), 300);
           break;
         }
 
-        // Victoria: fanfarria de campanas + doble tambora
+        // Victoria: golpe grave de impacto + fanfarria de campanas que sube
         case 'win': {
+          this.sub(70, 0.5, 0.7);
           const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
-          notes.forEach((f, i) => setTimeout(() => this.bell(this._vary(f, 5), 0.11, 2.2), i * 80));
-          this.drum(170, 60, 0.28, 0.24);
-          setTimeout(() => this.drum(120, 45, 0.34, 0.4), 400);
+          notes.forEach((f, i) => setTimeout(() => this.bell(this._vary(f, 5), 0.11, 2.2), i * 85));
+          setTimeout(() => this.sub(90, 0.34, 0.5), 420);
           break;
         }
 
-        // Error: tambora grave y apagada (un "pum" seco, nunca estridente)
+        // Error: "uh-oh" grave y suave que baja (nunca estridente)
         case 'error': {
-          this.drum(120, 45, 0.28, 0.30);
+          this.tone(this._vary(311, 5), 0.11, 0.16, 'sine', 0.05);
+          setTimeout(() => this.tone(this._vary(233, 5), 0.12, 0.32, 'sine', 0.08), 95);
           break;
         }
 
-        // Subir de nivel: fanfarria festiva de campanas + doble tambora
+        // Subir de nivel: impacto grave + escala festiva de campanas
         case 'levelUp': {
+          this.sub(65, 0.5, 0.75);
           const notes = [261.63, 329.63, 392.0, 523.25, 659.25, 783.99, 1046.5];
-          notes.forEach((f, i) => {
-            setTimeout(() => this.bell(this._vary(f, 6), 0.10, 2.0), i * 62);
-          });
-          this.drum(180, 60, 0.3, 0.25);
-          setTimeout(() => this.drum(120, 45, 0.34, 0.4), 430);
+          notes.forEach((f, i) => setTimeout(() => this.bell(this._vary(f, 6), 0.10, 2.0), i * 64));
+          setTimeout(() => this.sub(95, 0.3, 0.5), 470);
           break;
         }
 
