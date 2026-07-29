@@ -256,6 +256,26 @@
 .dsq-dato-t{font:900 12px/1 'Sora','Instrument Sans',sans-serif;color:#FFCF6B;letter-spacing:1.5px;margin-bottom:6px}
 .dsq-dato-x{font:600 12px/1.5 'Instrument Sans',sans-serif;color:rgba(245,242,235,.74)}
 
+/* ═══════════════ FONDO ANIMADO CON PROFUNDIDAD (AnimBg) ═══════════════ */
+.abg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.plan-scroll,.plan-onb,.prosell-scroll,.prosell-cta-bar{position:relative;z-index:1}
+.abg-orb{position:absolute;border-radius:50%;filter:blur(50px);mix-blend-mode:screen;opacity:.5;will-change:transform}
+.abg-orb--1{width:62vw;height:62vw;max-width:440px;max-height:440px;top:-12%;left:-14%;animation:abgO1 19s ease-in-out infinite}
+.abg-orb--2{width:52vw;height:52vw;max-width:380px;max-height:380px;bottom:-10%;right:-12%;animation:abgO2 23s ease-in-out infinite}
+.abg-orb--3{width:42vw;height:42vw;max-width:320px;max-height:320px;top:36%;left:42%;opacity:.32;animation:abgO3 27s ease-in-out infinite}
+@keyframes abgO1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20%,14%) scale(1.16)}}
+@keyframes abgO2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-18%,-15%) scale(1.1)}}
+@keyframes abgO3{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-15%,11%) scale(1.13)}66%{transform:translate(13%,-9%) scale(.95)}}
+.abg-grid{position:absolute;inset:-2px;opacity:.06;
+  background-image:linear-gradient(var(--a) 1px,transparent 1px),linear-gradient(90deg,var(--a) 1px,transparent 1px);background-size:46px 46px;
+  -webkit-mask:radial-gradient(ellipse at 50% 28%,#000,transparent 78%);mask:radial-gradient(ellipse at 50% 28%,#000,transparent 78%);animation:abgGrid 42s linear infinite}
+@keyframes abgGrid{0%{background-position:0 0}100%{background-position:46px 92px}}
+.abg-stars{position:absolute;inset:0}
+.abg-stars i{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.55);animation:abgTwinkle ease-in-out infinite}
+@keyframes abgTwinkle{0%,100%{opacity:.1}50%{opacity:.8}}
+.abg-vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 32%,transparent 46%,rgba(0,0,0,.5) 100%)}
+@media (prefers-reduced-motion:reduce){.abg-orb,.abg-grid,.abg-stars i{animation:none}}
+
 /* ═══════════════ PANKEY PRO ═══════════════ */
 /* CTA dorado compartido */
 .pro-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 26px;border-radius:15px;border:none;cursor:pointer;font-family:inherit;
@@ -429,6 +449,62 @@
 .plan-day__s{font:700 8.5px/1 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55)}
 .plan-edit{width:100%;margin-top:20px;padding:13px;border-radius:13px;border:1px solid rgba(255,255,255,.14);background:transparent;color:rgba(246,241,242,.7);font:800 13px/1 'Instrument Sans',sans-serif;cursor:pointer;font-family:inherit}
 @media (prefers-reduced-motion:reduce){.csab-hero,.csab-item,.csab-hero__aura,.csab-hero__dna,.csab-hero__bar i,.plan-pred__fill{animation:none}}
+
+/* ── Oráculo Vocacional (banner místico) ── */
+.orac-hero{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;width:100%;text-align:left;border-radius:18px;padding:15px 16px;margin-bottom:14px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(120deg,rgba(124,58,237,.3),rgba(34,211,238,.14) 72%,rgba(255,255,255,.03));border:1px solid rgba(192,132,252,.42);
+  box-shadow:0 16px 40px -16px rgba(124,58,237,.6),inset 0 1px 0 rgba(255,255,255,.1);transition:transform .12s}
+.orac-hero:active{transform:scale(.99)}
+.orac-hero__aura{position:absolute;left:-10%;top:-60%;width:55%;height:220%;pointer-events:none;background:radial-gradient(circle,rgba(192,132,252,.42),transparent 66%);animation:oracAura 5s ease-in-out infinite}
+@keyframes oracAura{0%,100%{opacity:.5;transform:translateX(0)}50%{opacity:.95;transform:translateX(35%)}}
+.orac-hero__i{position:relative;width:56px;height:56px;flex-shrink:0;display:grid;place-items:center}
+.orac-hero__orb{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 38% 32%,rgba(240,230,255,.92),rgba(168,85,247,.55) 55%,rgba(88,28,135,.6));
+  box-shadow:0 0 22px rgba(168,85,247,.7),inset 0 0 12px rgba(255,255,255,.3);animation:oracOrb 4s ease-in-out infinite}
+@keyframes oracOrb{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.05)}}
+.orac-hero__spark{position:absolute;width:5px;height:5px;border-radius:50%;background:#EAD8FF;box-shadow:0 0 8px #C084FC;animation:oracSpark 2.4s ease-in-out infinite}
+.orac-hero__spark:nth-child(1){top:2px;right:6px}
+.orac-hero__spark:nth-child(2){bottom:3px;left:1px}
+.orac-hero__spark:nth-child(3){top:22px;right:-3px}
+@keyframes oracSpark{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1)}}
+.orac-hero__tx{flex:1;min-width:0;position:relative}
+.orac-hero__k{font:900 9.5px/1.3 'Instrument Sans',sans-serif;letter-spacing:1.5px;color:rgba(216,180,254,.95)}
+.orac-hero__t{font:800 17px/1.15 'Sora','Instrument Sans',sans-serif;color:#F6F1F2;margin-top:2px}
+.orac-hero__s{font:600 11px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.6);margin-top:3px}
+.orac-hero__go{position:relative;flex-shrink:0;font:900 18px/1 'Instrument Sans',sans-serif;color:#C084FC}
+
+/* ── Sensei Ilimitado (chat) ── */
+.sen-wrap{position:fixed;inset:0;z-index:99992;display:flex;flex-direction:column}
+.sen-head{position:relative;z-index:1;display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 14px 12px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(10,20,36,.92),rgba(10,20,36,.4))}
+.sen-x{width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,.08);display:grid;place-items:center;cursor:pointer;flex-shrink:0}
+.sen-head__id{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+.sen-head__av{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:rgba(92,184,255,.16);box-shadow:inset 0 0 0 1px rgba(92,184,255,.4)}
+.sen-head__n{font:800 15px/1.1 'Instrument Sans',sans-serif;color:#F6F1F2}
+.sen-head__st{font:600 10.5px/1.2 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55);margin-top:2px}
+.sen-deb{flex-shrink:0;padding:8px 14px;border-radius:99px;border:1.5px solid rgba(92,184,255,.4);background:rgba(92,184,255,.08);color:#9FD8FF;font:800 12px/1 'Instrument Sans',sans-serif;cursor:pointer;font-family:inherit}
+.sen-deb.on{background:linear-gradient(90deg,#5CB8FF,#3B82F6);border-color:transparent;color:#06263f}
+.sen-msgs{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px;display:flex;flex-direction:column;gap:10px}
+.sen-empty{text-align:center;margin:auto;max-width:290px;padding:20px}
+.sen-empty__av{display:inline-grid;place-items:center;width:78px;height:78px;border-radius:22px;background:rgba(92,184,255,.14);box-shadow:inset 0 0 0 1px rgba(92,184,255,.34);filter:drop-shadow(0 0 20px rgba(92,184,255,.4));margin-bottom:14px}
+.sen-empty__h{font:800 19px/1.25 'Sora','Instrument Sans',sans-serif;color:#F6F1F2;text-wrap:balance}
+.sen-empty__s{font:600 12.5px/1.55 'Instrument Sans',sans-serif;color:rgba(246,241,242,.6);margin-top:8px;text-wrap:balance}
+.sen-b{max-width:82%;padding:11px 14px;border-radius:16px;font:500 13.5px/1.5 'Instrument Sans',sans-serif;animation:senIn .35s cubic-bezier(.2,1,.3,1) both;overflow-wrap:break-word;white-space:pre-wrap}
+.sen-b b{font-weight:800;color:#fff}
+.sen-b--user{align-self:flex-end;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;border-bottom-right-radius:5px}
+.sen-b--sensei{align-self:flex-start;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:rgba(246,241,242,.92);border-bottom-left-radius:5px}
+@keyframes senIn{0%{opacity:0;transform:translateY(8px) scale(.98)}100%{opacity:1;transform:none}}
+.sen-typing{display:flex;gap:5px;align-items:center;width:auto}
+.sen-typing i{width:7px;height:7px;border-radius:50%;background:#9FD8FF;animation:senDot 1.2s ease-in-out infinite}
+.sen-typing i:nth-child(2){animation-delay:.2s}.sen-typing i:nth-child(3){animation-delay:.4s}
+@keyframes senDot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.sen-sug{position:relative;z-index:1;display:flex;gap:8px;padding:0 14px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sen-chip{flex-shrink:0;padding:9px 14px;border-radius:99px;border:1px solid rgba(92,184,255,.34);background:rgba(92,184,255,.08);color:#CDE7FF;font:700 12px/1.2 'Instrument Sans',sans-serif;cursor:pointer;white-space:nowrap;font-family:inherit}
+.sen-input{position:relative;z-index:1;display:flex;gap:9px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,rgba(5,11,22,.92) 34%)}
+.sen-field{flex:1;padding:13px 16px;border-radius:15px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#F6F1F2;font:500 14px/1 'Instrument Sans',sans-serif;font-family:inherit;outline:none}
+.sen-field::placeholder{color:rgba(246,241,242,.4)}
+.sen-send{width:48px;height:48px;flex-shrink:0;border-radius:14px;border:none;cursor:pointer;display:grid;place-items:center;background:linear-gradient(135deg,#5CB8FF,#3B82F6);box-shadow:0 6px 16px -4px rgba(59,130,246,.6)}
+.sen-send:disabled{opacity:.4;cursor:not-allowed}
+@media (prefers-reduced-motion:reduce){.orac-hero__aura,.orac-hero__orb,.orac-hero__spark,.sen-b{animation:none}}
 
 /* ── Paywall del Centro del Sabio (no-Pro) ── */
 .csablock{position:relative;min-height:70vh;border-radius:18px;overflow:hidden}

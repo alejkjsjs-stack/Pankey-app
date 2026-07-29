@@ -3777,15 +3777,9 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         {(() => {
           const lvlH = computeLevel(appState.xp || 0);
           const R = 14, CIRC = 2 * Math.PI * R;
-          const eInfo = getEnergyNow(appState);
-          const enColor = eInfo.unlimited ? '#A78BFA' : eInfo.energy <= 1 ? '#EF4444' : C.accent;
           return (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {/* Energía (Módulo 2) → abre el modal de energía / Pro */}
-              <button onClick={() => setEnergyModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: `${enColor}18`, border: `1px solid ${enColor}40`, borderRadius: 12, padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill={enColor} style={{ display: 'block' }}><path d="M13 2 L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-                <span style={{ fontSize: 13, fontWeight: 900, color: enColor, fontVariantNumeric: 'tabular-nums' }}>{eInfo.unlimited ? '∞' : eInfo.energy}</span>
-              </button>
+              {/* (Energía eliminada: sin límite) */}
               {/* Empanadas con count-up → abre la Tienda Real */}
               <button onClick={() => setTiendaRealOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${C.amberMid}15`, border: `1px solid ${C.amberMid}35`, borderRadius: 12, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>
                 <PkIc n="empanada" s={14} c={C.amberMid} />
@@ -9607,6 +9601,36 @@ FORMATO DE RESPUESTA OBLIGATORIO (Devuelve SOLO un array JSON válido, sin markd
   }
 }
 
+// Chat libre con el Sensei (Pro): pregúntale CUALQUIER cosa del ICFES + Modo Debate socrático.
+async function fetchSenseiChat(history, debate) {
+  if (!GEMINI_API_KEY) throw new Error("Falta la Llave Maestra de IA.");
+  const convo = history.map(m => `${m.role === 'user' ? 'Alumno' : 'Sensei'}: ${m.text}`).join('\n');
+  const modo = debate
+    ? `MODO DEBATE (método socrático): NO des la respuesta directa. Guíalo con UNA sola pregunta a la vez para que ÉL llegue solo al concepto. Solo si ya lo logró o se frustra mucho, remata con la explicación corta.`
+    : `MODO EXPLICACIÓN: explícale claro, corto y con una analogía colombiana. Ve al grano.`;
+  const prompt = `Eres "El Sabio", tutor colombiano del ICFES Saber 11: brillante, cálido y cercano; hablas con parceros.
+${modo}
+
+REGLAS:
+- Respuesta CORTA (máx 85 palabras). Nada de introducciones largas.
+- Sin encabezados markdown (nada de ###). Puedes usar **negritas** para lo clave y viñetas simples con "-".
+- Solo temas del ICFES/estudio. Si te preguntan otra cosa, redirígelo con cariño al estudio.
+- Tono colombiano natural, sin exagerar.
+
+Conversación hasta ahora:
+${convo}
+Sensei:`;
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: debate ? 0.72 : 0.6, maxOutputTokens: 420 } }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || "El Sensei no responde.");
+  const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!txt) throw new Error("Respuesta vacía del Sensei.");
+  return txt.trim();
+}
+
 async function fetchSenseiAdvice(question, userAnswer, correctAnswer, chatHistory = []) {
   if (!GEMINI_API_KEY) throw new Error("Falta la Llave Maestra de IA.");
   const historyText = chatHistory.map(m => `${m.role === 'user' ? 'Alumno' : 'Sensei'}: ${m.text}`).join('\n');
@@ -12318,16 +12342,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
               {appState.equipped?.title?.name || 'Iniciado'}
             </div>
           </div>
-          {(() => {
-            const eInfo = getEnergyNow(appState);
-            return (
-              <button className="glass glass--en" onClick={() => { FX.play('tap'); onOpenEnergy?.(); }}
-                style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}><path d="M13 2 L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{eInfo.unlimited ? '∞' : eInfo.energy}</span>
-              </button>
-            );
-          })()}
+          {/* (Energía eliminada: sin límite) */}
           <button className="glass" onClick={() => { FX.play('tap'); onOpenTienda?.(); }}
             style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
             <PkIc n="empanada" s={15} c="#FFCF6B"/>
@@ -12793,6 +12808,35 @@ function ResultadosShow({ result, appState, onDetalle, onRetry, onBack }) {
   );
 }
 
+// Fondo animado con PROFUNDIDAD (orbes que derivan + malla + polvo estelar), cambia de estilo por modo.
+const ABG_VARIANTS = {
+  violet: { a: '#A78BFA', b: '#7C3AED', c1: '#241247', c2: '#120a24', c3: '#080413' },
+  fire:   { a: '#FF8A4C', b: '#FF2E4C', c1: '#361310', c2: '#1a0a08', c3: '#080403' },
+  blue:   { a: '#5CB8FF', b: '#3B82F6', c1: '#0e2340', c2: '#0a1424', c3: '#050b16' },
+  gold:   { a: '#FFE7A2', b: '#E0A93E', c1: '#2e1c10', c2: '#1a1008', c3: '#0a0603' },
+  mystic: { a: '#C084FC', b: '#22D3EE', c1: '#1e1040', c2: '#0f0a24', c3: '#070512' },
+};
+function AnimBg({ variant = 'violet' }) {
+  const V = ABG_VARIANTS[variant] || ABG_VARIANTS.violet;
+  const stars = useMemo(() => Array.from({ length: 26 }, (_, i) => ({
+    left: (i * 53 + 7) % 100, top: (i * 37 + 11) % 100, s: 1 + (i % 3), del: (i % 10) * 0.4, dur: 2.5 + (i % 5),
+  })), []);
+  return (
+    <div className="abg" style={{ '--a': V.a, '--b': V.b, background: `radial-gradient(120% 90% at 50% 0%, ${V.c1} 0%, ${V.c2} 48%, ${V.c3} 100%)` }} aria-hidden="true">
+      <span className="abg-orb abg-orb--1" style={{ background: `radial-gradient(circle, ${V.a}, transparent 70%)` }} />
+      <span className="abg-orb abg-orb--2" style={{ background: `radial-gradient(circle, ${V.b}, transparent 70%)` }} />
+      <span className="abg-orb abg-orb--3" style={{ background: `radial-gradient(circle, ${V.a}, transparent 72%)` }} />
+      <span className="abg-grid" />
+      <div className="abg-stars">
+        {stars.map((s, i) => (
+          <i key={i} style={{ left: `${s.left}%`, top: `${s.top}%`, width: s.s, height: s.s, animationDelay: `${s.del}s`, animationDuration: `${s.dur}s` }} />
+        ))}
+      </div>
+      <span className="abg-vig" />
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════
 //  PANKEY PRO — "El Sabio que te conoce"
 // ═════════════════════════════════════════════
@@ -12822,7 +12866,7 @@ const PRO_FUNCS = [
   { id:'adn',     pic:'adn',     name:'ADN del ICFES',        desc:'Tu análisis más profundo: por subtema y patrones de error.', color:'#A78BFA', ready:true },
   { id:'plan',    pic:'plan',    name:'Plan de Batalla',      desc:'Fecha, meta y minutos → tu camino diario al puntaje.',       color:'#FF6B54', ready:true },
   { id:'srs',     pic:'srs',     name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:false },
-  { id:'sensei',  pic:'sensei',  name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:false },
+  { id:'sensei',  pic:'sensei',  name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:true },
   { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
   { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
   { id:'banco',   pic:'banco',   name:'Banco por Tema',       desc:'Preguntas de UN subtema + años anteriores.',                 color:'#C084FC', ready:false },
@@ -12881,8 +12925,9 @@ function AdnIcfes({ C, appState, user, onClose, onPractice }) {
     return (
       <Portal>
         <div className="adn-wrap adn-wrap--empty">
+          <AnimBg variant="violet" />
           <button className="adn-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
-          <div style={{ textAlign: 'center', padding: 28, maxWidth: 320 }}>
+          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: 28, maxWidth: 320 }}>
             <div style={{ filter: 'drop-shadow(0 0 24px rgba(167,139,250,.6))', marginBottom: 14 }}><PkIc n="sabio" s={76} c="#A78BFA" /></div>
             <div className="serif" style={{ fontSize: 22, fontWeight: 800, color: '#F6F1F2', marginBottom: 8 }}>Aún no puedo leer tu ADN</div>
             <div style={{ fontSize: 13.5, color: 'rgba(246,241,242,.66)', lineHeight: 1.6, marginBottom: 22 }}>
@@ -13026,6 +13071,7 @@ function AdnIcfes({ C, appState, user, onClose, onPractice }) {
   return (
     <Portal>
       <div className="adn-wrap" onClick={(e) => { if (e.clientX < window.innerWidth * 0.28) go(-1); else go(1); }}>
+        <AnimBg variant="violet" />
         <div className="adn-bars">{cards.map((_, i) => <span key={i} className={i <= step ? 'on' : ''} />)}</div>
         <button className="adn-x" onClick={(e) => { e.stopPropagation(); onClose(); }}><PkIc n="x" s={18} c="#F6F1F2" /></button>
         <div key={step} className="adn-card">{cards[step]}</div>
@@ -13041,6 +13087,7 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
   return (
     <Portal>
       <div className="prosell">
+        <AnimBg variant="gold" />
         <button className="prosell-x" onClick={onClose}><PkIc n="x" s={20} c="#F6F1F2" /></button>
         <div className="prosell-scroll">
           {/* Encabezado */}
@@ -13211,6 +13258,25 @@ function CentroSabioLock({ C, appState, user, onOpenPro }) {
   );
 }
 
+// Oráculo Vocacional — banner prominente y místico (gratis, para todos).
+function OraculoHero({ onOpen }) {
+  return (
+    <button className="orac-hero" onClick={() => { FX.play('open'); FX.vibrate('medium'); onOpen?.(); }}>
+      <span className="orac-hero__aura" />
+      <span className="orac-hero__i" aria-hidden="true">
+        {[0, 1, 2].map(i => <span key={i} className="orac-hero__spark" style={{ animationDelay: `${i * 0.8}s` }} />)}
+        <span className="orac-hero__orb"><PkIc n="eye" s={26} c="#F0E6FF" /></span>
+      </span>
+      <div className="orac-hero__tx">
+        <div className="orac-hero__k">EL ORÁCULO VOCACIONAL</div>
+        <div className="orac-hero__t">Descubre qué carrera es para ti</div>
+        <div className="orac-hero__s">El Sabio lee tu perfil y te revela tu camino.</div>
+      </div>
+      <span className="orac-hero__go">→</span>
+    </button>
+  );
+}
+
 // Plan de Batalla (Pro) — onboarding + calendario + predicción de puntaje.
 function PlanBatalla({ C, appState, setAppState, user, onClose, onPractice }) {
   const plan = appState.proPlan || null;
@@ -13231,6 +13297,7 @@ function PlanBatalla({ C, appState, setAppState, user, onClose, onPractice }) {
     return (
       <Portal>
         <div className="plan-wrap">
+          <AnimBg variant="fire" />
           <button className="plan-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
           <div className="plan-onb">
             <span className="plan-onb__ic"><ProIcon id="plan" s={44} c="#FF8A6B" /></span>
@@ -13284,6 +13351,7 @@ function PlanBatalla({ C, appState, setAppState, user, onClose, onPractice }) {
   return (
     <Portal>
       <div className="plan-wrap plan-wrap--view">
+        <AnimBg variant="fire" />
         <button className="plan-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
         <div className="plan-scroll">
           <div className="plan-badge"><ProIcon id="plan" s={13} c="#3a2405" /> PLAN DE BATALLA</div>
@@ -13345,6 +13413,74 @@ function PlanBatalla({ C, appState, setAppState, user, onClose, onPractice }) {
             Ajustar mi plan
           </button>
           <div style={{ height: 24 }} />
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
+// Sensei Ilimitado (Pro) — chat libre con IA + Modo Debate socrático.
+function SenseiChat({ C, appState, user, onClose }) {
+  const [debate, setDebate] = useState(false);
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef(null);
+  useEffect(() => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs, loading]);
+
+  const enviar = async (texto) => {
+    const t = (texto != null ? texto : input).trim();
+    if (!t || loading) return;
+    setInput('');
+    const nueva = [...msgs, { role: 'user', text: t }];
+    setMsgs(nueva); setLoading(true); FX.play('tap');
+    try {
+      const r = await fetchSenseiChat(nueva, debate);
+      setMsgs(m => [...m, { role: 'sensei', text: r }]); FX.play('success');
+    } catch (e) {
+      setMsgs(m => [...m, { role: 'sensei', text: 'Uy parcero, se me cruzó el pensamiento. Intenta otra vez en un momentico.' }]);
+    } finally { setLoading(false); }
+  };
+
+  const SUG = debate
+    ? ['¿Por qué la moda no siempre representa bien los datos?', 'Guíame para entender la Ley de Newton', 'Ayúdame a razonar un silogismo']
+    : ['¿Diferencia entre moda y mediana?', 'Explícame metáfora vs símil', '¿Qué es el tercer condicional en inglés?'];
+  const fmt = (txt) => String(txt).split(/(\*\*[^*]+\*\*)/g).map((p, i) => p.startsWith('**') && p.endsWith('**') ? <b key={i}>{p.slice(2, -2)}</b> : p);
+
+  return (
+    <Portal>
+      <div className="sen-wrap">
+        <AnimBg variant="blue" />
+        <div className="sen-head">
+          <button className="sen-x" onClick={onClose}><PkIc n="left" s={18} c="#F6F1F2" /></button>
+          <div className="sen-head__id">
+            <span className="sen-head__av"><ProIcon id="sensei" s={20} c="#5CB8FF" /></span>
+            <div><div className="sen-head__n">El Sabio</div><div className="sen-head__st">{debate ? 'Modo Debate · te guía' : 'Sensei ilimitado'}</div></div>
+          </div>
+          <button className={`sen-deb${debate ? ' on' : ''}`} onClick={() => { FX.play('tap'); FX.vibrate('light'); setDebate(d => !d); }}>Debate</button>
+        </div>
+
+        <div className="sen-msgs" ref={scrollRef}>
+          {msgs.length === 0 && (
+            <div className="sen-empty">
+              <span className="sen-empty__av"><ProIcon id="sensei" s={42} c="#5CB8FF" /></span>
+              <div className="sen-empty__h">Pregúntame lo que sea del ICFES</div>
+              <div className="sen-empty__s">{debate ? 'En Modo Debate te guío con preguntas para que llegues solo.' : 'Cualquier duda o concepto. Te lo explico claro y al grano.'}</div>
+            </div>
+          )}
+          {msgs.map((m, i) => (
+            <div key={i} className={`sen-b sen-b--${m.role}`} style={{ animationDelay: '0s' }}>{m.role === 'sensei' ? fmt(m.text) : m.text}</div>
+          ))}
+          {loading && <div className="sen-b sen-b--sensei sen-typing"><i /><i /><i /></div>}
+        </div>
+
+        {msgs.length === 0 && (
+          <div className="sen-sug">{SUG.map((s, i) => <button key={i} className="sen-chip" onClick={() => enviar(s)}>{s}</button>)}</div>
+        )}
+        <div className="sen-input">
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') enviar(); }}
+            placeholder="Escríbele al Sabio…" className="sen-field" />
+          <button className="sen-send" onClick={() => enviar()} disabled={loading || !input.trim()}><PkIc n="right" s={18} c="#06263f" /></button>
         </div>
       </div>
     </Portal>
@@ -13694,6 +13830,7 @@ const SABIO_HYPE = [
 
   return (
     <>
+      <OraculoHero onOpen={() => setIcfesScreen('oracle')} />
       {appState.isPro ? (
         <CentroSabio C={C} appState={appState} user={user} onOpenFunc={abrirFunc} onPractice={() => setIcfesScreen('setup')} />
       ) : (
@@ -13701,6 +13838,7 @@ const SABIO_HYPE = [
       )}
       {proFunc === 'adn' && <AdnIcfes C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
       {proFunc === 'plan' && <PlanBatalla C={C} appState={appState} setAppState={setAppState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
+      {proFunc === 'sensei' && <SenseiChat C={C} appState={appState} user={user} onClose={() => setProFunc(null)} />}
       {overlays}
     </>
   );
