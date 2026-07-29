@@ -9559,6 +9559,7 @@ ES OBLIGATORIO que AL MENOS LA MITAD de las preguntas tengan el campo "context" 
 Tu ÚNICA tarea es generar exactamente ${count} preguntas de examen NUEVAS y ORIGINALES (nunca repitas preguntas típicas de banco).
 Distribución de materias: ${subjectList}
 Dificultad: ${dificultad}. Formato ICFES real, análisis crítico y pensamiento profundo.
+${opts.tema ? `🎯 FOCO OBLIGATORIO DE SUBTEMA: TODAS las ${count} preguntas deben ser EXCLUSIVAMENTE sobre "${opts.tema}". Varía enunciados, datos y el ángulo, PERO NO te salgas de ese subtema (aquí SÍ es a propósito el mismo subtema; ignora abajo la regla de "subtema diferente").` : ''}
 
 🚫 UNICIDAD OBLIGATORIA (esto es clave):
 - Las ${count} preguntas deben ser TOTALMENTE DISTINTAS entre sí: distinto tema, distinto contexto, distinto enunciado. PROHIBIDO repetir la misma pregunta cambiando una palabra o un número.
@@ -12930,7 +12931,7 @@ const PRO_FUNCS = [
   { id:'sensei',  pic:'sensei',  name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:true },
   { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
   { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
-  { id:'banco',   pic:'banco',   name:'Banco por Tema',       desc:'Preguntas de UN subtema + años anteriores.',                 color:'#C084FC', ready:false },
+  { id:'banco',   pic:'banco',   name:'Banco por Tema',       desc:'Forja preguntas de UN subtema exacto.',                      color:'#C084FC', ready:true },
   { id:'reporte', pic:'reporte', name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:false },
 ];
 
@@ -13548,6 +13549,83 @@ function SenseiChat({ C, appState, user, onClose }) {
   );
 }
 
+// Subtemas por materia para el Banco por Tema (El Taller del Sabio).
+const TEMAS_POR_MATERIA = {
+  'Matemáticas':        ['Álgebra', 'Geometría', 'Estadística y probabilidad', 'Funciones', 'Trigonometría', 'Proporciones y porcentajes'],
+  'Lectura Crítica':    ['Inferencia', 'Intención del autor', 'Función semántica', 'Tipología textual', 'Argumentación', 'Cohesión y coherencia'],
+  'Ciencias Naturales': ['Física: mecánica', 'Física: energía', 'Química: reacciones', 'Biología: célula', 'Ecología', 'Genética'],
+  'Ciencias Sociales':  ['Constitución y democracia', 'Geografía', 'Economía', 'Historia de Colombia', 'Conflicto y paz', 'Derechos humanos'],
+  'Inglés':             ['Vocabulario', 'Tiempos verbales', 'Comprensión de avisos', 'Conectores', 'Condicionales', 'Preposiciones'],
+};
+
+// Banco por Tema (Pro) — "El Taller del Sabio": forja preguntas de un subtema exacto.
+function BancoTema({ C, appState, user, onClose, onForjar }) {
+  const [subject, setSubject] = useState(null);
+  const [tema, setTema] = useState(null);
+  const [count, setCount] = useState(15);
+  const subjects = Object.keys(SUBJECT_META);
+  const temas = subject ? (TEMAS_POR_MATERIA[subject] || []) : [];
+  const listo = subject && tema;
+  return (
+    <Portal>
+      <div className="taller-wrap">
+        <AnimBg variant="mystic" />
+        <button className="taller-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+        <div className="taller-scroll">
+          <div className="taller-badge"><ProIcon id="banco" s={13} c="#2a0e30" /> BANCO POR TEMA</div>
+          <div className="taller-h serif">El Taller del Sabio</div>
+          <div className="taller-s">Forja preguntas de EXACTAMENTE lo que quieres practicar.</div>
+
+          <div className="taller-step">1 · Elige la materia</div>
+          <div className="taller-subs">
+            {subjects.map(s => {
+              const m = SUBJECT_META[s];
+              return (
+                <button key={s} className={`taller-sub${subject === s ? ' on' : ''}`} style={{ '--fc': m.color }}
+                  onClick={() => { FX.play('tap'); setSubject(s); setTema(null); }}>
+                  <span className="taller-sub__dot" style={{ background: m.color }} />{s}
+                </button>
+              );
+            })}
+          </div>
+
+          {subject && (
+            <>
+              <div className="taller-step">2 · Elige el subtema</div>
+              <div className="taller-temas">
+                {temas.map(tm => (
+                  <button key={tm} className={`taller-tema${tema === tm ? ' on' : ''}`} style={{ '--fc': SUBJECT_META[subject].color }}
+                    onClick={() => { FX.play('select'); setTema(tm); }}>{tm}</button>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="taller-step">3 · ¿Cuántas?</div>
+          <div className="taller-counts">
+            {[10, 15, 20].map(n => <button key={n} className={`taller-count${count === n ? ' on' : ''}`} onClick={() => { FX.play('tap'); setCount(n); }}>{n}</button>)}
+          </div>
+
+          {/* Yunque: preview en vivo de lo que se va a forjar */}
+          <div className={`taller-anvil${listo ? ' on' : ''}`}>
+            <span className="taller-anvil__glow" />
+            <div className="taller-anvil__k">VAS A FORJAR</div>
+            <div className="taller-anvil__t">{listo ? <>{count} preguntas de <b style={{ color: SUBJECT_META[subject].color }}>{tema}</b></> : 'Elige materia y subtema…'}</div>
+            {listo && <div className="taller-anvil__s">{subject} · hechas por el Sabio, solo para ti</div>}
+          </div>
+          <div style={{ height: 90 }} />
+        </div>
+        <div className="taller-cta-bar">
+          <button className={`pro-cta${listo ? '' : ' pro-cta--off'}`} disabled={!listo} style={{ width: '100%' }}
+            onClick={() => { FX.play('open'); onForjar?.(subject, tema, count); }}>
+            Forjar preguntas →
+          </button>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
 function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked, startNonce = 0, onOpenPro }) {
   const [icfesScreen, setIcfesScreen] = useState('dashboard');
   const [proFunc, setProFunc] = useState(null); // función Pro abierta (ej. 'adn')
@@ -13622,14 +13700,14 @@ const SABIO_HYPE = [
     setSabioComment({ msg, tone, key: Date.now() });
     setTimeout(() => setSabioComment(null), 2600);
   };
-  const handleBeginTest = async (subjects, count) => {
+  const handleBeginTest = async (subjects, count, opts = {}) => {
     // Módulo 2 — Energía: cada simulacro gasta 1 ⚡ (Pro es ilimitado). Si está en 0, bloquea.
     if (onConsumeEnergy && !onConsumeEnergy()) { FX.play('error'); onEnergyBlocked?.(); return; }
     setLoading(true);
     FX.play('conjure'); // El Sabio empieza a tejer las preguntas
     try {
       let qs;
-      try { qs = await fetchGeminiQuestions(subjects, count); }
+      try { qs = await fetchGeminiQuestions(subjects, count, opts); }
       catch(e) {
         const filtered = ICFES_QUESTIONS.filter(q => subjects.includes(q.subject));
         const shuffled = [...filtered].sort(() => Math.random() - 0.5);
@@ -13900,6 +13978,8 @@ const SABIO_HYPE = [
       {proFunc === 'adn' && <AdnIcfes C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
       {proFunc === 'plan' && <PlanBatalla C={C} appState={appState} setAppState={setAppState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
       {proFunc === 'sensei' && <SenseiChat C={C} appState={appState} user={user} onClose={() => setProFunc(null)} />}
+      {proFunc === 'banco' && <BancoTema C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
+        onForjar={(subject, tema, count) => { setProFunc(null); handleBeginTest([subject], count, { tema }); }} />}
       {overlays}
     </>
   );
