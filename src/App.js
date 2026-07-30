@@ -13224,57 +13224,111 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
 // Preview del hub (compartido por el Centro del Sabio y su paywall borroso).
 function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
   const d = useMemo(() => computeAdn(appState), [appState]);
+  const arch = useMemo(() => computeArchivo(appState), [appState]);
   const nombre = (user?.name || 'crack').split(' ')[0];
-  const adnF = PRO_FUNCS[0];
-  const otras = PRO_FUNCS.slice(1);
-  const bar = (pct, color) => (
-    <span className="csab-hero__bar"><i style={{ width: `${pct}%`, background: color }} /></span>
-  );
-  const click = (f) => !preview && (FX.play(f.ready ? 'open' : 'tap'), onOpenFunc?.(f));
+  const F = {}; PRO_FUNCS.forEach(f => { F[f.id] = f; });
   const Tag = preview ? 'div' : 'button';
+  const p = (id) => preview ? undefined : () => { FX.play(F[id].ready ? 'open' : 'tap'); onOpenFunc?.(F[id]); };
+
+  const plan = appState.proPlan;
+  let planPrev = null;
+  if (plan) {
+    const dias = Math.max(0, Math.ceil((new Date(plan.examISO + 'T00:00:00') - new Date()) / 86400000));
+    const base = d.avg || 250;
+    const factor = Math.min(1, (plan.minutes / 60) * 0.55 + Math.min(dias, 60) / 130);
+    const proy = Math.min(500, Math.max(base, Math.round(base + (plan.meta - base) * factor)));
+    planPrev = { dias, proy, meta: plan.meta };
+  }
+  const bancoChips = ['Geometría', 'Inferencia', 'Condicionales', 'Célula'];
+
   return (
     <>
       <div className="csab-head">
-        <div className="csab-badge"><ProIcon id="adn" s={13} c="#3a2405" /> PANKEY PRO</div>
+        <div className="csab-badge"><ProIcon id="adn" s={12} c="#FFD98A" /> PANKEY PRO</div>
         <div className="csab-hi serif">El Centro del Sabio</div>
         <div className="csab-sub">Hola {nombre}, tu preparador personal ya tiene todo listo.</div>
       </div>
 
-      {/* HERO — ADN grande con preview animado */}
-      <Tag className="csab-hero" onClick={preview ? undefined : () => click(adnF)}>
-        <span className="csab-hero__aura" />
-        <div className="csab-hero__top">
-          <span className="csab-hero__dna"><ProIcon id="adn" s={52} c="#C4B5FD" /></span>
+      {/* ADN — hero con barras */}
+      <Tag className="hub-adn" onClick={p('adn')}>
+        <span className="hub-adn__aura" />
+        <div className="hub-adn__top">
+          <span className="hub-ic hub-ic--adn"><ProIcon id="adn" s={30} c="#C4B5FD" /></span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="csab-hero__k">ASÍ VA TU ADN, {String(nombre).toUpperCase()}</div>
-            <div className="csab-hero__perfil">{d.perfil.name}</div>
+            <div className="hub-k" style={{ color: 'rgba(196,181,253,.9)' }}>ASÍ VA TU ADN, {String(nombre).toUpperCase()}</div>
+            <div className="hub-adn__perfil">{d.perfil.name}</div>
           </div>
         </div>
-        <div className="csab-hero__mini">
+        <div className="hub-adn__mini">
           {d.ordenados.slice(0, 3).map(a => (
-            <div key={a.subject} className="csab-hero__row">
-              <span className="csab-hero__lab">{a.subject}</span>
-              {bar(a.pct, a.color)}
-              <span className="csab-hero__pct" style={{ color: a.color }}>{a.pct}%</span>
+            <div key={a.subject} className="hub-adn__row">
+              <span className="hub-adn__lab">{a.subject}</span>
+              <span className="hub-adn__bar"><i style={{ width: `${a.pct}%`, background: a.color }} /></span>
+              <span className="hub-adn__pct" style={{ color: a.color }}>{a.pct}%</span>
             </div>
           ))}
-          {d.ordenados.length === 0 && <div className="csab-hero__lab" style={{ opacity: .7 }}>Haz un simulacro y aquí verás tu perfil.</div>}
+          {d.ordenados.length === 0 && <div className="hub-adn__lab" style={{ opacity: .7 }}>Haz un simulacro y verás tu perfil.</div>}
         </div>
-        <span className="csab-hero__cta">Ver mi ADN completo <b>→</b></span>
+        <span className="hub-adn__cta">Ver mi ADN completo <b>→</b></span>
       </Tag>
 
-      {/* Resto de funciones — lista variada, cada una con su icono y color */}
-      <div className="csab-list">
-        {otras.map((f, i) => (
-          <Tag key={f.id} className={`csab-item${f.ready ? '' : ' csab-item--soon'}`} style={{ '--fc': f.color, animationDelay: `${0.05 * i}s` }}
-            onClick={preview ? undefined : () => click(f)}>
-            <span className="csab-item__stripe" />
-            <span className="csab-item__ic" style={{ background: `${f.color}18` }}><ProIcon id={f.pic} s={25} c={f.color} /></span>
-            <div className="csab-item__tx">
-              <div className="csab-item__n">{f.name}</div>
-              <div className="csab-item__d">{f.desc}</div>
-            </div>
-            <span className="csab-item__r" style={f.ready ? { color: f.color } : undefined}>{f.ready ? '→' : 'Pronto'}</span>
+      {/* Dúo: Plan + Archivo (previews distintas, lado a lado) */}
+      <div className="hub-duo">
+        <Tag className="hub-tile" style={{ '--fc': F.plan.color }} onClick={p('plan')}>
+          <span className="hub-ic hub-ic--sm"><ProIcon id="plan" s={20} c={F.plan.color} /></span>
+          <div className="hub-tile__name">Plan de Batalla</div>
+          {planPrev ? (
+            <>
+              <div className="hub-tile__big">{planPrev.dias}<span> días</span></div>
+              <div className="hub-tile__sub">Proyección <b style={{ color: planPrev.proy >= planPrev.meta ? '#34D399' : '#FFCF6B' }}>{planPrev.proy}</b> / {planPrev.meta}</div>
+              <div className="hub-mbar"><i style={{ width: `${Math.min(100, (planPrev.proy / 500) * 100)}%`, background: F.plan.color }} /></div>
+            </>
+          ) : (
+            <><div className="hub-tile__empty">Arma tu camino al examen</div><div className="hub-tile__go" style={{ color: F.plan.color }}>Empezar →</div></>
+          )}
+        </Tag>
+        <Tag className="hub-tile" style={{ '--fc': F.srs.color }} onClick={p('srs')}>
+          <span className="hub-ic hub-ic--sm"><ProIcon id="srs" s={20} c={F.srs.color} /></span>
+          <div className="hub-tile__name">Archivo del Sabio</div>
+          {arch.total > 0 ? (
+            <>
+              <div className="hub-tile__big" style={{ color: '#6EE7B7' }}>{arch.dueCount}<span> hoy</span></div>
+              <div className="hub-srs__dots">{arch.fichas.slice(0, 6).map((f, i) => <i key={i} style={{ background: f.color }} />)}</div>
+              <div className="hub-tile__sub">{arch.total} fichas · {arch.avg}%</div>
+            </>
+          ) : (
+            <><div className="hub-tile__empty">Guardo lo que te cuesta</div><div className="hub-tile__go" style={{ color: F.srs.color }}>Ver →</div></>
+          )}
+        </Tag>
+      </div>
+
+      {/* Sensei — burbuja de chat */}
+      <Tag className="hub-sensei" style={{ '--fc': F.sensei.color }} onClick={p('sensei')}>
+        <div className="hub-row">
+          <span className="hub-ic hub-ic--sensei"><ProIcon id="sensei" s={24} c="#5CB8FF" /></span>
+          <div style={{ flex: 1, minWidth: 0 }}><div className="hub-t">Sensei Ilimitado</div><div className="hub-d">Pregúntale lo que sea, 24/7</div></div>
+          <span className="hub-arrow" style={{ color: '#5CB8FF' }}>→</span>
+        </div>
+        <div className="hub-sensei__bub">“¿Diferencia entre moda y mediana?”<span className="hub-sensei__deb">Modo Debate</span></div>
+      </Tag>
+
+      {/* Banco — chips de subtemas */}
+      <Tag className="hub-banco" style={{ '--fc': F.banco.color }} onClick={p('banco')}>
+        <div className="hub-row">
+          <span className="hub-ic hub-ic--banco"><ProIcon id="banco" s={24} c="#C084FC" /></span>
+          <div style={{ flex: 1, minWidth: 0 }}><div className="hub-t">Banco por Tema</div><div className="hub-d">Forja preguntas de un subtema exacto</div></div>
+          <span className="hub-arrow" style={{ color: '#C084FC' }}>→</span>
+        </div>
+        <div className="hub-banco__chips">{bancoChips.map(c => <span key={c}>{c}</span>)}<span className="hub-banco__more">+8</span></div>
+      </Tag>
+
+      {/* Pronto — trío compacto */}
+      <div className="hub-soon-row">
+        {['diag', 'live', 'reporte'].map(id => (
+          <Tag key={id} className="hub-soon" style={{ '--fc': F[id].color }} onClick={p(id)}>
+            <span className="hub-soon__ic"><ProIcon id={F[id].pic} s={22} c={F[id].color} /></span>
+            <span className="hub-soon__n">{F[id].name}</span>
+            <span className="hub-soon__b">Pronto</span>
           </Tag>
         ))}
       </div>

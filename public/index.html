@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="utf-8" />
@@ -8,9 +8,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <link rel="manifest" href="/manifest.json?v=6" />
-    <link rel="icon" type="image/png" href="/logo192.png?v=6" />
-    <link rel="apple-touch-icon" href="/logo192.png?v=6" />
+    <link rel="manifest" href="/manifest.json?v=7" />
+    <link rel="icon" type="image/png" href="/logo192.png?v=7" />
+    <link rel="apple-touch-icon" href="/logo192.png?v=7" />
 
     <title>Pankey</title>
 
@@ -19,14 +19,14 @@
 
     <style>
       html, body {
-        touch-action: manipulation; /* Mata el zoom al hacer doble toque rápido */
+        touch-action: manipulation; /* Mata el zoom al hacer doble toque rÃ¡pido */
         -webkit-text-size-adjust: 100%;
         overflow: hidden; /* Congela el fondo para que no rebote al llegar al final */
       }
       #root {
         touch-action: pan-x pan-y;
       }
-      /* App nativa: al mantener oprimido NO se selecciona el texto ni sale el menú copiar/compartir */
+      /* App nativa: al mantener oprimido NO se selecciona el texto ni sale el menÃº copiar/compartir */
       * {
         -webkit-user-select: none;
         -moz-user-select: none;
@@ -35,7 +35,7 @@
         -webkit-touch-callout: none;
         -webkit-tap-highlight-color: transparent;
       }
-      /* …excepto donde el usuario SÍ debe poder escribir/seleccionar */
+      /* â€¦excepto donde el usuario SÃ debe poder escribir/seleccionar */
       input, textarea, [contenteditable="true"] {
         -webkit-user-select: text;
         -moz-user-select: text;
@@ -54,7 +54,7 @@
       });
       document.addEventListener('touchstart', function(event) {
           if (event.touches.length > 1) {
-              event.preventDefault(); // Bloquea si detecta más de un dedo en la pantalla
+              event.preventDefault(); // Bloquea si detecta mÃ¡s de un dedo en la pantalla
           }
       }, { passive: false });
     </script>
