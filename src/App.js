@@ -12927,7 +12927,7 @@ function ProIcon({ id, s = 24, c = 'currentColor', sw = 1.7 }) {
 const PRO_FUNCS = [
   { id:'adn',     pic:'adn',     name:'ADN del ICFES',        desc:'Tu análisis más profundo: por subtema y patrones de error.', color:'#A78BFA', ready:true },
   { id:'plan',    pic:'plan',    name:'Plan de Batalla',      desc:'Fecha, meta y minutos → tu camino diario al puntaje.',       color:'#FF6B54', ready:true },
-  { id:'srs',     pic:'srs',     name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:false },
+  { id:'srs',     pic:'srs',     name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:true },
   { id:'sensei',  pic:'sensei',  name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:true },
   { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
   { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
@@ -13626,6 +13626,88 @@ function BancoTema({ C, appState, user, onClose, onForjar }) {
   );
 }
 
+// Repaso con Memoria (SRS) — fichas = competencias flojas, con urgencia por olvido.
+function computeArchivo(appState) {
+  const now = Date.now();
+  const srsState = appState.srsState || {};
+  const fichas = Object.entries(appState.weakStats || {})
+    .filter(([, v]) => v.t >= 3)
+    .map(([key, v]) => {
+      const [subject, nivel] = key.split('·');
+      const pct = v.t ? Math.round(100 * v.c / v.t) : 0;
+      const srs = srsState[key] || null;
+      const due = !srs || (srs.nextReviewTs || 0) <= now;
+      const nextDays = srs ? Math.max(0, Math.ceil(((srs.nextReviewTs || now) - now) / 86400000)) : 0;
+      let urgency = due ? (pct < 55 ? 'hoy' : 'semana') : (nextDays <= 3 ? 'semana' : 'control');
+      if (pct >= 78 && !due) urgency = 'control';
+      return { key, subject, nivel, pct, t: v.t, color: (SUBJECT_META[subject] || {}).color || '#C084FC', due, nextDays, urgency, reviews: (srs && srs.reviews) || 0 };
+    });
+  fichas.sort((a, b) => (a.due !== b.due) ? (a.due ? -1 : 1) : (a.due ? a.pct - b.pct : a.nextDays - b.nextDays));
+  const total = fichas.length;
+  const avg = total ? Math.round(fichas.reduce((s, f) => s + f.pct, 0) / total) : 0;
+  const controladas = fichas.filter(f => f.pct >= 75).length;
+  const dueCount = fichas.filter(f => f.due).length;
+  return { fichas, total, avg, controladas, dueCount };
+}
+
+function ArchivoSabio({ C, appState, user, onClose, onRevisar }) {
+  const a = useMemo(() => computeArchivo(appState), [appState]);
+  const URG = { hoy: { c: '#FF6B6B', l: 'Repasar hoy' }, semana: { c: '#FFCF6B', l: 'Esta semana' }, control: { c: '#34D399', l: 'En control' } };
+  return (
+    <Portal>
+      <div className="arch-wrap">
+        <AnimBg variant="mystic" />
+        <button className="taller-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+        <div className="arch-scroll">
+          <div className="arch-badge"><ProIcon id="srs" s={13} c="#06281c" /> ARCHIVO DEL SABIO</div>
+          <div className="taller-h serif">El Archivo del Sabio</div>
+          <div className="taller-s">Guardo lo que te cuesta y te lo devuelvo justo antes de que lo olvides.</div>
+
+          {a.total === 0 ? (
+            <div className="arch-empty">
+              <span className="arch-empty__ic"><ProIcon id="srs" s={44} c="#34D399" /></span>
+              <div className="arch-empty__h">Tu archivo está limpio</div>
+              <div className="arch-empty__s">Haz simulacros y practica: cada tema que te cueste lo guardo aquí para que lo repases antes del examen.</div>
+            </div>
+          ) : (
+            <>
+              <div className="arch-metrics">
+                <div><b>{a.total}</b><span>fichas</span></div>
+                <div><b style={{ color: '#34D399' }}>{a.avg}%</b><span>retención</span></div>
+                <div><b style={{ color: '#5CB8FF' }}>{a.controladas}</b><span>ya controlas</span></div>
+              </div>
+              {a.dueCount > 0 && (
+                <button className="pro-cta arch-today" style={{ width: '100%' }} onClick={() => { FX.play('open'); onRevisar(a.fichas.find(f => f.due)); }}>
+                  Repasar hoy · {a.dueCount} {a.dueCount === 1 ? 'ficha' : 'fichas'} →
+                </button>
+              )}
+              <div className="arch-list">
+                {a.fichas.map(f => {
+                  const u = URG[f.urgency];
+                  return (
+                    <button key={f.key} className="arch-card" style={{ '--fc': f.color }} onClick={() => { FX.play('tap'); onRevisar(f); }}>
+                      <span className="arch-card__stripe" />
+                      <div className="arch-card__top">
+                        <span className="arch-card__urg" style={{ color: u.c }}><i style={{ background: u.c }} />{u.l}</span>
+                        <span className="arch-card__pct" style={{ color: f.pct < 55 ? '#FF6B6B' : f.pct < 78 ? '#FFCF6B' : '#34D399' }}>{f.pct}%</span>
+                      </div>
+                      <div className="arch-card__n">{f.nivel}</div>
+                      <div className="arch-card__s">{f.subject} · vista {f.t} veces{f.reviews ? ` · ${f.reviews} repaso${f.reviews > 1 ? 's' : ''}` : ''}</div>
+                      <div className="arch-card__bar"><i style={{ width: `${f.pct}%`, background: f.color }} /></div>
+                      <span className="arch-card__go" style={{ color: f.color }}>Repasar →</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <div style={{ height: 24 }} />
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
 function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked, startNonce = 0, onOpenPro }) {
   const [icfesScreen, setIcfesScreen] = useState('dashboard');
   const [proFunc, setProFunc] = useState(null); // función Pro abierta (ej. 'adn')
@@ -13980,6 +14062,15 @@ const SABIO_HYPE = [
       {proFunc === 'sensei' && <SenseiChat C={C} appState={appState} user={user} onClose={() => setProFunc(null)} />}
       {proFunc === 'banco' && <BancoTema C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
         onForjar={(subject, tema, count) => { setProFunc(null); handleBeginTest([subject], count, { tema }); }} />}
+      {proFunc === 'srs' && <ArchivoSabio C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
+        onRevisar={(f) => {
+          if (!f) return;
+          const base = f.pct < 55 ? 1 : f.pct < 78 ? 3 : 7;
+          const ivl = Math.max(1, Math.round(base * (1 + (f.reviews || 0) * 0.5)));
+          setAppState(s => ({ ...s, srsState: { ...(s.srsState || {}), [f.key]: { interval: ivl, nextReviewTs: Date.now() + ivl * 86400000, reviews: (f.reviews || 0) + 1 } } }));
+          setProFunc(null);
+          handleBeginTest([f.subject], 5, { tema: f.nivel });
+        }} />}
       {overlays}
     </>
   );

@@ -536,6 +536,37 @@
 .taller-cta-bar{position:relative;z-index:1;padding:12px 20px calc(14px + env(safe-area-inset-bottom));max-width:420px;margin:0 auto;width:100%;background:linear-gradient(180deg,transparent,rgba(7,5,18,.92) 34%)}
 @media (prefers-reduced-motion:reduce){.taller-temas,.taller-anvil__glow{animation:none}}
 
+/* ── El Archivo del Sabio (SRS) — fichas de archivo ── */
+.arch-wrap{position:fixed;inset:0;z-index:99992;display:flex;flex-direction:column}
+.arch-scroll{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:46px 18px 24px;max-width:440px;margin:0 auto;width:100%}
+.arch-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:99px;background:linear-gradient(90deg,#A7F3D0,#34D399);color:#06281c;font:900 10px/1 'Instrument Sans',sans-serif;letter-spacing:1.5px}
+.arch-metrics{display:flex;gap:9px;margin:18px 0 14px}
+.arch-metrics>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:13px 6px;border-radius:15px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)}
+.arch-metrics b{font:900 23px/1 'Sora','Instrument Sans',sans-serif;color:#F6F1F2}
+.arch-metrics span{font:700 9px/1.2 'Instrument Sans',sans-serif;color:rgba(246,241,242,.5);text-transform:uppercase;letter-spacing:.5px}
+.arch-today{margin-bottom:18px;animation:archPulse 2.6s ease-in-out infinite}
+@keyframes archPulse{0%,100%{box-shadow:0 10px 26px -8px rgba(52,211,153,.5),inset 0 1px 0 rgba(255,255,255,.6)}50%{box-shadow:0 12px 34px -6px rgba(52,211,153,.85),inset 0 1px 0 rgba(255,255,255,.6)}}
+.arch-list{display:flex;flex-direction:column;gap:11px}
+.arch-card{position:relative;overflow:hidden;text-align:left;width:100%;border-radius:16px;padding:16px 15px 15px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 8px 20px -12px rgba(0,0,0,.7);transition:transform .12s,border-color .2s;animation:csabIn .45s cubic-bezier(.2,1,.3,1) both}
+.arch-card:active{transform:scale(.985)}
+.arch-card__stripe{position:absolute;left:0;right:0;top:0;height:4px;background:var(--fc)}
+.arch-card__top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.arch-card__urg{display:inline-flex;align-items:center;gap:6px;font:800 10px/1 'Instrument Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px}
+.arch-card__urg i{width:8px;height:8px;border-radius:50%;box-shadow:0 0 8px currentColor}
+.arch-card__pct{font:900 17px/1 'Sora','Instrument Sans',sans-serif}
+.arch-card__n{font:800 15.5px/1.25 'Instrument Sans',sans-serif;color:#F6F1F2}
+.arch-card__s{font:600 11px/1.3 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55);margin-top:3px}
+.arch-card__bar{height:6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin:10px 0 6px}
+.arch-card__bar i{display:block;height:100%;border-radius:99px;animation:adnFill .9s cubic-bezier(.2,1,.3,1) both}
+.arch-card__go{font:900 11px/1 'Instrument Sans',sans-serif}
+.arch-empty{text-align:center;padding:40px 20px;max-width:300px;margin:20px auto}
+.arch-empty__ic{display:inline-grid;place-items:center;width:78px;height:78px;border-radius:22px;background:rgba(52,211,153,.14);box-shadow:inset 0 0 0 1px rgba(52,211,153,.34);filter:drop-shadow(0 0 20px rgba(52,211,153,.4));margin-bottom:14px}
+.arch-empty__h{font:800 19px/1.2 'Sora','Instrument Sans',sans-serif;color:#F6F1F2}
+.arch-empty__s{font:600 12.5px/1.55 'Instrument Sans',sans-serif;color:rgba(246,241,242,.6);margin-top:8px}
+@media (prefers-reduced-motion:reduce){.arch-today,.arch-card,.arch-card__bar i{animation:none}}
+
 /* ── Paywall del Centro del Sabio (no-Pro) ── */
 .csablock{position:relative;min-height:70vh;border-radius:18px;overflow:hidden}
 .csablock-bg{padding:14px;filter:blur(7px) saturate(.85);opacity:.7;pointer-events:none;display:flex;flex-direction:column;gap:14px}
