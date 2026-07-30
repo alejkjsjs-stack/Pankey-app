@@ -598,6 +598,47 @@
 .arch-empty__s{font:600 12.5px/1.55 'Instrument Sans',sans-serif;color:rgba(246,241,242,.6);margin-top:8px}
 @media (prefers-reduced-motion:reduce){.arch-today,.arch-card,.arch-card__bar i{animation:none}}
 
+/* ── Reporte del Sabio — teaser en el hub + pantalla editorial ── */
+.hub-rep{position:relative;text-align:left;width:100%;border-radius:22px;padding:16px;cursor:pointer;font-family:inherit;
+  background:rgba(255,255,255,.045);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 6px 22px -14px rgba(0,0,0,.5);transition:transform .22s cubic-bezier(.2,.8,.2,1);animation:csabIn .6s cubic-bezier(.2,.8,.2,1) both}
+.hub-rep:active{transform:scale(.985)}
+.hub-ic--rep{width:48px;height:48px;background:rgba(255,138,76,.14);border-color:rgba(255,138,76,.3)}
+.rep-wrap{position:fixed;inset:0;z-index:99992;display:flex;flex-direction:column}
+.rep-scroll{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:44px 22px 24px;max-width:440px;margin:0 auto;width:100%}
+.rep-cover{text-align:center;padding:14px 0 22px;border-bottom:1px solid rgba(255,255,255,.1)}
+.rep-cover__ic{display:inline-grid;place-items:center;width:60px;height:60px;border-radius:18px;background:rgba(255,138,76,.14);border:1px solid rgba(255,138,76,.3);margin-bottom:12px}
+.rep-cover__k{font:900 10px/1 'Instrument Sans',sans-serif;letter-spacing:2.5px;color:#FFB877}
+.rep-cover__t{font-size:32px;font-weight:800;color:#F6F1F2;margin-top:8px;letter-spacing:-.02em}
+.rep-cover__d{font:600 11.5px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55);margin-top:6px;text-wrap:balance}
+.rep-sec{padding:20px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.rep-sec__hd{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.rep-sec__n{font:900 13px/1 'Sora','Instrument Sans',sans-serif;color:rgba(255,184,119,.55);font-variant-numeric:tabular-nums}
+.rep-sec__k{font:800 12.5px/1 'Instrument Sans',sans-serif;letter-spacing:.6px;color:#F6F1F2;text-transform:uppercase}
+.rep-p{font:500 13.5px/1.6 'Instrument Sans',sans-serif;color:rgba(246,241,242,.8)}
+.rep-p b{font-weight:800}
+.rep-stats{display:flex;gap:10px}
+.rep-stats>div{flex:1;text-align:center;padding:14px 6px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.rep-stats b{font:800 23px/1 'Sora','Instrument Sans',sans-serif;color:#F6F1F2}
+.rep-stats b em{font-size:12px;font-style:normal;color:rgba(255,255,255,.5)}
+.rep-stats span{display:block;font:700 8.5px/1.2 'Instrument Sans',sans-serif;color:rgba(246,241,242,.5);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.rep-delta{margin-top:12px;text-align:center;font:800 13px/1 'Instrument Sans',sans-serif}
+.rep-best{display:flex;align-items:center;gap:16px}
+.rep-best__score{font:800 42px/1 'Sora','Instrument Sans',sans-serif;color:#FFCF6B;flex-shrink:0}
+.rep-best__score span{font-size:14px;color:rgba(255,255,255,.5)}
+.rep-best__tx{font:500 12.5px/1.5 'Instrument Sans',sans-serif;color:rgba(246,241,242,.7)}
+.rep-foco{display:flex;flex-direction:column;gap:8px}
+.rep-foco__chip{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:12px 14px;border-radius:14px;cursor:pointer;font-family:inherit;background:color-mix(in srgb,var(--fc) 10%,rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--fc) 28%,transparent);font:700 13px/1 'Instrument Sans',sans-serif;color:#F6F1F2;transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+.rep-foco__chip:active{transform:scale(.98)}
+.rep-foco__chip>span{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rep-foco__chip em{margin-left:auto;font-style:normal;font-weight:800;color:var(--fc)}
+.rep-note{font:600 11px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.45);margin-top:10px}
+.rep-perfil{font:800 24px/1.1 'Sora','Instrument Sans',sans-serif;letter-spacing:-.01em;background:linear-gradient(90deg,#FFE7A2,#FFB877);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.rep-empty{text-align:center;padding:40px 24px;max-width:320px;margin:auto;position:relative;z-index:1}
+.rep-empty__ic{display:inline-grid;place-items:center;width:78px;height:78px;border-radius:22px;background:rgba(255,138,76,.14);border:1px solid rgba(255,138,76,.3);margin-bottom:14px;filter:drop-shadow(0 0 20px rgba(255,138,76,.4))}
+.rep-empty__h{font-size:22px;font-weight:800;color:#F6F1F2}
+.rep-empty__s{font:600 13px/1.55 'Instrument Sans',sans-serif;color:rgba(246,241,242,.62);margin:8px 0 20px;text-wrap:balance}
+
 /* ── Paywall del Centro del Sabio (no-Pro) ── */
 .csablock{position:relative;min-height:70vh;border-radius:18px;overflow:hidden}
 .csablock-bg{padding:14px;filter:blur(7px) saturate(.85);opacity:.7;pointer-events:none;display:flex;flex-direction:column;gap:14px}

@@ -12932,7 +12932,7 @@ const PRO_FUNCS = [
   { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
   { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
   { id:'banco',   pic:'banco',   name:'Banco por Tema',       desc:'Forja preguntas de UN subtema exacto.',                      color:'#C084FC', ready:true },
-  { id:'reporte', pic:'reporte', name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:false },
+  { id:'reporte', pic:'reporte', name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:true },
 ];
 
 // Análisis real del rendimiento a partir de icfesHistory + weakStats + modeStats.
@@ -13225,6 +13225,7 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
 function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
   const d = useMemo(() => computeAdn(appState), [appState]);
   const arch = useMemo(() => computeArchivo(appState), [appState]);
+  const rep = useMemo(() => computeReporte(appState), [appState]);
   const nombre = (user?.name || 'crack').split(' ')[0];
   const F = {}; PRO_FUNCS.forEach(f => { F[f.id] = f; });
   const Tag = preview ? 'div' : 'button';
@@ -13322,9 +13323,21 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
         <div className="hub-banco__chips">{bancoChips.map(c => <span key={c}>{c}</span>)}<span className="hub-banco__more">+8</span></div>
       </Tag>
 
-      {/* Pronto — trío compacto */}
+      {/* Reporte del Sabio — teaser editorial */}
+      <Tag className="hub-rep" style={{ '--fc': F.reporte.color }} onClick={p('reporte')}>
+        <div className="hub-row">
+          <span className="hub-ic hub-ic--rep"><ProIcon id="reporte" s={24} c="#FF8A4C" /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="hub-t">Reporte del Sabio</div>
+            <div className="hub-d">{rep.sims > 0 ? `Semana ${rep.semana} · ${rep.sims} simulacros · promedio ${rep.avgThis}` : 'Tu análisis de la semana, cada domingo'}</div>
+          </div>
+          <span className="hub-arrow" style={{ color: '#FF8A4C' }}>→</span>
+        </div>
+      </Tag>
+
+      {/* Pronto — dúo compacto */}
       <div className="hub-soon-row">
-        {['diag', 'live', 'reporte'].map(id => (
+        {['diag', 'live'].map(id => (
           <Tag key={id} className="hub-soon" style={{ '--fc': F[id].color }} onClick={p(id)}>
             <span className="hub-soon__ic"><ProIcon id={F[id].pic} s={22} c={F[id].color} /></span>
             <span className="hub-soon__n">{F[id].name}</span>
@@ -13762,6 +13775,130 @@ function ArchivoSabio({ C, appState, user, onClose, onRevisar }) {
   );
 }
 
+// Reporte Semanal del Sabio — análisis de la semana (layout editorial tipo carta).
+function computeReporte(appState) {
+  const now = Date.now();
+  const hist = (appState.icfesHistory || []).filter(r => typeof r.score === 'number' && r.ts);
+  const thisW = hist.filter(r => (now - r.ts) < 7 * 86400000);
+  const lastW = hist.filter(r => (now - r.ts) >= 7 * 86400000 && (now - r.ts) < 14 * 86400000);
+  const avg = arr => arr.length ? Math.round(arr.reduce((s, r) => s + (r.score || 0), 0) / arr.length) : 0;
+  const avgThis = avg(thisW), avgLast = avg(lastW);
+  const d = computeAdn(appState);
+  const foco = [...d.areas].filter(a => (a.t || 0) >= 3).sort((a, b) => a.pct - b.pct).slice(0, 3);
+  const best = thisW.slice().sort((a, b) => (b.score || 0) - (a.score || 0))[0] || null;
+  const semana = Math.max(1, Math.ceil((now - (appState.proPlan?.createdAt || (hist[0] && hist[0].ts) || now)) / (7 * 86400000)));
+  let diasExamen = null;
+  if (appState.proPlan?.examISO) diasExamen = Math.max(0, Math.ceil((new Date(appState.proPlan.examISO + 'T00:00:00') - now) / 86400000));
+  return {
+    sims: thisW.length,
+    okThis: thisW.reduce((s, r) => s + (r.correct || 0), 0),
+    totThis: thisW.reduce((s, r) => s + (r.total || 0), 0),
+    avgThis, avgLast, delta: avgLast ? avgThis - avgLast : 0,
+    best, foco, hallazgo: d.peorComp, semana, diasExamen, perfil: d.perfil, avg: d.avg,
+  };
+}
+
+function ReporteSemanal({ C, appState, user, onClose, onPractice }) {
+  const r = useMemo(() => computeReporte(appState), [appState]);
+  const nombre = (user?.name || 'crack').split(' ')[0];
+  const hoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long' });
+
+  if (r.sims === 0) {
+    return (
+      <Portal>
+        <div className="rep-wrap">
+          <AnimBg variant="gold" />
+          <button className="taller-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+          <div className="rep-empty">
+            <span className="rep-empty__ic"><ProIcon id="reporte" s={44} c="#FF8A4C" /></span>
+            <div className="rep-empty__h serif">Aún no hay reporte</div>
+            <div className="rep-empty__s">Haz algunos simulacros esta semana y el domingo el Sabio te entrega tu análisis completo.</div>
+            <button className="pro-cta" onClick={() => { onClose?.(); onPractice?.(); }}>Hacer un simulacro</button>
+          </div>
+        </div>
+      </Portal>
+    );
+  }
+
+  const Sec = ({ n, k, children }) => (
+    <div className="rep-sec">
+      <div className="rep-sec__hd"><span className="rep-sec__n">{n}</span><span className="rep-sec__k">{k}</span></div>
+      {children}
+    </div>
+  );
+
+  return (
+    <Portal>
+      <div className="rep-wrap">
+        <AnimBg variant="gold" />
+        <button className="taller-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+        <div className="rep-scroll">
+          {/* Portada tipo carta */}
+          <div className="rep-cover">
+            <span className="rep-cover__ic"><ProIcon id="reporte" s={30} c="#FFB877" /></span>
+            <div className="rep-cover__k">REPORTE DEL SABIO</div>
+            <div className="rep-cover__t serif">Semana {r.semana}</div>
+            <div className="rep-cover__d">{hoy}{r.diasExamen != null ? ` · faltan ${r.diasExamen} días para tu ICFES` : ''}</div>
+          </div>
+
+          <Sec n="01" k="Lo que pasó">
+            <div className="rep-stats">
+              <div><b>{r.sims}</b><span>simulacros</span></div>
+              <div><b>{r.okThis}<em>/{r.totThis}</em></b><span>correctas</span></div>
+              <div><b style={{ color: '#FFCF6B' }}>{r.avgThis}</b><span>promedio</span></div>
+            </div>
+            {r.avgLast > 0 && (
+              <div className="rep-delta" style={{ color: r.delta >= 0 ? '#34D399' : '#FF8A6B' }}>
+                {r.delta >= 0 ? '▲' : '▼'} {r.delta >= 0 ? '+' : ''}{r.delta} pts vs la semana pasada
+              </div>
+            )}
+          </Sec>
+
+          <Sec n="02" k="El hallazgo de la semana">
+            <p className="rep-p">
+              {r.hallazgo
+                ? <>Noté que <b style={{ color: r.hallazgo.color }}>{r.hallazgo.nivel}</b> ({r.hallazgo.subject}) te está costando: solo aciertas el {r.hallazgo.pct}%. Si cierras ese punto, subes puntaje rápido — no es toda la materia, es ese subtema.</>
+                : <>Vas parejo, {nombre}. Todavía no veo un punto flojo que resalte; sigue así y refinamos los detalles.</>}
+            </p>
+          </Sec>
+
+          {r.best && (
+            <Sec n="03" k="Tu mejor momento">
+              <div className="rep-best">
+                <div className="rep-best__score">{r.best.score}<span>/500</span></div>
+                <div className="rep-best__tx">Tu mejor simulacro de la semana. Recuerda cómo te sentías ahí — esa es tu forma.</div>
+              </div>
+            </Sec>
+          )}
+
+          <Sec n="04" k="Tu plan para la próxima semana">
+            <div className="rep-foco">
+              {r.foco.map((f, i) => (
+                <button key={f.subject} className="rep-foco__chip" style={{ '--fc': f.color }}
+                  onClick={() => { onClose?.(); onPractice?.([f.subject]); }}>
+                  <span style={{ background: f.color }} />{f.subject} <em>{f.pct}%</em>
+                </button>
+              ))}
+            </div>
+            <div className="rep-note">Toca una materia para practicarla ya.</div>
+          </Sec>
+
+          <Sec n="05" k="Tu perfil sigue siendo">
+            <div className="rep-perfil">{r.perfil.name}</div>
+            <p className="rep-p" style={{ marginTop: 4 }}>{r.perfil.desc}</p>
+          </Sec>
+
+          <button className="pro-cta" style={{ width: '100%', marginTop: 8 }}
+            onClick={() => { FX.play('tap'); shareWhatsApp(`Mi reporte de la semana (Pankey Pro) 📊\nSemana ${r.semana} · ${r.sims} simulacros\nPromedio: ${r.avgThis}/500${r.avgLast ? ` (${r.delta >= 0 ? '+' : ''}${r.delta} vs la semana pasada)` : ''}\nPerfil: ${r.perfil.name}\n\n→ pankey.vercel.app`); }}>
+            <PkIc n="msg" s={16} c="#3a2405" /> Compartir mi progreso
+          </button>
+          <div style={{ height: 22 }} />
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
 function IcfesTab({ C, isLight, user, appState, setAppState, setGlobalSenseiQ, onCoinBurst, onAchievement, onConfirm, pushNotif, onConsumeEnergy, onEnergyBlocked, startNonce = 0, onOpenPro }) {
   const [icfesScreen, setIcfesScreen] = useState('dashboard');
   const [proFunc, setProFunc] = useState(null); // función Pro abierta (ej. 'adn')
@@ -14116,6 +14253,7 @@ const SABIO_HYPE = [
       {proFunc === 'sensei' && <SenseiChat C={C} appState={appState} user={user} onClose={() => setProFunc(null)} />}
       {proFunc === 'banco' && <BancoTema C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
         onForjar={(subject, tema, count) => { setProFunc(null); handleBeginTest([subject], count, { tema }); }} />}
+      {proFunc === 'reporte' && <ReporteSemanal C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
       {proFunc === 'srs' && <ArchivoSabio C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
         onRevisar={(f) => {
           if (!f) return;
