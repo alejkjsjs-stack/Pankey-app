@@ -12929,7 +12929,7 @@ const PRO_FUNCS = [
   { id:'plan',    pic:'plan',    name:'Plan de Batalla',      desc:'Fecha, meta y minutos → tu camino diario al puntaje.',       color:'#FF6B54', ready:true },
   { id:'srs',     pic:'srs',     name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:true },
   { id:'sensei',  pic:'sensei',  name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:true },
-  { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:false },
+  { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:true },
   { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
   { id:'banco',   pic:'banco',   name:'Banco por Tema',       desc:'Forja preguntas de UN subtema exacto.',                      color:'#C084FC', ready:true },
   { id:'reporte', pic:'reporte', name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:true },
@@ -13226,6 +13226,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
   const d = useMemo(() => computeAdn(appState), [appState]);
   const arch = useMemo(() => computeArchivo(appState), [appState]);
   const rep = useMemo(() => computeReporte(appState), [appState]);
+  const diagP = useMemo(() => computeDiagnostico(appState), [appState]);
   const nombre = (user?.name || 'crack').split(' ')[0];
   const F = {}; PRO_FUNCS.forEach(f => { F[f.id] = f; });
   const Tag = preview ? 'div' : 'button';
@@ -13323,6 +13324,16 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
         <div className="hub-banco__chips">{bancoChips.map(c => <span key={c}>{c}</span>)}<span className="hub-banco__more">+8</span></div>
       </Tag>
 
+      {/* Simulacro Diagnóstico — teaser de proyección */}
+      <Tag className="hub-diag" style={{ '--fc': F.diag.color }} onClick={p('diag')}>
+        <div className="hub-diag__l">
+          <span className="hub-diag__k">SIMULACRO DIAGNÓSTICO</span>
+          <span className="hub-diag__t">Tu puntaje proyectado</span>
+          <span className="hub-diag__go" style={{ color: '#FBBF24' }}>{diagP.sims >= 2 ? 'Ver veredicto →' : 'Descúbrelo →'}</span>
+        </div>
+        <div className="hub-diag__score">{diagP.sims >= 2 ? diagP.proy : '?'}<span>/500</span></div>
+      </Tag>
+
       {/* Reporte del Sabio — teaser editorial */}
       <Tag className="hub-rep" style={{ '--fc': F.reporte.color }} onClick={p('reporte')}>
         <div className="hub-row">
@@ -13335,9 +13346,9 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
         </div>
       </Tag>
 
-      {/* Pronto — dúo compacto */}
+      {/* Pronto — Estudio en Vivo */}
       <div className="hub-soon-row">
-        {['diag', 'live'].map(id => (
+        {['live'].map(id => (
           <Tag key={id} className="hub-soon" style={{ '--fc': F[id].color }} onClick={p(id)}>
             <span className="hub-soon__ic"><ProIcon id={F[id].pic} s={22} c={F[id].color} /></span>
             <span className="hub-soon__n">{F[id].name}</span>
@@ -13769,6 +13780,123 @@ function ArchivoSabio({ C, appState, user, onClose, onRevisar }) {
             </>
           )}
           <div style={{ height: 24 }} />
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
+// Simulacro Diagnóstico — proyección de puntaje + programas donde entrarías.
+const DIAG_PROGRAMAS = [
+  { name: 'Medicina', cutoff: 415 }, { name: 'Física / Matemáticas', cutoff: 375 }, { name: 'Ing. de Petróleos', cutoff: 370 },
+  { name: 'Ing. Mecatrónica', cutoff: 365 }, { name: 'Ing. de Sistemas', cutoff: 360 }, { name: 'Ing. Biomédica', cutoff: 355 },
+  { name: 'Arquitectura', cutoff: 350 }, { name: 'Derecho', cutoff: 350 }, { name: 'Odontología', cutoff: 345 },
+  { name: 'Ing. Civil', cutoff: 340 }, { name: 'Economía', cutoff: 340 }, { name: 'Psicología', cutoff: 335 },
+  { name: 'Enfermería', cutoff: 330 }, { name: 'Comunicación Social', cutoff: 310 }, { name: 'Contaduría Pública', cutoff: 300 },
+  { name: 'Gastronomía', cutoff: 280 }, { name: 'Desarrollo de Software', cutoff: 260 },
+];
+function computeDiagnostico(appState) {
+  const d = computeAdn(appState);
+  const base = d.avg || 0;
+  let proy = base;
+  if (base) {
+    const adj = d.tendencia === 'subiendo' ? Math.max(6, d.delta) : d.tendencia === 'bajando' ? Math.min(-4, Math.round(d.delta * 0.5)) : 6;
+    proy = Math.min(500, Math.max(150, Math.round(base + adj)));
+  }
+  const lo = Math.max(0, proy - 15), hi = Math.min(500, proy + 15);
+  const nivel = getPerfLevel(proy);
+  const entras = DIAG_PROGRAMAS.filter(p => proy >= p.cutoff).sort((a, b) => b.cutoff - a.cutoff);
+  const cerca = DIAG_PROGRAMAS.filter(p => proy < p.cutoff && proy >= p.cutoff - 35).sort((a, b) => a.cutoff - b.cutoff);
+  const plan = appState.proPlan;
+  let mejora = null;
+  if (plan && base) {
+    const factor = Math.min(1, (plan.minutes / 60) * 0.55);
+    mejora = { conPlan: Math.min(500, Math.max(proy, Math.round(proy + (plan.meta - proy) * factor * 0.85))), meta: plan.meta };
+  }
+  return { base, proy, lo, hi, nivel, entras, cerca, sims: d.totalSims, debil: d.debil, plan, mejora };
+}
+
+function Diagnostico({ C, appState, user, onClose, onPractice }) {
+  const g = useMemo(() => computeDiagnostico(appState), [appState]);
+  const pos = (v) => `${Math.max(0, Math.min(100, ((v - 150) / 350) * 100))}%`;
+
+  if (g.sims < 2) {
+    return (
+      <Portal>
+        <div className="diag-wrap">
+          <AnimBg variant="gold" />
+          <button className="taller-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+          <div className="diag-empty">
+            <span className="diag-empty__ic"><ProIcon id="diag" s={44} c="#FBBF24" /></span>
+            <div className="diag-empty__h serif">Calibremos tu puntaje</div>
+            <div className="diag-empty__s">Necesito al menos 2 simulacros para predecir tu puntaje real con precisión. Haz uno y volvemos.</div>
+            <button className="pro-cta" onClick={() => { onClose?.(); onPractice?.(); }}>Hacer un simulacro</button>
+          </div>
+        </div>
+      </Portal>
+    );
+  }
+
+  return (
+    <Portal>
+      <div className="diag-wrap">
+        <AnimBg variant="gold" />
+        <button className="taller-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+        <div className="diag-scroll">
+          <div className="diag-badge"><ProIcon id="diag" s={13} c="#3a2a05" /> SIMULACRO DIAGNÓSTICO</div>
+
+          {/* El veredicto */}
+          <div className="diag-verdict">
+            <div className="diag-verdict__k">PUNTAJE PROYECTADO</div>
+            <div className="diag-verdict__big">{g.proy}<span>/500</span></div>
+            <div className="diag-verdict__rng">rango probable {g.lo}–{g.hi}</div>
+            <div className="diag-scale">
+              <span className="diag-scale__band" style={{ left: pos(g.lo), width: `calc(${pos(g.hi)} - ${pos(g.lo)})` }} />
+              <span className="diag-scale__mark" style={{ left: pos(g.proy) }} />
+            </div>
+            <div className="diag-verdict__lvl" style={{ color: g.nivel.color }}>{g.nivel.label}</div>
+          </div>
+
+          {/* Dónde entrarías */}
+          <div className="diag-sec">¿Dónde entrarías hoy?</div>
+          <div className="diag-progs">
+            {g.entras.slice(0, 6).map(p => (
+              <div key={p.name} className="diag-prog diag-prog--in">
+                <PkIc n="check" s={14} c="#34D399" /><span>{p.name}</span><em>{p.cutoff}</em>
+              </div>
+            ))}
+            {g.entras.length === 0 && <div className="diag-prog"><span style={{ opacity: .7 }}>Sube un poco más y desbloqueas tus primeros programas.</span></div>}
+          </div>
+          {g.cerca.length > 0 && (
+            <>
+              <div className="diag-near-k">A un empujón:</div>
+              <div className="diag-progs">
+                {g.cerca.slice(0, 3).map(p => (
+                  <div key={p.name} className="diag-prog diag-prog--near">
+                    <span className="diag-prog__lock">▲</span><span>{p.name}</span><em>te faltan {p.cutoff - g.proy}</em>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Con tu plan */}
+          {g.mejora && (
+            <>
+              <div className="diag-sec">Con tu Plan de Batalla</div>
+              <div className="diag-plan">
+                <div className="diag-plan__row"><span>Hoy proyectas</span><b>{g.proy}</b></div>
+                <div className="diag-plan__arrow">↓ si cumples el plan</div>
+                <div className="diag-plan__row"><span>Podrías llegar a</span><b style={{ color: '#34D399' }}>{g.mejora.conPlan}</b></div>
+              </div>
+            </>
+          )}
+
+          <button className="pro-cta" style={{ width: '100%', marginTop: 20 }} onClick={() => { FX.play('duel'); onClose?.(); onPractice?.(); }}>
+            Recalibrar con un simulacro →
+          </button>
+          <div className="diag-foot">Estimación basada en tus {g.sims} simulacros. Entre más hagas, más preciso.</div>
+          <div style={{ height: 22 }} />
         </div>
       </div>
     </Portal>
@@ -14254,6 +14382,7 @@ const SABIO_HYPE = [
       {proFunc === 'banco' && <BancoTema C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
         onForjar={(subject, tema, count) => { setProFunc(null); handleBeginTest([subject], count, { tema }); }} />}
       {proFunc === 'reporte' && <ReporteSemanal C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
+      {proFunc === 'diag' && <Diagnostico C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={() => setIcfesScreen('setup')} />}
       {proFunc === 'srs' && <ArchivoSabio C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
         onRevisar={(f) => {
           if (!f) return;

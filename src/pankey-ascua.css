@@ -639,6 +639,49 @@
 .rep-empty__h{font-size:22px;font-weight:800;color:#F6F1F2}
 .rep-empty__s{font:600 13px/1.55 'Instrument Sans',sans-serif;color:rgba(246,241,242,.62);margin:8px 0 20px;text-wrap:balance}
 
+/* ── Simulacro Diagnóstico — teaser + veredicto ── */
+.hub-diag{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;border-radius:22px;padding:16px 18px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(120deg,rgba(251,191,36,.14),rgba(255,255,255,.03));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(251,191,36,.28);
+  box-shadow:0 6px 22px -14px rgba(0,0,0,.5);transition:transform .22s cubic-bezier(.2,.8,.2,1);animation:csabIn .6s cubic-bezier(.2,.8,.2,1) both}
+.hub-diag:active{transform:scale(.985)}
+.hub-diag__l{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hub-diag__k{font:900 9px/1.2 'Instrument Sans',sans-serif;letter-spacing:1.4px;color:rgba(251,191,36,.9)}
+.hub-diag__t{font:700 15px/1.15 'Instrument Sans',sans-serif;color:#F6F1F2}
+.hub-diag__go{font:800 12px/1 'Instrument Sans',sans-serif;margin-top:4px}
+.hub-diag__score{flex-shrink:0;font:800 34px/1 'Sora','Instrument Sans',sans-serif;color:#FBBF24;text-shadow:0 0 24px rgba(251,191,36,.4)}
+.hub-diag__score span{font-size:13px;color:rgba(255,255,255,.45)}
+.diag-wrap{position:fixed;inset:0;z-index:99992;display:flex;flex-direction:column}
+.diag-scroll{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:44px 20px 24px;max-width:440px;margin:0 auto;width:100%}
+.diag-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:99px;background:linear-gradient(90deg,#FFE7A2,#FBBF24);color:#3a2a05;font:900 10px/1 'Instrument Sans',sans-serif;letter-spacing:1.5px}
+.diag-verdict{text-align:center;padding:22px 0 8px}
+.diag-verdict__k{font:900 10px/1 'Instrument Sans',sans-serif;letter-spacing:2px;color:rgba(251,191,36,.85)}
+.diag-verdict__big{font:800 64px/1 'Sora','Instrument Sans',sans-serif;color:#F6F1F2;margin:8px 0 2px;text-shadow:0 0 40px rgba(251,191,36,.35)}
+.diag-verdict__big span{font-size:18px;color:rgba(255,255,255,.4)}
+.diag-verdict__rng{font:600 11.5px/1 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55)}
+.diag-scale{position:relative;height:8px;border-radius:99px;background:rgba(255,255,255,.09);margin:16px 8px 12px}
+.diag-scale__band{position:absolute;top:0;bottom:0;border-radius:99px;background:rgba(251,191,36,.35)}
+.diag-scale__mark{position:absolute;top:-3px;width:4px;height:14px;border-radius:2px;background:#FBBF24;box-shadow:0 0 10px rgba(251,191,36,.8);transform:translateX(-50%)}
+.diag-verdict__lvl{font:800 14px/1 'Instrument Sans',sans-serif;margin-top:4px}
+.diag-sec{font:900 12px/1 'Instrument Sans',sans-serif;letter-spacing:1.2px;color:#FBBF24;text-transform:uppercase;margin:24px 0 12px}
+.diag-progs{display:flex;flex-direction:column;gap:7px}
+.diag-prog{display:flex;align-items:center;gap:9px;padding:11px 14px;border-radius:13px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font:700 13px/1.2 'Instrument Sans',sans-serif;color:#F6F1F2}
+.diag-prog>span{flex:1;min-width:0}
+.diag-prog em{font-style:normal;font-weight:800;font-size:11px;color:rgba(255,255,255,.4);font-variant-numeric:tabular-nums}
+.diag-prog--in{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.22)}
+.diag-prog--near{opacity:.9}
+.diag-prog--near em{color:#FF8A6B}
+.diag-prog__lock{color:#FF8A6B;font-size:10px;flex:none!important}
+.diag-near-k{font:700 11px/1 'Instrument Sans',sans-serif;color:rgba(246,241,242,.5);margin:14px 0 9px}
+.diag-plan{border-radius:16px;padding:16px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.22);text-align:center}
+.diag-plan__row{display:flex;align-items:center;justify-content:space-between;font:600 13px/1 'Instrument Sans',sans-serif;color:rgba(246,241,242,.75)}
+.diag-plan__row b{font:800 22px/1 'Sora','Instrument Sans',sans-serif;color:#F6F1F2}
+.diag-plan__arrow{font:700 10.5px/1 'Instrument Sans',sans-serif;color:rgba(110,231,183,.8);margin:9px 0;letter-spacing:.5px}
+.diag-foot{font:600 10.5px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.4);text-align:center;margin-top:12px}
+.diag-empty{text-align:center;padding:40px 24px;max-width:320px;margin:auto;position:relative;z-index:1}
+.diag-empty__ic{display:inline-grid;place-items:center;width:78px;height:78px;border-radius:22px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.3);margin-bottom:14px;filter:drop-shadow(0 0 20px rgba(251,191,36,.4))}
+.diag-empty__h{font-size:22px;font-weight:800;color:#F6F1F2}
+.diag-empty__s{font:600 13px/1.55 'Instrument Sans',sans-serif;color:rgba(246,241,242,.62);margin:8px 0 20px;text-wrap:balance}
+
 /* ── Paywall del Centro del Sabio (no-Pro) ── */
 .csablock{position:relative;min-height:70vh;border-radius:18px;overflow:hidden}
 .csablock-bg{padding:14px;filter:blur(7px) saturate(.85);opacity:.7;pointer-events:none;display:flex;flex-direction:column;gap:14px}
