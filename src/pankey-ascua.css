@@ -357,49 +357,50 @@
 @keyframes proCtaPulse{0%,100%{box-shadow:0 10px 28px -8px rgba(224,169,62,.7),inset 0 1px 0 rgba(255,255,255,.6)}50%{box-shadow:0 12px 36px -6px rgba(224,169,62,.9),inset 0 1px 0 rgba(255,255,255,.6)}}
 .prosell-cta__sub{font:600 11px/1.3 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55);margin-top:8px}
 
-/* ── Centro del Sabio (hub Pro dentro de ICFES) ── */
-.csab{display:flex;flex-direction:column;gap:14px}
-.csab-head{text-align:center;padding:6px 0 2px}
-.csab-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:99px;background:linear-gradient(90deg,#FFE7A2,#E0A93E);color:#3a2405;font:900 10px/1 'Instrument Sans',sans-serif;letter-spacing:1.5px;box-shadow:0 6px 16px -5px rgba(224,169,62,.6)}
-.csab-hi{font-size:24px;font-weight:800;color:var(--t1,#F6F1F2);margin-top:10px}
-.csab-sub{font:600 12.5px/1.5 'Instrument Sans',sans-serif;color:var(--t3,#B9A9AF);margin-top:3px;text-wrap:balance}
-/* HERO — ADN grande con preview animado */
-.csab-hero{position:relative;overflow:hidden;text-align:left;width:100%;border-radius:20px;padding:16px;cursor:pointer;font-family:inherit;
-  background:linear-gradient(150deg,rgba(167,139,250,.2),rgba(88,28,135,.14) 60%,rgba(255,255,255,.03));border:1px solid rgba(167,139,250,.4);
-  box-shadow:0 16px 40px -16px rgba(124,58,237,.55),inset 0 1px 0 rgba(255,255,255,.1);animation:csabIn .5s cubic-bezier(.2,1,.3,1) both}
-.csab-hero:active{transform:scale(.99)}
-.csab-hero__aura{position:absolute;top:-40%;right:-20%;width:70%;height:160%;pointer-events:none;background:radial-gradient(circle,rgba(167,139,250,.4),transparent 66%);animation:csabAura 4s ease-in-out infinite}
-@keyframes csabAura{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
-.csab-hero__top{position:relative;display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.csab-hero__dna{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:rgba(167,139,250,.16);box-shadow:inset 0 0 0 1px rgba(167,139,250,.44);animation:csabDna 3.4s ease-in-out infinite}
-@keyframes csabDna{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
-.csab-hero__k{font:900 10px/1.3 'Instrument Sans',sans-serif;letter-spacing:1.5px;color:rgba(196,181,253,.95)}
-.csab-hero__perfil{font:900 21px/1.1 'Sora','Instrument Sans',sans-serif;background:linear-gradient(90deg,#FFE7A2,#C4B5FD);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-top:3px}
-.csab-hero__mini{position:relative;display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
-.csab-hero__row{display:flex;align-items:center;gap:9px}
-.csab-hero__lab{flex:0 0 96px;font:700 11px/1.2 'Instrument Sans',sans-serif;color:rgba(246,241,242,.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.csab-hero__bar{flex:1;height:7px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
-.csab-hero__bar i{display:block;height:100%;border-radius:99px;animation:adnFill 1s cubic-bezier(.2,1,.3,1) both}
-.csab-hero__pct{flex:0 0 34px;text-align:right;font:900 12px/1 'Sora','Instrument Sans',sans-serif}
-.csab-hero__cta{position:relative;display:inline-flex;align-items:center;gap:6px;font:900 12.5px/1 'Instrument Sans',sans-serif;color:#C4B5FD}
-.csab-hero__cta b{transition:transform .2s}
+/* ── Centro del Sabio (hub Pro) · lenguaje Apple/espacial: glass fino, aire, resorte sutil ── */
+.csab{display:flex;flex-direction:column;gap:18px}
+.csab-head{text-align:center;padding:10px 0 4px}
+.csab-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:99px;background:rgba(224,169,62,.14);border:1px solid rgba(224,169,62,.34);color:#FFD98A;font:800 10px/1 'Instrument Sans',sans-serif;letter-spacing:1.8px}
+.csab-hi{font-size:27px;font-weight:800;letter-spacing:-.02em;color:var(--t1,#F6F1F2);margin-top:12px}
+.csab-sub{font:500 13px/1.55 'Instrument Sans',sans-serif;color:var(--t3,#B9A9AF);margin-top:5px;text-wrap:balance}
+/* HERO — ADN, tarjeta de vidrio serena */
+.csab-hero{position:relative;overflow:hidden;text-align:left;width:100%;border-radius:24px;padding:20px;cursor:pointer;font-family:inherit;
+  background:rgba(255,255,255,.05);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 10px 34px -14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .24s cubic-bezier(.2,.8,.2,1),box-shadow .24s;animation:csabIn .6s cubic-bezier(.2,.8,.2,1) both}
+.csab-hero:active{transform:scale(.975)}
+.csab-hero__aura{position:absolute;top:-30%;right:-18%;width:62%;height:150%;pointer-events:none;background:radial-gradient(circle,rgba(167,139,250,.26),transparent 68%);animation:csabAura 7s ease-in-out infinite}
+@keyframes csabAura{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.85;transform:scale(1.08)}}
+.csab-hero__top{position:relative;display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.csab-hero__dna{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.3);animation:csabDna 5s ease-in-out infinite}
+@keyframes csabDna{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.csab-hero__k{font:800 10px/1.3 'Instrument Sans',sans-serif;letter-spacing:1.6px;color:rgba(196,181,253,.9)}
+.csab-hero__perfil{font:800 22px/1.1 'Sora','Instrument Sans',sans-serif;letter-spacing:-.01em;background:linear-gradient(90deg,#FFE7A2,#C4B5FD);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-top:4px}
+.csab-hero__mini{position:relative;display:flex;flex-direction:column;gap:9px;margin-bottom:16px}
+.csab-hero__row{display:flex;align-items:center;gap:10px}
+.csab-hero__lab{flex:0 0 100px;font:600 11.5px/1.2 'Instrument Sans',sans-serif;color:rgba(246,241,242,.72);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.csab-hero__bar{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden}
+.csab-hero__bar i{display:block;height:100%;border-radius:99px;animation:adnFill 1.1s cubic-bezier(.2,.8,.2,1) both}
+.csab-hero__pct{flex:0 0 34px;text-align:right;font:800 12px/1 'Sora','Instrument Sans',sans-serif;font-variant-numeric:tabular-nums}
+.csab-hero__cta{position:relative;display:inline-flex;align-items:center;gap:6px;font:800 12.5px/1 'Instrument Sans',sans-serif;color:#C4B5FD}
+.csab-hero__cta b{transition:transform .24s cubic-bezier(.2,.8,.2,1)}
 .csab-hero:active .csab-hero__cta b{transform:translateX(4px)}
-/* Lista variada de funciones */
-.csab-list{display:flex;flex-direction:column;gap:9px}
-.csab-item{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-radius:15px;padding:12px 14px 12px 16px;cursor:pointer;font-family:inherit;
-  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09);transition:transform .12s,border-color .2s;animation:csabIn .5s cubic-bezier(.2,1,.3,1) both}
-.csab-item:active{transform:scale(.98)}
-.csab-item:not(.csab-item--soon):hover{border-color:var(--fc)}
-.csab-item--soon{opacity:.66}
-.csab-item__stripe{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--fc)}
-.csab-item__ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fc) 40%,transparent)}
+/* Lista serena de funciones */
+.csab-list{display:flex;flex-direction:column;gap:11px}
+.csab-item{position:relative;display:flex;align-items:center;gap:14px;width:100%;text-align:left;border-radius:20px;padding:15px 16px;cursor:pointer;font-family:inherit;
+  background:rgba(255,255,255,.045);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 6px 22px -14px rgba(0,0,0,.5);transition:transform .22s cubic-bezier(.2,.8,.2,1),border-color .24s,background .24s;animation:csabIn .6s cubic-bezier(.2,.8,.2,1) both}
+.csab-item:not(.csab-item--soon):active{transform:scale(.975);border-color:color-mix(in srgb,var(--fc) 55%,transparent);background:rgba(255,255,255,.06)}
+.csab-item--soon{opacity:.6}
+.csab-item__ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;flex-shrink:0;border:1px solid color-mix(in srgb,var(--fc) 28%,transparent)}
 .csab-item__tx{flex:1;min-width:0}
-.csab-item__n{font:800 14px/1.2 'Instrument Sans',sans-serif;color:#F6F1F2}
-.csab-item__d{font:600 11px/1.4 'Instrument Sans',sans-serif;color:rgba(246,241,242,.55);margin-top:2px}
-.csab-item__r{flex-shrink:0;font:900 12px/1 'Instrument Sans',sans-serif;color:rgba(255,255,255,.42)}
-@keyframes csabIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
-.csab-practice{display:flex;align-items:center;justify-content:center;gap:9px;padding:15px;border-radius:15px;cursor:pointer;font-family:inherit;margin-top:2px;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--t1,#F6F1F2);font:800 14px/1 'Instrument Sans',sans-serif}
+.csab-item__n{font:700 14.5px/1.2 'Instrument Sans',sans-serif;letter-spacing:-.01em;color:#F6F1F2}
+.csab-item__d{font:500 11px/1.45 'Instrument Sans',sans-serif;color:rgba(246,241,242,.5);margin-top:3px}
+.csab-item__r{flex-shrink:0;font:800 13px/1 'Instrument Sans',sans-serif;color:rgba(255,255,255,.38)}
+@keyframes csabIn{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:none}}
+.csab-practice{display:flex;align-items:center;justify-content:center;gap:9px;padding:16px;border-radius:18px;cursor:pointer;font-family:inherit;margin-top:2px;
+  background:rgba(255,255,255,.04);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);color:var(--t1,#F6F1F2);font:700 14px/1 'Instrument Sans',sans-serif;letter-spacing:-.01em;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.csab-practice:active{transform:scale(.98)}
 
 /* ── Plan de Batalla ── */
 .plan-wrap{position:fixed;inset:0;z-index:99992;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;
