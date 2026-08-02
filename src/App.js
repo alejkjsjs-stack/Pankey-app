@@ -12930,7 +12930,7 @@ const PRO_FUNCS = [
   { id:'srs',     pic:'srs',     name:'Repaso con Memoria',   desc:'El Archivo del Sabio te hace repasar justo antes de olvidar.', color:'#34D399', ready:true },
   { id:'sensei',  pic:'sensei',  name:'Sensei Ilimitado',     desc:'Pregúntale lo que sea + Modo Debate socrático.',             color:'#5CB8FF', ready:true },
   { id:'diag',    pic:'diag',    name:'Simulacro Diagnóstico',desc:'Predice tu puntaje real y en qué universidad entrarías.',    color:'#FBBF24', ready:true },
-  { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudia en tiempo real con tu parcero.',                     color:'#F472B6', ready:false },
+  { id:'live',    pic:'live',    name:'Estudio en Vivo',      desc:'Estudien juntos: el que sabe le explica al otro.',           color:'#F472B6', ready:true },
   { id:'banco',   pic:'banco',   name:'Banco por Tema',       desc:'Forja preguntas de UN subtema exacto.',                      color:'#C084FC', ready:true },
   { id:'reporte', pic:'reporte', name:'Reporte del Sabio',    desc:'Cada domingo, el análisis de tu semana.',                    color:'#FF8A4C', ready:true },
 ];
@@ -13346,16 +13346,18 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
         </div>
       </Tag>
 
-      {/* Pronto — Estudio en Vivo */}
-      <div className="hub-soon-row">
-        {['live'].map(id => (
-          <Tag key={id} className="hub-soon" style={{ '--fc': F[id].color }} onClick={p(id)}>
-            <span className="hub-soon__ic"><ProIcon id={F[id].pic} s={22} c={F[id].color} /></span>
-            <span className="hub-soon__n">{F[id].name}</span>
-            <span className="hub-soon__b">Pronto</span>
-          </Tag>
-        ))}
-      </div>
+      {/* Estudio en Vivo — dos avatares */}
+      <Tag className="hub-live" style={{ '--fc': F.live.color }} onClick={p('live')}>
+        <div className="hub-live__avs">
+          <span className="hub-live__av"><ProIcon id="live" s={22} c="#F472B6" /></span>
+          <span className="hub-live__av hub-live__av--2"><PkIc n="sabio" s={20} c="#F472B6" /></span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="hub-t">Estudio en Vivo</div>
+          <div className="hub-d">Estudien juntos · el que sabe explica</div>
+        </div>
+        <span className="hub-arrow" style={{ color: '#F472B6' }}>→</span>
+      </Tag>
 
       {!preview && (
         <button className="csab-practice" onClick={() => { FX.play('tap'); onPractice?.(); }}>
@@ -13781,6 +13783,141 @@ function ArchivoSabio({ C, appState, user, onClose, onRevisar }) {
           )}
           <div style={{ height: 24 }} />
         </div>
+      </div>
+    </Portal>
+  );
+}
+
+// Estudio en Vivo — sesión colaborativa: ambos responden, ven la respuesta del otro, el que sabe explica.
+function EstudioVivo({ C, appState, setAppState, user, onClose }) {
+  const [phase, setPhase] = useState('lobby'); // lobby | loading | play | result
+  const [qs, setQs] = useState([]);
+  const [qi, setQi] = useState(0);
+  const [mySel, setMySel] = useState(null);
+  const [buddySel, setBuddySel] = useState(null);
+  const [reveal, setReveal] = useState(false);
+  const [myScore, setMyScore] = useState(0);
+  const [buddyScore, setBuddyScore] = useState(0);
+  const [syncCount, setSyncCount] = useState(0);
+  const [waiting, setWaiting] = useState(false);
+  const buddyName = 'El Sabio';
+  const buddyAcc = 0.6;
+
+  const empezar = async () => {
+    FX.play('duel'); setPhase('loading');
+    let questions = null;
+    try { questions = await fetchGeminiQuestions(['Matemáticas', 'Lectura Crítica', 'Ciencias Sociales', 'Ciencias Naturales', 'Inglés'], 5, { duelo: true }); } catch (e) {}
+    if (!questions || questions.length < 5) questions = seededShuffle(ICFES_QUESTIONS, hashStr('estudio' + Date.now())).slice(0, 5);
+    setQs(questions); setQi(0); setMySel(null); setBuddySel(null); setReveal(false); setMyScore(0); setBuddyScore(0); setSyncCount(0);
+    setPhase('play');
+  };
+
+  const responder = (idx) => {
+    if (mySel != null) return;
+    const q = qs[qi];
+    setMySel(idx); setWaiting(true);
+    FX.play(idx === q.correct ? 'success' : 'tap');
+    setTimeout(() => {
+      const bOk = Math.random() < buddyAcc;
+      const wrongs = [0, 1, 2, 3].filter(i => i !== q.correct && i < q.options.length);
+      const bIdx = bOk ? q.correct : wrongs[Math.floor(Math.random() * wrongs.length)];
+      setBuddySel(bIdx); setReveal(true); setWaiting(false);
+      const myOk = idx === q.correct;
+      if (myOk) setMyScore(s => s + 1);
+      if (bOk) setBuddyScore(s => s + 1);
+      if (myOk && bOk) { setSyncCount(s => s + 1); FX.play('coin'); }
+      else FX.play('next');
+    }, 800 + Math.random() * 900);
+  };
+
+  const siguiente = () => {
+    if (qi < qs.length - 1) { setQi(qi + 1); setMySel(null); setBuddySel(null); setReveal(false); FX.play('tap'); }
+    else {
+      const xp = myScore * 15 + syncCount * 12;
+      setAppState(s => ({ ...s, xp: (s.xp || 0) + xp }));
+      FX.play('win'); FX.vibrate('success');
+      setPhase('result');
+    }
+  };
+
+  const q = qs[qi];
+  const myOk = q && mySel === q.correct;
+  const bOk = q && buddySel === q.correct;
+  const feedback = !reveal ? null
+    : (myOk && bOk) ? { t: '¡En sincronía!', s: 'Los dos le pegaron. Así se estudia, parceros.', c: '#34D399' }
+    : (myOk && !bOk) ? { t: `Le explicaste a ${buddyName}`, s: q.explicacion?.porQue || 'Tú acertaste — enseñarle a otro te lo graba doble.', c: '#5CB8FF' }
+    : (!myOk && bOk) ? { t: `${buddyName} te salvó`, s: q.explicacion?.porQue || 'Ojo con esta. Fíjate por qué era la correcta.', c: '#FBBF24' }
+    : { t: 'El Sabio interviene', s: q.explicacion?.porQue || 'Ninguno la vio — pero para eso estamos. Mira la correcta.', c: '#FF6B6B' };
+
+  return (
+    <Portal>
+      <div className="ev-wrap">
+        <AnimBg variant="mystic" />
+        <button className="taller-x" onClick={onClose}><PkIc n="x" s={18} c="#F6F1F2" /></button>
+
+        {(phase === 'lobby' || phase === 'loading') && (
+          <div className="ev-lobby">
+            <div className="ev-pair">
+              <div className="ev-av"><Av name={user?.name || 'Tú'} sz={64} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame} /><span>{(user?.name || 'Tú').split(' ')[0]}</span></div>
+              <span className="ev-plus"><PkIc n="people" s={22} c="#F472B6" /></span>
+              <div className="ev-av"><span className="ev-av__sabio"><ProIcon id="sensei" s={30} c="#F472B6" /></span><span>El Sabio</span></div>
+            </div>
+            <div className="ev-lobby__h serif">Estudio en Vivo</div>
+            <div className="ev-lobby__s">Estudien juntos: los dos responden lo mismo, ven la respuesta del otro y el que sabe le explica al otro. Enseñar es la mejor forma de aprender.</div>
+            <button className={`pro-cta${phase === 'loading' ? ' pro-cta--off' : ''}`} disabled={phase === 'loading'} onClick={empezar}>
+              {phase === 'loading' ? 'Preparando la sesión…' : 'Empezar a estudiar juntos →'}
+            </button>
+          </div>
+        )}
+
+        {phase === 'play' && q && (
+          <div className="ev-scroll">
+            <div className="ev-hud">
+              <div className="ev-hud__p ev-hud__p--me"><Av name={user?.name || 'Tú'} sz={30} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame} /><b>{myScore}</b></div>
+              <div className="ev-hud__mid">{qi + 1}/{qs.length}<span>en sincronía · {syncCount}</span></div>
+              <div className="ev-hud__p ev-hud__p--bd"><b>{buddyScore}</b><span className="ev-av__sabio ev-av__sabio--sm"><ProIcon id="sensei" s={16} c="#F472B6" /></span></div>
+            </div>
+            {q.context && <div style={{ marginBottom: 12 }}><IcfesVisualContext context={q.context} accent="#F472B6" /></div>}
+            <div className="ev-q"><span className="ev-q__subj">{q.subject}</span><div className="ev-q__t">{q.text}</div></div>
+            <div className="ev-opts">
+              {q.options.map((op, i) => {
+                let cls = 'ev-opt';
+                if (reveal) {
+                  if (i === q.correct) cls += ' ev-opt--ok';
+                  else if (i === mySel || i === buddySel) cls += ' ev-opt--bad';
+                } else if (i === mySel) cls += ' ev-opt--sel';
+                return (
+                  <button key={i} className={cls} disabled={mySel != null} onClick={() => responder(i)}>
+                    <span className="ev-opt__l">{String.fromCharCode(65 + i)}</span>
+                    <span className="ev-opt__t">{op}</span>
+                    {reveal && (i === mySel || i === buddySel) && (
+                      <span className="ev-opt__who">{i === mySel && <em className="ev-who ev-who--me">Tú</em>}{i === buddySel && <em className="ev-who ev-who--bd">Sabio</em>}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {waiting && <div className="ev-wait">Esperando a {buddyName}<span className="dsrch-dots"><i>.</i><i>.</i><i>.</i></span></div>}
+            {reveal && feedback && (
+              <div className="ev-fb" style={{ '--fc': feedback.c }}>
+                <div className="ev-fb__t" style={{ color: feedback.c }}>{feedback.t}</div>
+                <div className="ev-fb__s">{feedback.s}</div>
+                <button className="pro-cta" style={{ width: '100%', marginTop: 12 }} onClick={siguiente}>{qi < qs.length - 1 ? 'Siguiente →' : 'Terminar sesión'}</button>
+              </div>
+            )}
+            <div style={{ height: 20 }} />
+          </div>
+        )}
+
+        {phase === 'result' && (
+          <div className="ev-lobby">
+            <div className="ev-result__big">{myScore + buddyScore}<span>/{qs.length * 2}</span></div>
+            <div className="ev-lobby__h serif">Buena sesión</div>
+            <div className="ev-lobby__s">Entre los dos acertaron {myScore + buddyScore} de {qs.length * 2}. Estuvieron <b style={{ color: '#34D399' }}>{syncCount}</b> {syncCount === 1 ? 'vez' : 'veces'} en sincronía. +{myScore * 15 + syncCount * 12} XP.</div>
+            <button className="pro-cta" onClick={empezar}>Otra sesión →</button>
+            <button className="ev-close" onClick={onClose}>Salir</button>
+          </div>
+        )}
       </div>
     </Portal>
   );
@@ -14383,6 +14520,7 @@ const SABIO_HYPE = [
         onForjar={(subject, tema, count) => { setProFunc(null); handleBeginTest([subject], count, { tema }); }} />}
       {proFunc === 'reporte' && <ReporteSemanal C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={practicar} />}
       {proFunc === 'diag' && <Diagnostico C={C} appState={appState} user={user} onClose={() => setProFunc(null)} onPractice={() => setIcfesScreen('setup')} />}
+      {proFunc === 'live' && <EstudioVivo C={C} appState={appState} setAppState={setAppState} user={user} onClose={() => setProFunc(null)} />}
       {proFunc === 'srs' && <ArchivoSabio C={C} appState={appState} user={user} onClose={() => setProFunc(null)}
         onRevisar={(f) => {
           if (!f) return;
