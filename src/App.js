@@ -157,6 +157,32 @@ button:active { transform: scale(0.95); opacity: 0.88; }
   animation: goldShimmer 5s linear infinite;
 }
 
+/* ═══ BANNERS ANIMADOS (cada tier con su efecto propio, se diferencian) ═══ */
+.banner-gold,.banner-aurora,.banner-cosmos,.banner-stellar,.banner-void,.banner-lava,.banner-neon,.banner-wave,.banner-storm{position:relative;overflow:hidden;isolation:isolate}
+.banner-gold::after{content:'';position:absolute;top:-60%;left:-40%;width:42%;height:220%;transform:rotate(18deg);background:linear-gradient(90deg,transparent,rgba(255,240,190,.55),transparent);animation:bnSweep 4.5s ease-in-out infinite}
+@keyframes bnSweep{0%{left:-45%}55%,100%{left:135%}}
+.banner-aurora::before{content:'';position:absolute;inset:-30%;background:radial-gradient(60% 50% at 30% 20%,rgba(52,211,153,.5),transparent 60%),radial-gradient(55% 45% at 70% 30%,rgba(96,165,250,.45),transparent 60%),radial-gradient(50% 40% at 50% 62%,rgba(192,132,252,.4),transparent 60%);filter:blur(6px);animation:bnAurora 9s ease-in-out infinite}
+@keyframes bnAurora{0%,100%{transform:translate(-4%,0) scale(1.05);filter:blur(6px) hue-rotate(0deg)}50%{transform:translate(4%,-3%) scale(1.15);filter:blur(8px) hue-rotate(40deg)}}
+.banner-cosmos::before{content:'';position:absolute;inset:-20%;background-image:radial-gradient(1.5px 1.5px at 20% 30%,rgba(255,240,180,.9),transparent),radial-gradient(1px 1px at 55% 70%,rgba(255,255,255,.7),transparent),radial-gradient(1.5px 1.5px at 80% 20%,rgba(255,225,150,.85),transparent),radial-gradient(1px 1px at 35% 85%,rgba(255,255,255,.6),transparent),radial-gradient(1.5px 1.5px at 68% 48%,rgba(255,240,180,.8),transparent);animation:bnDrift 26s linear infinite,bnTwinkle 3.4s ease-in-out infinite}
+.banner-cosmos::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 72% 78%,rgba(251,191,36,.3),transparent 50%);animation:bnGlow 5s ease-in-out infinite}
+@keyframes bnDrift{from{transform:translateX(0)}to{transform:translateX(-12%)}}
+@keyframes bnTwinkle{0%,100%{opacity:.7}50%{opacity:1}}
+@keyframes bnGlow{0%,100%{opacity:.5}50%{opacity:1}}
+.banner-stellar::before{content:'';position:absolute;inset:-45%;background:conic-gradient(from 0deg,rgba(124,58,237,.4),rgba(34,211,238,.22),rgba(236,72,153,.32),rgba(124,58,237,.4));filter:blur(15px);animation:bnRotate 20s linear infinite}
+.banner-stellar::after{content:'';position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 25% 35%,#fff,transparent),radial-gradient(1px 1px at 60% 65%,#fff,transparent),radial-gradient(1.5px 1.5px at 82% 25%,#fff,transparent),radial-gradient(1px 1px at 40% 80%,#fff,transparent);animation:bnTwinkle 2.6s ease-in-out infinite}
+@keyframes bnRotate{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.banner-void::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,rgba(251,191,36,.16),transparent 62%);animation:bnGlow 5s ease-in-out infinite}
+.banner-void::after{content:'';position:absolute;top:-60%;left:-50%;width:55%;height:220%;transform:rotate(20deg);background:linear-gradient(90deg,transparent,rgba(251,220,120,.6),rgba(255,255,255,.35),transparent);filter:blur(2px);opacity:0;animation:bnFlash 6s ease-in-out infinite}
+@keyframes bnFlash{0%,72%{left:-50%;opacity:0}80%{opacity:.9}100%{left:140%;opacity:0}}
+.banner-lava::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 116%,rgba(255,120,20,.6),transparent 60%),radial-gradient(ellipse at 25% 106%,rgba(255,60,0,.5),transparent 55%),radial-gradient(ellipse at 78% 108%,rgba(255,180,40,.45),transparent 55%);mix-blend-mode:screen;animation:bnLava 3.6s ease-in-out infinite}
+@keyframes bnLava{0%,100%{opacity:.7;transform:translateY(2%) scale(1)}50%{opacity:1;transform:translateY(-2%) scale(1.06)}}
+.banner-neon::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 28% 78%,rgba(0,240,255,.4),transparent 45%),radial-gradient(circle at 72% 60%,rgba(255,0,140,.34),transparent 42%);mix-blend-mode:screen;animation:bnNeon 4.4s ease-in-out infinite}
+@keyframes bnNeon{0%,100%{opacity:.6;filter:saturate(1)}50%{opacity:1;filter:saturate(1.5)}}
+.banner-wave::before{content:'';position:absolute;inset:-20%;background:radial-gradient(ellipse at 50% -10%,rgba(0,229,255,.28),transparent 55%);animation:bnWave 6s ease-in-out infinite}
+@keyframes bnWave{0%,100%{transform:translateX(-4%)}50%{transform:translateX(4%)}}
+.banner-storm::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 46%,rgba(255,255,255,.5) 49%,rgba(200,180,255,.2) 50%,transparent 53%);opacity:0;animation:bnBolt 7s steps(1,end) infinite}
+@keyframes bnBolt{0%,90%,100%{opacity:0}92%{opacity:.9}94%{opacity:.2}96%{opacity:.8}}
+
 /* ── Nav tab indicator ── */
 @keyframes tabPop {
   0%   { transform: scaleX(0); }
@@ -14720,46 +14746,46 @@ const SHOP_ITEMS = [
          radial-gradient(ellipse at 30% 70%, rgba(45,106,45,0.4) 0%, transparent 60%),
          radial-gradient(ellipse at 70% 40%, rgba(20,60,20,0.5) 0%, transparent 55%),
          linear-gradient(160deg, #0a1f0a 0%, #1a3a1a 50%, #0f2910 100%)` },
-  { id:'b_ocean',  type:'banner', name:'Ola del Caribe',      desc:'Playa, aunque sigas en examen...',            rarity:'raro',       price:1500,
+  { id:'b_ocean',  type:'banner', name:'Ola del Caribe',      desc:'Playa, aunque sigas en examen...',            rarity:'raro',       price:1500, animClass:'banner-wave',
     css:`repeating-linear-gradient(170deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 2px, transparent 2px, transparent 30px),
          radial-gradient(ellipse at 50% 0%, rgba(0,229,255,0.18) 0%, transparent 55%),
          linear-gradient(160deg, #001540 0%, #003c6e 50%, #00204a 100%)` },
-  { id:'b_storm',  type:'banner', name:'Tormenta del Páramo', desc:'El cielo antes de olvidar la sombrilla...',   rarity:'raro',       price:2000,
+  { id:'b_storm',  type:'banner', name:'Tormenta del Páramo', desc:'El cielo antes de olvidar la sombrilla...',   rarity:'raro',       price:2000, animClass:'banner-storm',
     css:`linear-gradient(105deg, transparent 48%, rgba(255,255,255,0.18) 49%, rgba(255,255,255,0.05) 50%, transparent 51%),
          linear-gradient(115deg, transparent 30%, rgba(192,132,252,0.12) 31%, transparent 32%),
          linear-gradient(150deg, #1a1a2e 0%, #2a1a3a 50%, #0d0d1a 100%)` },
   { id:'b_llano',  type:'banner', name:'Atardecer Llanero',   desc:'Hasta las vacas se detienen a mirar...',      rarity:'raro',       price:4000,
     css:`radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.25) 0%, transparent 60%),
          linear-gradient(180deg, #2d1b4e 0%, #8b3a5c 35%, #e8743a 65%, #ffb347 100%)` },
-  { id:'b_flame',  type:'banner', name:'Fuego del Volcán',    desc:'Directo desde las entrañas de la tierra...',  rarity:'épico',      price:6000,
+  { id:'b_flame',  type:'banner', name:'Fuego del Volcán',    desc:'Directo desde las entrañas de la tierra...',  rarity:'épico',      price:6000, animClass:'banner-lava',
     css:`radial-gradient(circle at 30% 80%, rgba(255,180,40,0.35) 0%, transparent 40%),
          radial-gradient(circle at 70% 90%, rgba(255,90,0,0.4) 0%, transparent 45%),
          radial-gradient(ellipse at 50% 100%, rgba(255,60,0,0.5) 0%, transparent 60%),
          linear-gradient(180deg, #1a0500 0%, #3d0d00 40%, #8b1a00 80%, #c43900 100%)` },
-  { id:'b_aurora', type:'banner', name:'Cielo de Estrellas',  desc:'Como si alguien le subiera el brillo...',     rarity:'épico',      price:8000,
+  { id:'b_aurora', type:'banner', name:'Cielo de Estrellas',  desc:'Como si alguien le subiera el brillo...',     rarity:'épico',      price:8000, animClass:'banner-aurora',
     css:`radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,255,255,0.9), transparent),
          radial-gradient(1px 1px at 45% 60%, rgba(255,255,255,0.7), transparent),
          radial-gradient(1.5px 1.5px at 75% 15%, rgba(255,255,255,0.85), transparent),
          radial-gradient(1px 1px at 30% 85%, rgba(255,255,255,0.6), transparent),
          radial-gradient(1.5px 1.5px at 90% 50%, rgba(255,255,255,0.8), transparent),
          linear-gradient(160deg, #001a30 0%, #003a50 50%, #00403a 100%)` },
-  { id:'b_cosmos', type:'banner', name:'Universo Muisca',     desc:'El cielo que inspiró leyendas de oro...',     rarity:'legendario', price:15000,
+  { id:'b_cosmos', type:'banner', name:'Universo Muisca',     desc:'El cielo que inspiró leyendas de oro...',     rarity:'legendario', price:15000, animClass:'banner-cosmos',
     css:`radial-gradient(1.5px 1.5px at 20% 30%, rgba(255,255,255,0.8), transparent),
          radial-gradient(1px 1px at 55% 70%, rgba(255,255,255,0.6), transparent),
          radial-gradient(1.5px 1.5px at 80% 20%, rgba(255,255,255,0.85), transparent),
          radial-gradient(1px 1px at 35% 85%, rgba(255,255,255,0.5), transparent),
          radial-gradient(circle at 70% 80%, rgba(251,191,36,0.15) 0%, transparent 45%),
          linear-gradient(160deg, #0a0015 0%, #2a0a4a 50%, #150030 100%)` },
-  { id:'b_void',   type:'banner', name:'El Dorado Perdido',   desc:'Brilla y desaparece... como tus llaves.',     rarity:'mítico',     price:18000, animClass:'banner-shimmer',
+  { id:'b_void',   type:'banner', name:'El Dorado Perdido',   desc:'Brilla y desaparece... como tus llaves.',     rarity:'mítico',     price:18000, animClass:'banner-void',
     css:`linear-gradient(100deg, transparent 30%, rgba(251,191,36,0.25) 50%, transparent 70%),
          linear-gradient(160deg, #0d001a 0%, #1a0033 50%, #0a0010 100%)` },
-  { id:'b_neon_city', type:'banner', name:'Ciudad de Neón',   desc:'Medellín a las 2am.',   rarity:'épico',      price:5000,
+  { id:'b_neon_city', type:'banner', name:'Ciudad de Neón',   desc:'Medellín a las 2am.',   rarity:'épico',      price:5000, animClass:'banner-neon',
     css:`radial-gradient(circle at 30% 80%, rgba(0,255,255,0.15) 0%, transparent 50%),
          radial-gradient(circle at 70% 60%, rgba(255,0,128,0.1) 0%, transparent 40%),
          linear-gradient(180deg, #0a0020 0%, #1a0040 40%, #2a0060 100%)` },
-  { id:'b_gold_rush', type:'banner', name:'Fiebre del Oro',   desc:'El Dorado fue real.',   rarity:'legendario', price:12000, animClass:'banner-shimmer',
+  { id:'b_gold_rush', type:'banner', name:'Fiebre del Oro',   desc:'El Dorado fue real.',   rarity:'legendario', price:12000, animClass:'banner-gold',
     css:`linear-gradient(135deg, #1a0f00 0%, #3d2800 30%, #6b4500 50%, #3d2800 70%, #1a0f00 100%)` },
-  { id:'b_cosmos_v2', type:'banner', name:'Vacío Estelar',    desc:'Más allá del tiempo.',  rarity:'mítico',     price:25000,
+  { id:'b_cosmos_v2', type:'banner', name:'Vacío Estelar',    desc:'Más allá del tiempo.',  rarity:'mítico',     price:25000, animClass:'banner-stellar',
     css:`radial-gradient(circle at 50% 50%, rgba(100,50,200,0.2) 0%, transparent 50%),
          radial-gradient(2px 2px at 20% 30%, white 50%, transparent 50%),
          radial-gradient(1.5px 1.5px at 60% 70%, white 50%, transparent 50%),
