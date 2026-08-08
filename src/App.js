@@ -12477,7 +12477,10 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
 
         {/* ── 1. TOP BAR ASCUA (avatar con anillo vivo + nivel + nombre + chips glass) ── */}
         <div className="top" style={{ padding: '2px 0 0', animation: 'staggerRise 0.5s ease both' }}>
-          <div className="av" onClick={() => { FX.play('tap'); onOpenIdentity?.(); }} title="Perfil y ajustes">
+          <div className="av" role="button" tabIndex={0} aria-label="Perfil y ajustes"
+            onClick={() => { FX.play('tap'); onOpenIdentity?.(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); FX.play('tap'); onOpenIdentity?.(); } }}
+            title="Perfil y ajustes">
             <div className="av__r" />
             <div className="av__i" style={{ overflow: 'hidden' }}>
               <Av name={user?.name || '?'} sz={40} C={C} photoURL={appState.photoURL} frameData={appState.equipped?.frame}/>
@@ -12492,7 +12495,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
             </div>
           </div>
           {/* (Energía eliminada: sin límite) */}
-          <button className="glass" onClick={() => { FX.play('tap'); onOpenTienda?.(); }}
+          <button className="glass" aria-label="Abrir tienda" onClick={() => { FX.play('tap'); onOpenTienda?.(); }}
             style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
             <PkIc n="empanada" s={15} c="#FFCF6B"/>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>{empanadasCount.toLocaleString()}</span>
@@ -12538,7 +12541,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
             </div>
             {fire.id > 0 && <div className="ocf-reflect" />}
           </div>
-          <div className="fogonfrase" key={fraseIdx}>{streak > 0 ? FRASES_FOGON[fraseIdx] : 'Prende el fogón hoy, hágale'}</div>
+          <div className="fogonfrase" key={fraseIdx} aria-hidden="true">{streak > 0 ? FRASES_FOGON[fraseIdx] : 'Prende el fogón hoy, hágale'}</div>
 
           {/* Panel de stats (long-press del fuego) */}
           {fuegoStats && (

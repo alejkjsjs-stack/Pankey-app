@@ -1021,6 +1021,11 @@
 .misbub__peek span{font:600 10.5px/1.2 'Instrument Sans';color:#C9BC93;margin-top:3px}
 .misbub--full .misbub__ball{color:#F0D89A;box-shadow:0 8px 20px -10px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,230,180,.16),inset 0 0 0 1px rgba(226,182,96,.5),0 0 14px -6px rgba(224,180,90,.5)}
 
+/* ── Accesibilidad (Web Interface Guidelines): foco de teclado visible + toque sin retardo ── */
+:root{color-scheme:dark}
+.cta,.pickbtn,.rank,.mis-btn,.misbub__ball,.misbub__peek,.glass,.av,.float,.mode,.tablet{touch-action:manipulation}
+.cta:focus-visible,.pickbtn:focus-visible,.rank:focus-visible,.misbub__ball:focus-visible,.misbub__peek:focus-visible,.glass:focus-visible,.av:focus-visible,.float:focus-visible,.mode:focus-visible{outline:2px solid #FFCF6B;outline-offset:3px}
+
 /* ── Tableta de piedra: relieve que se llena de oro fundido ── */
 .tablet{position:relative;width:100%;border:none;cursor:pointer;border-radius:16px;overflow:hidden;font-family:inherit;text-align:left;padding:0;
   background:linear-gradient(158deg,#3c3a33 0%,#2c2a24 52%,#211f1a 100%);
