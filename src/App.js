@@ -16749,8 +16749,6 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [interests, setInterests]     = useState(appState.interests || '');
   const [selectedShopItem, setSelectedShopItem] = useState(null);
   const [chestShow, setChestShow] = useState(null); // { chest, premio } → show de apertura
-  const [bazarCat, setBazarCat] = useState('chest'); // categoría activa del Bazar
-  const [catFull, setCatFull] = useState(null);      // categoría abierta en "Ver todo" (grid completo)
   const [previewFX, setPreviewFX] = useState(null);  // preview del efecto de victoria/entrada al equipar
   const [fueTab, setFueTab] = useState('color');     // eje activo del Fueguito: color | forma | anim
   const [heroIdx, setHeroIdx] = useState(0);         // slide activo del escaparate
@@ -17148,24 +17146,12 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     const hh = Math.floor(msFin / 3600000), mm2 = Math.floor((msFin % 3600000) / 60000), ss2 = Math.floor((msFin % 60000) / 1000);
     const cuenta = `${String(hh).padStart(2, '0')}:${String(mm2).padStart(2, '0')}:${String(ss2).padStart(2, '0')}`;
 
-    // ZONA 2 — CATEGORÍAS
-    const CATS = [
-      { id: 'chest',  label: 'Cofres' },
-      { id: 'frame',  label: 'Marcos' },
-      { id: 'title',  label: 'Títulos' },
-      { id: 'banner', label: 'Paisajes' },
-      { id: 'item',   label: 'Poderes' },
-    ];
+    // Color representativo de una categoría (por su mejor rareza)
     const catColor = (cid) => {
       const its = SHOP_ITEMS.filter(i => i.type === cid);
       const best = its.reduce((m, i) => Math.min(m, rankOf(i.rarity)), 99);
       return (RARITY_META[RARITY_ORDER[best]] || RARITY_META['común']).color;
     };
-
-    // ZONA 3 — LISTA de la categoría activa, mítico → común
-    const listItems = SHOP_ITEMS
-      .filter(i => i.type === bazarCat)
-      .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
 
     const abrirItem = (item, precioOverride = null) => {
       FX.play('tap');
@@ -17846,26 +17832,37 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           );
         })}
 
-        {/* ══ ESTANTERÍAS DEL CATÁLOGO (una fila horizontal por categoría) ══ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 8 }}>
-          {CATS.map(cat => {
-            const its = SHOP_ITEMS.filter(i => i.type === cat.id)
-              .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
-            if (!its.length) return null;
-            const cc = catColor(cat.id);
-            return (
-              <div key={cat.id} style={{ padding: '9px 0 6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
-                  <span className="bz-sec" style={{ color: cc }}>{cat.label}</span>
-                  <button className="bz-verall" onClick={() => { FX.play('tap'); setCatFull(cat.id); }}>Ver todo →</button>
+        {/* ══ COFRES y PODERES — SIEMPRE disponibles (los cosméticos van por rotación) ══ */}
+        {(() => {
+          const cofres = SHOP_ITEMS.filter(i => i.type === 'chest').sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
+          const poderes = SHOP_ITEMS.filter(i => i.type === 'item').sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
+          return (
+            <>
+              {cofres.length > 0 && (
+                <div style={{ padding: '14px 0 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
+                    <span className="bz-sec" style={{ color: catColor('chest') }}>Cofres</span>
+                    <span className="bz-timer">siempre a la vista</span>
+                  </div>
+                  <div className="bz-shelf">
+                    {cofres.map(item => cardDe(item))}
+                  </div>
                 </div>
-                <div className="bz-shelf">
-                  {its.slice(0, 8).map(item => cardDe(item))}
+              )}
+              {poderes.length > 0 && (
+                <div style={{ padding: '14px 20px 4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+                    <span className="bz-sec" style={{ color: catColor('item') }}>Poderes</span>
+                    <span className="bz-timer">siempre a la vista</span>
+                  </div>
+                  <div className="bz-pgrid">
+                    {poderes.map(item => cardDe(item))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* ══ RECARGA DE EMPANADAS (dinero real) — al final del scroll ══ */}
         <div style={{ padding: '18px 0 14px' }}>
@@ -17890,35 +17887,6 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           </div>
         </div>
 
-        {/* ══ "VER TODO": grid completo de la categoría ══ */}
-        {catFull && (() => {
-          const cat = CATS.find(c => c.id === catFull);
-          const its = SHOP_ITEMS.filter(i => i.type === catFull)
-            .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
-          const cc = catColor(catFull);
-          return (
-            <Portal>
-              <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99990, background: 'rgba(0,0,0,0.92)',
-                backdropFilter: 'blur(16px)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 20px 14px' }}>
-                  <button className="icq-back" onClick={() => { FX.play('close'); setCatFull(null); }}>
-                    <PkIc n="left" s={15} c="#B9A9AF" />
-                  </button>
-                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 300, color: '#F6F1F2' }}>
-                    {cat?.label}
-                  </div>
-                  <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: cc,
-                    background: `${cc}18`, borderRadius: 99, padding: '5px 11px' }}>{its.length} ítems</span>
-                </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 30px', WebkitOverflowScrolling: 'touch' }}>
-                  <div className="bz-grid">
-                    {its.map(item => cardDe(item))}
-                  </div>
-                </div>
-              </div>
-            </Portal>
-          );
-        })()}
       </div>
     );
   }

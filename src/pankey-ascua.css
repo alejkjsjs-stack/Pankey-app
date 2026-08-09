@@ -1244,6 +1244,9 @@
 /* Estantería horizontal con snap */
 .bz-shelf{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 20px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .bz-shelf::-webkit-scrollbar{display:none}
+/* Rejilla de poderes — todos a la vista, proporción distinta a los cofres */
+.bz-pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 2px}
+.bz-pgrid .bz-card{width:auto;flex:none;scroll-snap-align:none;padding:10px 6px 15px}
 .bz-card{scroll-snap-align:start;flex:none;width:120px;display:flex;flex-direction:column;align-items:center;gap:9px;
   border:none;cursor:pointer;padding:8px 8px 15px;text-align:center;font-family:inherit;position:relative;
   background:none;box-shadow:none;transition:transform .14s var(--pop)}
