@@ -1407,6 +1407,53 @@
 .bz-fxc__buy:active{transform:scale(.94)}
 .bz-fxc__eq{font:800 12px/1 'Instrument Sans';color:#E0A93E;padding:6px 0}
 
+/* ── Mini-vista animada de ENTRADA (anticipo del efecto en la tarjeta) ── */
+.emi{position:relative;display:grid;place-items:center;border-radius:13px;overflow:hidden;
+  background:radial-gradient(120% 95% at 50% 105%,rgba(255,255,255,.05),transparent 68%),#150f11}
+.emi-glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(58% 46% at 50% 60%,var(--emc),transparent 70%);opacity:.20;mix-blend-mode:screen}
+.emi--portal .emi-glow{background:radial-gradient(48% 48% at 50% 50%,var(--emc),transparent 68%);opacity:.24}
+/* llamas: brasas que suben */
+.emi-ember{position:absolute;bottom:8%;width:6px;height:6px;border-radius:50%;
+  background:var(--emc);box-shadow:0 0 8px var(--emc),0 0 14px var(--emc);animation:emiRise linear infinite}
+@keyframes emiRise{0%{transform:translateY(0) scale(1);opacity:0}14%{opacity:1}100%{transform:translateY(-46px) scale(.25);opacity:0}}
+/* cielo: caída desde arriba */
+.emi-fall{position:absolute;top:-22%;width:3px;height:15px;border-radius:2px;
+  background:linear-gradient(var(--emc),transparent);box-shadow:0 0 7px var(--emc);animation:emiFall linear infinite}
+@keyframes emiFall{0%{transform:translateY(0);opacity:0}16%{opacity:1}100%{transform:translateY(70px);opacity:0}}
+/* portal: anillos girando + núcleo latiendo */
+.emi-ring{position:absolute;width:58%;height:58%;border-radius:50%;border:2px solid var(--emc);
+  border-top-color:transparent;border-left-color:transparent;filter:drop-shadow(0 0 5px var(--emc));animation:emiSpin 1.7s linear infinite}
+.emi-ring--2{width:36%;height:36%;animation-duration:1.15s;animation-direction:reverse;opacity:.75}
+.emi-core{position:absolute;width:20%;height:20%;border-radius:50%;background:var(--emc);
+  box-shadow:0 0 10px var(--emc),0 0 22px var(--emc);animation:emiPulse 1.4s ease-in-out infinite}
+@keyframes emiSpin{to{transform:rotate(360deg)}}
+@keyframes emiPulse{0%,100%{transform:scale(.78);opacity:.8}50%{transform:scale(1.15);opacity:1}}
+
+/* ── Rendimiento: la tabla no pinta ni anima las filas fuera de pantalla ── */
+.lb-row{content-visibility:auto;contain-intrinsic-size:0 74px}
+
+/* ── Mercado Misterioso: cartas selladas que se revelan al tocar ── */
+.bz-myst-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bz-myst{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  min-height:152px;border:none;cursor:pointer;border-radius:16px;padding:13px 8px;font-family:inherit;text-align:center;
+  background:radial-gradient(120% 80% at 50% 0%,color-mix(in srgb,var(--rc) 20%,transparent),transparent 66%),linear-gradient(180deg,#1b1526,#120e18);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rc) 32%,transparent),0 6px 18px -12px #000;
+  transition:transform .14s var(--pop),box-shadow .2s}
+.bz-myst:active{transform:scale(.96)}
+.bz-myst__seal{font:900 32px/1 'Fraunces',serif;color:var(--rc);width:58px;height:58px;border-radius:50%;
+  display:grid;place-items:center;border:2px dashed color-mix(in srgb,var(--rc) 60%,transparent);
+  box-shadow:0 0 18px -4px var(--rc);animation:breathe 2.8s ease-in-out infinite}
+.bz-myst__hint{font:700 9.5px/1 'Instrument Sans';color:var(--t3);letter-spacing:.4px}
+.bz-myst--open{background:radial-gradient(120% 80% at 50% 0%,color-mix(in srgb,var(--rc) 16%,transparent),transparent 70%),#14101c}
+.bz-myst--open>*{animation:mystReveal .4s var(--pop) both}
+.bz-myst__rare{font:800 8px/1 'Instrument Sans';letter-spacing:1.2px;color:var(--rc)}
+.bz-myst__prev{display:grid;place-items:center;height:64px}
+.bz-myst__nm{font:700 11px/1.15 'Instrument Sans';color:var(--t1);min-height:26px;display:flex;align-items:center}
+.bz-myst__pr{display:inline-flex;align-items:center;gap:3px;font:800 12px/1 'Instrument Sans';color:#FFCF6B}
+.bz-myst__old{font-size:9px;color:var(--t3);text-decoration:line-through;margin-right:2px}
+@keyframes mystReveal{0%{transform:translateY(6px) scale(.7);opacity:0}60%{transform:translateY(0) scale(1.06)}100%{transform:scale(1);opacity:1}}
+
 /* "Ver todo" + grid de la categoría */
 /* Selector de eje del fueguito (Color / Forma / Movimiento) */
 .fue-tabs{display:flex;gap:6px;padding:0 20px 8px}

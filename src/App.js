@@ -3937,7 +3937,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
           <PergaminosTab C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} books={books} setBooks={setBooks} onAddBook={handleAddBook} onConfirm={handleConfirm} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} notes={notes} noteText={noteText} setNoteText={setNoteText} onAddNote={handleAddNote} onReactNote={handleReactNote} onRemindPartner={handleRemindPartner} partnerReqs={partnerReqs} onSendPartnerRequest={handleSendPartnerRequest} onAcceptPartnerRequest={handleAcceptPartnerRequest} onDeclinePartnerRequest={handleDeclinePartnerRequest} />
         </div>
         <div style={{ display: tab === 'friends' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
-          <FriendsView C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} pushNotif={pushNotif} onBack={() => setTab('books')} />
+          <FriendsView C={C} isLight={isLight} appState={appState} setAppState={setAppState} user={user} pushNotif={pushNotif} active={tab === 'friends'} onBack={() => setTab('books')} />
         </div>
         <div style={{ display: tab === 'perfil' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <SettingsTab startView={perfilStartView} startViewNonce={perfilNav} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={(url) => { setAppState(s => ({ ...s, photoURL: url })); if (fbOK() && user?.sessionId) { try { FB().get(FB().ref(FB().db, `sessions/${user.sessionId}`)).then(snap => { if (!snap.exists()) return; const amI1 = snap.val().user1Code === user.code; FB().update(FB().ref(FB().db, `sessions/${user.sessionId}`), { [amI1 ? 'user1PhotoURL' : 'user2PhotoURL']: url }); }); } catch(_) {} } }} onLogout={() => { localStorage.removeItem(SK); setUser(null); setAppState(freshState()); setBooks([]); setScreen('onboarding'); }} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} />
@@ -10890,6 +10890,34 @@ function FXPreview({ item, onDone }) {
   );
 }
 
+// Mini-vista del efecto de ENTRADA para la tarjeta de la tienda: en vez de un
+// logo estático, un anticipo animado LIVIANO (pocas partículas, solo transform/
+// opacity para no trabar). Da una idea real de cómo se ve la entrada.
+function EntradaMini({ fx = 'llamas', color = '#FF6B54', size = 64 }) {
+  return (
+    <div className={`emi emi--${fx}`} style={{ width: size, height: size, ['--emc']: color }} aria-hidden="true">
+      <span className="emi-glow" />
+      {fx === 'portal' ? (
+        <>
+          <span className="emi-ring" />
+          <span className="emi-ring emi-ring--2" />
+          <span className="emi-core" />
+        </>
+      ) : fx === 'cielo' ? (
+        [0, 1, 2, 3, 4].map(i => (
+          <span key={i} className="emi-fall" style={{ left: `${14 + i * 16}%`,
+            animationDelay: `${(i % 3) * 0.24}s`, animationDuration: `${1 + (i % 2) * 0.4}s` }} />
+        ))
+      ) : (
+        [0, 1, 2, 3, 4].map(i => (
+          <span key={i} className="emi-ember" style={{ left: `${16 + i * 15}%`,
+            animationDelay: `${(i % 3) * 0.3}s`, animationDuration: `${1.3 + (i % 2) * 0.5}s` }} />
+        ))
+      )}
+    </div>
+  );
+}
+
 // Reveal Ascua compartido: 3 golpes → explota y desaparece → objeto con su preview.
 // Sirve para cofres comprados, bundles y el regalo. lvColors = CHEST_SHOP_COLORS.
 function ChestShopShow({ chest, premio, onClose, appState, user }) {
@@ -14911,6 +14939,18 @@ const SHOP_BUNDLES = [
     price: 2600, rarity: 'épico',      items: ['c_gold', 'i_boost', 'i_comodin', 'i_repaso'], linea: 'Estudia menos, rinde más en el ICFES.' },
   { id: 'bd_leyenda',   name: 'El Combo del Legendario', desc: 'Cofre de Tumbaga + Escudo + Pergamino',
     price: 8000, rarity: 'legendario', items: ['c_tumbaga', 'i_arepa', 'i_boost'],            linea: 'Pa\' los que ya son leyenda del páramo.' },
+
+  // ── Combos de LOOK: marco + banner de la misma temática (se equipan al comprar) ──
+  { id: 'bd_look_neon',   name: 'Rumba de Neón',        desc: 'Neón Caribe + Ciudad de Neón', look: true,
+    price: 4900,  rarity: 'épico',      items: ['f_neon', 'b_neon_city'],   linea: 'Medellín a las 2am, y tú brillando.' },
+  { id: 'bd_look_volcan', name: 'Corazón de Volcán',    desc: 'El Volcán + Fuego del Volcán', look: true,
+    price: 8900,  rarity: 'épico',      items: ['f_dragon', 'b_flame'],     linea: 'Ardes por dentro y por fuera.' },
+  { id: 'bd_look_aurora', name: 'Cielo del Sur',        desc: 'Aurora Boreal + Cielo de Estrellas', look: true,
+    price: 12900, rarity: 'legendario', items: ['f_aurora', 'b_aurora'],    linea: 'El firmamento entero, encima tuyo.' },
+  { id: 'bd_look_dorado', name: 'Fiebre de El Dorado',  desc: 'Rana Dorada + Fiebre del Oro', look: true,
+    price: 11200, rarity: 'legendario', items: ['f_koi', 'b_gold_rush'],    linea: 'El Dorado sí era real, y es tuyo.' },
+  { id: 'bd_look_muisca', name: 'Leyenda Muisca',       desc: 'Corona de Estrellas + Universo Muisca', look: true,
+    price: 22000, rarity: 'mítico',     items: ['f_celestial', 'b_cosmos'], linea: 'El cielo que inspiró las leyendas de oro.' },
 ];
 
 // Oferta del día: 1 ítem VISUAL (banner/marco/cofre) con 30% de descuento, cambia cada 24h.
@@ -14954,6 +14994,24 @@ function mercadoDelDia() {
     if (it) { usados.add(it.id); picks.push({ item: it, precio: Math.round(it.price * 0.85) }); }
   });
   return picks.slice(0, 4);
+}
+
+// ── Mercado Misterioso: SEGUNDA tanda diaria (seed distinto), objetos "sellados"
+// que se revelan al tocar. Más descuento (25%) y solo cosméticos/cofres → amplía
+// la oferta de la tienda y da otra razón para volver cada día. Determinista por fecha.
+function mercadoMisterioso() {
+  const oferta = ofertaDelDia().item;
+  const yaEnMercado = new Set(mercadoDelDia().map(m => m.item.id));
+  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id]
+    && i.id !== oferta.id && !yaEnMercado.has(i.id)
+    && ['frame', 'banner', 'title', 'chest'].includes(i.type));
+  const seed = 'misterio-' + dateKeyISO();
+  const picks = []; const used = new Set();
+  for (let k = 0; picks.length < 3 && k < pool.length * 5 && used.size < pool.length; k++) {
+    const idx = hashStr(seed + '-' + k) % pool.length;
+    if (!used.has(idx)) { used.add(idx); const it = pool[idx]; picks.push({ item: it, precio: Math.round(it.price * 0.75) }); }
+  }
+  return picks;
 }
 
 // Preview visual de un ítem del Bazar (60×60, con su animación activa).
@@ -15010,11 +15068,42 @@ function destacadosSemana(n = 4) {
 const msProxSemana = () => { const wk = 7 * 86400000; return wk - (Date.now() % wk); };
 const fmtDH = (ms) => { const h = Math.floor(ms / 3600000); const d = Math.floor(h / 24); return d > 0 ? `${d}d ${h % 24}h` : `${h}h`; };
 
+// Carta SELLADA del Mercado Misterioso: empieza tapada con un sello "?" y su aura
+// de rareza; al tocar se revela el objeto (con su descuento). Vuelve a tocar → compra.
+function MysteryCard({ entry, C, user, appState, onBuy }) {
+  const [open, setOpen] = useState(false);
+  const { item, precio } = entry;
+  const rc = (RARITY_META[item.rarity] || RARITY_META['común']).color;
+  return (
+    <button className={`bz-myst${open ? ' bz-myst--open' : ''}`} style={{ ['--rc']: rc }}
+      onClick={() => {
+        if (!open) { FX.play('open'); FX.vibrate('light'); setOpen(true); }
+        else { FX.play('tap'); onBuy(item, precio); }
+      }}>
+      {!open ? (
+        <>
+          <span className="bz-myst__seal">?</span>
+          <span className="bz-myst__hint">Toca para revelar</span>
+        </>
+      ) : (
+        <>
+          <span className="bz-myst__rare">{(RARITY_META[item.rarity] || {}).label}</span>
+          <span className="bz-myst__prev"><BazarPreview item={item} size={62} C={C} user={user} appState={appState} /></span>
+          <span className="bz-myst__nm">{item.name}</span>
+          <span className="bz-myst__pr"><span className="bz-myst__old">{item.price.toLocaleString()}</span><PkIc n="empanada" s={12} c="#FFCF6B" />{precio.toLocaleString()}</span>
+        </>
+      )}
+    </button>
+  );
+}
+
 function BazarPreview({ item, size = 60, C, user, appState }) {
   const rc = (RARITY_META[item.rarity] || {}).color || '#888';
   if (item.type === 'frame') return <Av name={user?.name || '?'} sz={size - 8} C={C} photoURL={appState.photoURL} frameData={item}/>;
+  // Preview pequeño: arte estático (sin la capa animada con blur) — se ve igual de
+  // bien con el PNG y evita decenas de animaciones simultáneas en la tienda.
   if (item.type === 'banner') return (
-    <div className={item.animClass || ''} style={{ width: size, height: Math.round(size * 0.66), borderRadius: 9,
+    <div style={{ width: size, height: Math.round(size * 0.66), borderRadius: 9,
       background: bannerBg(item, item.css), boxShadow: `inset 0 0 0 1px ${rc}40` }}/>
   );
   if (item.type === 'chest') {
@@ -16145,7 +16234,7 @@ function FriendProfileModal({ C, isLight, person, user, isFriend, sent, appState
 // ─────────────────────────────────────────────
 //  EL COMBO (Ex-FriendsView) — Ranking y Social
 // ─────────────────────────────────────────────
-function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBack }) {
+function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, active = true, onBack }) {
   const [searchInput, setSearchInput]   = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -16174,7 +16263,15 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
       setFriends(Object.values(snap.val()).sort((a, b) => (b.ts || 0) - (a.ts || 0)));
     });
 
-    // 2. Cargar Ranking y crear diccionario
+    return () => { reqUnsub(); friendsUnsub(); };
+  }, [user?.code]);
+
+  // Carga (y recarga) del ranking. Se vuelve a ejecutar cada vez que se ABRE la
+  // pestaña, porque los tabs viven ocultos (display:none) y no se remontan:
+  // sin esto tocaba reiniciar la app para ver marcos/banners/fotos nuevos de todos.
+  const refreshRanking = useCallback((silent = false) => {
+    if (!fbOK() || !user?.code) return;
+    if (!silent) setLoadingRank(true);
     FB().get(FB().ref(FB().db, 'users')).then(snap => {
       if (snap.exists()) {
         const allUsers = Object.values(snap.val());
@@ -16182,21 +16279,22 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
         const ranked = allUsers.map(u => {
           const correctas = (u.appState?.icfesHistory || []).reduce((sum, r) => sum + (r.correct || 0), 0);
           const lvl = computeLevel(u.appState?.xp || u.xp || 0).level;
-          map[u.code] = u; 
+          map[u.code] = u;
           return { ...u, correctas, lvl };
         })
         // 👻 Modo Fantasma: los perfiles ocultos no aparecen en el ranking (tú sí te ves a ti mismo)
         .filter(u => u.code === user?.code || !((u.appState?.ghostUntil || 0) > Date.now()))
         .sort((a, b) => b.correctas - a.correctas);
-        
+
         setLeaderboard(ranked);
-        setUsersMap(map); 
+        setUsersMap(map);
       }
       setLoadingRank(false);
-    });
-
-    return () => { reqUnsub(); friendsUnsub(); };
+    }).catch(() => setLoadingRank(false));
   }, [user?.code]);
+
+  // Primera carga + recarga silenciosa al reabrir la pestaña.
+  useEffect(() => { if (active) refreshRanking(leaderboard.length === 0); }, [active, refreshRanking]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = async () => {
     const code = searchInput.trim().toUpperCase().replace('@', '').replace(/[^A-Z0-9]/g, '');
@@ -16345,9 +16443,12 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {leaderboard.map((u, index) => {
               const rank = getRankColor(index);
-              const bannerCss = bannerBg(u.appState?.equipped?.banner, `linear-gradient(135deg, ${C.accent}40, ${C.accent}10)`);
-              const institution = u.appState?.institution || u.institution;
               const isMe = u.code === user?.code;
+              // La fila propia usa el appState EN VIVO (no el snapshot de Firebase),
+              // así el banner/marco/foto/llamita se ven al instante sin reiniciar.
+              const ua = isMe ? appState : (u.appState || {});
+              const bannerCss = bannerBg(ua?.equipped?.banner, `linear-gradient(135deg, ${C.accent}40, ${C.accent}10)`);
+              const institution = ua?.institution || u.institution;
 
               return (
                 <div key={u.code} onClick={() => {
@@ -16357,53 +16458,56 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
                     return;
                   }
                   setViewingProfile(u);
-                }} className="su" style={{
+                }} className="su lb-row" style={{
                   position: 'relative', overflow: 'hidden', borderRadius: 16, cursor: 'pointer',
                   border: isMe ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
                   animationDelay: `${index * 0.05}s`,
                   boxShadow: isMe ? `0 0 15px ${C.accent}40` : '0 4px 15px rgba(0,0,0,0.2)',
                   transition: 'transform 0.15s ease', transform: 'scale(1)',
                 }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>
-                  
-                  <div className={u.appState?.equipped?.banner?.animClass || ''} style={{ position: 'absolute', inset: 0, background: bannerCss, opacity: 0.8, pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, rgba(15,13,12,0.95) 0%, rgba(15,13,12,0.85) 50%, rgba(15,13,12,0.4) 100%)`, pointerEvents: 'none' }} />
+
+                  {/* Banner de la persona: arte estático (sin blur/animación → se nota y no traba) */}
+                  <div style={{ position: 'absolute', inset: 0, background: bannerCss, pointerEvents: 'none' }} />
+                  {/* Velo: oscuro a la izquierda (para leer el nombre), casi limpio en el centro-derecha (para lucir el banner) */}
+                  <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
+                    background: `linear-gradient(90deg, rgba(12,10,10,0.90) 0%, rgba(12,10,10,0.62) 34%, rgba(12,10,10,0.20) 60%, rgba(12,10,10,0.48) 100%)` }} />
 
                   <div style={{ position: 'relative', zIndex: 1, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    
+
                     <div style={{ width: 26, height: 26, borderRadius: '50%', background: rank.bg, color: rank.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, boxShadow: rank.shadow, border: rank.border, flexShrink: 0 }}>
                       {index + 1}
                     </div>
 
                     <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <Av name={u.name || '?'} sz={46} C={C} photoURL={u.appState?.photoURL || u.photoURL} frameData={u.appState?.equipped?.frame} />
+                      <Av name={u.name || '?'} sz={46} C={C} photoURL={ua?.photoURL || u.photoURL} frameData={ua?.equipped?.frame} />
                       {/* Llamita equipada de la persona */}
                       <span style={{ position: 'absolute', right: -4, bottom: -3, zIndex: 3 }}>
-                        <MiniFuego color={u.appState?.fireColor} anim={u.appState?.fireAnim} size={22} />
+                        <MiniFuego color={ua?.fireColor} anim={ua?.fireAnim} size={22} />
                       </span>
                     </div>
 
                     {/* Info Central */}
                     <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6, textShadow: '0 1px 4px rgba(0,0,0,0.85)' }}>
                         {u.name} {isMe && <span style={{ fontSize: 9, background: C.accent, color: '#000', padding: '2px 6px', borderRadius: 4, fontWeight: 900 }}>TÚ</span>}
-                        {u.appState?.isPro && (() => {
-                          const sk = FIRE_SKINS[u.appState?.fireColor] || FIRE_SKINS.morado;
+                        {ua?.isPro && (() => {
+                          const sk = FIRE_SKINS[ua?.fireColor] || FIRE_SKINS.morado;
                           return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 900, padding: '2px 6px', borderRadius: 4,
                             background: `${sk.swatch}22`, color: sk.swatch, border: `1px solid ${sk.swatch}55` }}><PkIc n="flame" s={9} c={sk.swatch}/> PRO</span>;
                         })()}
                       </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.82)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
                         @{u.code} {u.age ? `· ${u.age} años` : ''} {institution ? `· 🎓 ${institution}` : ''}
                       </div>
                     </div>
 
                     {/* 🌟 STATS SÚPER MINIMALISTAS 🌟 */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: C.accent, letterSpacing: 0.5 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: C.accent, letterSpacing: 0.5, textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
                         NV. {u.lvl}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: "'Fraunces', serif" }}>{u.correctas}</span>
+                        <span style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: "'Fraunces', serif", textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>{u.correctas}</span>
                         <PkIc n="check" s={14} c={C.accent} />
                       </div>
                     </div>
@@ -17169,6 +17273,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     const regalo = regaloDelDia();
     const regaloReclamado = appState.regaloClaimDate === dateKeyISO();
     const mercado = mercadoDelDia();
+    const misterio = mercadoMisterioso();
     const reclamarRegalo = () => {
       if (regaloReclamado) { FX.play('error'); return; }
       FX.play('reward'); FX.vibrate('success');
@@ -17286,6 +17391,8 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       FX.play('coin'); FX.vibrate('heavy');
       let chestPremio = null, chestItem = null;
       let efectos = {};
+      const cosmeticos = [];            // frame/banner/title/entrance/victory → van al inventario y se equipan
+      const COSM = ['frame', 'banner', 'title', 'entrance', 'victory'];
       b.items.forEach(id => {
         const it = SHOP_ITEMS.find(x => x.id === id);
         if (!it) return;
@@ -17296,15 +17403,23 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           chestItem = it;
         } else if (ITEM_EFFECTS[id]) {
           efectos = { ...efectos, __fns: [...(efectos.__fns || []), ITEM_EFFECTS[id]] };
+        } else if (COSM.includes(it.type)) {
+          cosmeticos.push(it);
         }
       });
       setAppState(s => {
         let upd = { ...s, ryo: (s.ryo || 0) - b.price + (chestPremio ? chestPremio.emp : 0), xp: (s.xp || 0) + (chestPremio ? chestPremio.xp : 0) };
         (efectos.__fns || []).forEach(fn => { upd = { ...upd, ...fn(upd) }; });
+        if (cosmeticos.length) {
+          const inv = new Set(upd.inventory || []);
+          const eq = { ...(upd.equipped || {}) };
+          cosmeticos.forEach(it => { inv.add(it.id); eq[it.type] = it; }); // se otorga y se equipa el look completo
+          upd = { ...upd, inventory: [...inv], equipped: eq };
+        }
         return upd;
       });
       if (chestItem && chestPremio) setChestShow({ chest: chestItem, premio: chestPremio });
-      pushNotif?.(`¡${b.name} adquirido! Poderes activados.`);
+      pushNotif?.(cosmeticos.length ? `¡${b.name} equipado! Nuevo look activado.` : `¡${b.name} adquirido! Poderes activados.`);
       fireBoost();
     };
 
@@ -17618,6 +17733,21 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           })()}
         </div>
 
+        {/* ══ MERCADO MISTERIOSO — cartas selladas que se revelan (otra tanda, 25% off) ══ */}
+        {misterio.length > 0 && (
+          <div style={{ padding: '18px 20px 4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
+              <span className="bz-sec" style={{ color: '#B79CFF' }}>Mercado Misterioso</span>
+              <span className="bz-timer" style={{ color: '#B79CFF', background: 'rgba(140,110,230,.14)' }}>−25% · rota en {hh}h {mm2}m</span>
+            </div>
+            <div className="bz-myst-row">
+              {misterio.map(entry => (
+                <MysteryCard key={entry.item.id} entry={entry} C={C} user={user} appState={appState} onBuy={abrirItem} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ══ COMBOS DEL PÁRAMO — cartas grandes (rompe la repetición de cartas chicas) ══ */}
         <div style={{ padding: '16px 20px 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
@@ -17798,7 +17928,6 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           const its = SHOP_ITEMS.filter(i => i.type === tipo).sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity));
           const label = 'Entradas';
           const acc = '#FF6B54';
-          const ICS = { llamas: 'flame', cielo: 'people', portal: 'target' };
           return (
             <div key={tipo} style={{ padding: '12px 0 4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
@@ -17814,7 +17943,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                   return (
                     <div key={item.id} className={`bz-fxc${rank <= 1 ? ' bz-fxc--hot' : ''}`} style={{ '--rc': rc }}>
                       <button className="bz-fxc__prev" onClick={() => { FX.play('open'); FX.vibrate('light'); setPreviewFX(item); }}>
-                        <span className="bz-fxc__ic"><PkIc n={ICS[item.fx] || 'flame'} s={34} c={rc} /></span>
+                        <EntradaMini fx={item.fx} color={rc} size={68} />
                         <span className="bz-fxc__play">▶ Ver</span>
                       </button>
                       <span className="bz-fxc__rare" style={{ color: rc }}>{(RARITY_META[item.rarity] || {}).label}</span>
