@@ -15033,6 +15033,125 @@ function BazarPreview({ item, size = 60, C, user, appState }) {
   );
 }
 
+// ── LA RULETA DEL PÁRAMO — tiro diario gratis, carrete estilo apertura de caja ──
+const RULETA_RANK = { 'común': 0, 'poco común': 1, 'raro': 2, 'épico': 3, 'legendario': 4, 'mítico': 5 };
+const RULETA_W = { 'común': 10, 'poco común': 6.5, 'raro': 3.2, 'épico': 1.4, 'legendario': 0.5, 'mítico': 0.14 };
+function ruletaPool() {
+  const emp = [
+    { kind: 'emp', amount: 60,  rarity: 'común',      w: 30 },
+    { kind: 'emp', amount: 120, rarity: 'común',      w: 20 },
+    { kind: 'emp', amount: 300, rarity: 'poco común', w: 9 },
+    { kind: 'emp', amount: 800, rarity: 'raro',       w: 3 },
+  ];
+  const items = SHOP_ITEMS
+    .filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ['frame', 'banner', 'title', 'chest'].includes(i.type))
+    .map(i => ({ kind: 'item', item: i, rarity: i.rarity, w: RULETA_W[i.rarity] || 1 }));
+  return [...emp, ...items];
+}
+function ruletaPick(pool) {
+  const tot = pool.reduce((s, p) => s + p.w, 0);
+  let r = Math.random() * tot;
+  for (const p of pool) { r -= p.w; if (r <= 0) return p; }
+  return pool[pool.length - 1];
+}
+function RuletaTile({ p, C, user, appState }) {
+  const rc = (RARITY_META[p.rarity] || {}).color || '#888';
+  return (
+    <div className="rul-tile" style={{ '--rc': rc }}>
+      <div className="rul-tile__ic">
+        {p.kind === 'emp' ? <PkIc n="empanada" s={30} c="#FFCF6B" /> : <BazarPreview item={p.item} size={42} C={C} user={user} appState={appState} />}
+      </div>
+      <div className="rul-tile__lb">{p.kind === 'emp' ? `+${p.amount}` : p.item.name}</div>
+    </div>
+  );
+}
+function RuletaBazar({ appState, setAppState, C, user, onCoinBurst }) {
+  const hoy = dateKeyISO();
+  const [phase, setPhase] = useState(appState.ruletaBazarDate === hoy ? 'done' : 'idle');
+  const [reel, setReel] = useState([]);
+  const [win, setWin] = useState(null);
+  const reelRef = useRef(null);
+  const pool = useMemo(ruletaPool, []);
+  const TILE = 92, WIN_AT = 48, N = 56;
+
+  useEffect(() => { setReel(Array.from({ length: 22 }, () => pool[Math.floor(Math.random() * pool.length)])); }, [pool]);
+
+  const girar = () => {
+    if (phase !== 'idle') return;
+    const winner = ruletaPick(pool);
+    const arr = Array.from({ length: N }, () => pool[Math.floor(Math.random() * pool.length)]);
+    arr[WIN_AT] = winner;
+    setWin(null); setReel(arr); setPhase('spinning');
+    FX.play('open'); FX.vibrate('medium');
+    setTimeout(() => {
+      const el = reelRef.current; if (!el) return;
+      const view = (el.parentElement && el.parentElement.clientWidth) || 340;
+      el.style.transition = 'none';
+      el.style.transform = 'translateX(0px)';
+      void el.offsetWidth;
+      const target = -(WIN_AT * TILE - view / 2 + TILE / 2) + (Math.random() * 22 - 11);
+      el.style.transition = 'transform 4.6s cubic-bezier(.13,.71,.11,1)';
+      el.style.transform = `translateX(${target}px)`;
+    }, 40);
+  };
+
+  const finGiro = () => {
+    if (phase !== 'spinning') return;
+    const w = reel[WIN_AT];
+    const dup = w.kind === 'item' && (appState.inventory || []).includes(w.item.id);
+    setWin({ ...w, dup }); setPhase('won');
+    FX.play(RULETA_RANK[w.rarity] >= 3 ? 'win' : 'reward'); FX.vibrate('heavy');
+    setAppState(s => {
+      const upd = { ...s, ruletaBazarDate: hoy };
+      if (w.kind === 'emp') upd.ryo = (s.ryo || 0) + w.amount;
+      else if ((s.inventory || []).includes(w.item.id)) upd.ryo = (s.ryo || 0) + Math.round(w.item.price * 0.3);
+      else upd.inventory = [...(s.inventory || []), w.item.id];
+      return upd;
+    });
+    if (w.kind === 'emp') onCoinBurst?.(w.amount);
+  };
+
+  return (
+    <div style={{ padding: '6px 20px 2px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
+        <span className="bz-sec" style={{ color: '#FFCF6B' }}>La Ruleta del Páramo</span>
+        <span className="bz-timer">1 tiro gratis al día</span>
+      </div>
+      <div className="rul">
+        <div className="rul-view">
+          <div className="rul-fade rul-fade--l" /><div className="rul-fade rul-fade--r" />
+          <div className="rul-marker" />
+          <div ref={reelRef} className="rul-reel" onTransitionEnd={(e) => { if (e.target === reelRef.current && e.propertyName === 'transform') finGiro(); }}>
+            {reel.map((p, i) => <RuletaTile key={i} p={p} C={C} user={user} appState={appState} />)}
+          </div>
+        </div>
+        <button className="rul-btn" onClick={girar} disabled={phase !== 'idle'}>
+          {phase === 'idle' ? 'Girar gratis' : phase === 'spinning' ? 'Girando…' : 'Ya giraste hoy · vuelve mañana'}
+        </button>
+      </div>
+
+      {phase === 'won' && win && (
+        <Portal>
+          <div className="rul-rev" onClick={() => setPhase('done')}>
+            <div className="rul-rev__card" style={{ '--rc': (RARITY_META[win.rarity] || {}).color || '#E0A93E' }} onClick={e => e.stopPropagation()}>
+              {RULETA_RANK[win.rarity] >= 3 && Array.from({ length: 14 }).map((_, i) => (
+                <span key={i} className="rul-rev__spark" style={{ '--a': `${(i / 14) * 360}deg`, '--d': `${0.05 + (i % 5) * 0.04}s` }} />
+              ))}
+              <div className="rul-rev__k">{(RARITY_META[win.rarity] || {}).label}</div>
+              <div className="rul-rev__ic">
+                {win.kind === 'emp' ? <PkIc n="empanada" s={72} c="#FFCF6B" /> : <BazarPreview item={win.item} size={112} C={C} user={user} appState={appState} />}
+              </div>
+              <div className="rul-rev__nm">{win.kind === 'emp' ? `+${win.amount} empanadas` : win.item.name}</div>
+              <div className="rul-rev__sub">{win.kind === 'emp' ? '¡Cayó la platica!' : win.dup ? `Repetido → +${Math.round(win.item.price * 0.3).toLocaleString()} empanadas` : '¡Se sumó a tu inventario!'}</div>
+              <button className="rul-rev__btn" onClick={() => setPhase('done')}>¡De una!</button>
+            </div>
+          </div>
+        </Portal>
+      )}
+    </div>
+  );
+}
+
 const ACCENT_COLORS = [
   { name: 'Ciruelo', value: '#9D4E7C' }, { name: 'Jade',    value: '#2D8A5E' },
   { name: 'Índigo',  value: '#4A6FA5' }, { name: 'Crisantemo', value: '#D4853A' },
@@ -17419,6 +17538,9 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
             <span className="bz-gift__cta">{regaloReclamado ? '✓' : 'Reclamar'}</span>
           </button>
         </div>
+
+        {/* ══ LA RULETA DEL PÁRAMO — tiro diario gratis ══ */}
+        <RuletaBazar appState={appState} setAppState={setAppState} C={C} user={user} onCoinBurst={onCoinBurst} />
 
         {/* ══ MERCADO DEL DÍA — mosaico de rareza (rota cada 24h) ══ */}
         <div style={{ padding: '16px 20px 2px' }}>
