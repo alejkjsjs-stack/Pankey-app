@@ -11906,8 +11906,8 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   // ══ VS (Clash Royale: banderas arriba/abajo con foto/marco/banner + entrada de cada quien) ══
   if (phase === 'vs') {
     const rc = rival?.cosm || {};
-    const miBanner = appState.equipped?.banner?.css || 'linear-gradient(135deg, #3A1622 0%, #7A1E30 100%)';
-    const rivBanner = rc.banner?.css || 'linear-gradient(135deg, #16203A 0%, #2A3A6E 100%)';
+    const miBanner = bannerBg(appState.equipped?.banner, 'linear-gradient(135deg, #3A1622 0%, #7A1E30 100%)');
+    const rivBanner = bannerBg(rc.banner, 'linear-gradient(135deg, #16203A 0%, #2A3A6E 100%)');
     const rivLvl = computeLevel(rival?.xp || 0).level;
     return (
       <Portal>
@@ -14815,6 +14815,12 @@ const PODER_ICONS = {
   i_arepa: 'empanada', i_comodin: 'rana', i_ghost: 'eye',
 };
 
+// Banners: usan ARTE de canvas (public/banners/<id>.png) en vez del degradado css.
+function bannerBg(banner, fallback) {
+  if (banner && banner.id) return `url(${process.env.PUBLIC_URL || ''}/banners/${banner.id}.png) center/cover no-repeat`;
+  return (banner && banner.css) || fallback || 'none';
+}
+
 // Efecto que aplica cada poder al comprarse (se consume al usarse)
 const ITEM_EFFECTS = {
   i_freeze:  s => ({ streakFreezes: (s.streakFreezes || 0) + 1 }),
@@ -14950,12 +14956,48 @@ function mercadoDelDia() {
 // Preview visual de un ítem del Bazar (60×60, con su animación activa).
 // Vive a nivel de módulo para que React NO lo remonte en cada re-render
 // (el countdown de la oferta reiniciaba las animaciones cada segundo).
+// Amuletos: los poderes dejan de ser iconitos a línea y pasan a ser gemas/sellos
+// metálicos con bisel, faceta y símbolo en relieve (un tono propio por efecto).
+const AMULETO_TINT = {
+  i_tinto:   { bg: '#5A3A18', rim: '#C98A3E', sym: '#FFE7C2' },
+  i_repaso:  { bg: '#123A2E', rim: '#3FB88C', sym: '#CFF3E4' },
+  i_arepa:   { bg: '#4A2410', rim: '#E08A4C', sym: '#FFE0C2' },
+  i_comodin: { bg: '#2A1A4A', rim: '#A78BFA', sym: '#EADCFF' },
+  i_boost:   { bg: '#3A1030', rim: '#E04CC0', sym: '#FFD8F4' },
+  i_freeze:  { bg: '#123048', rim: '#5CB8FF', sym: '#D6EEFF' },
+  i_ghost:   { bg: '#26203A', rim: '#9AA6E0', sym: '#E4E8FF' },
+};
+function Amuleto({ id, size = 52 }) {
+  const t = AMULETO_TINT[id] || { bg: '#3A2E10', rim: '#E0B24E', sym: '#FFF0C8' };
+  const gid = `amg-${id}`;
+  return (
+    <div style={{ position: 'relative', width: size, height: size, display: 'grid', placeItems: 'center',
+      animation: 'breathe 2.8s ease-in-out infinite', filter: `drop-shadow(0 3px 6px rgba(0,0,0,.5))` }}>
+      <svg width={size} height={size} viewBox="0 0 52 52" style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
+        <defs>
+          <radialGradient id={gid} cx="38%" cy="28%">
+            <stop offset="0" stopColor={t.rim} />
+            <stop offset="0.5" stopColor={t.bg} />
+            <stop offset="1" stopColor="#0c0707" />
+          </radialGradient>
+        </defs>
+        <circle cx="26" cy="26" r="24" fill={`url(#${gid})`} />
+        <circle cx="26" cy="26" r="24" fill="none" stroke={t.rim} strokeWidth="2" strokeOpacity="0.9" />
+        <circle cx="26" cy="26" r="20.5" fill="none" stroke="#000" strokeOpacity="0.32" strokeWidth="1" />
+        <path d="M10 19 A19 19 0 0 1 42 19" fill="none" stroke="#fff" strokeOpacity="0.22" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="18" cy="15" r="2.3" fill="#fff" fillOpacity="0.55" />
+      </svg>
+      <PkIc n={PODER_ICONS[id] || 'star'} s={Math.round(size * 0.4)} c={t.sym} />
+    </div>
+  );
+}
+
 function BazarPreview({ item, size = 60, C, user, appState }) {
   const rc = (RARITY_META[item.rarity] || {}).color || '#888';
   if (item.type === 'frame') return <Av name={user?.name || '?'} sz={size - 8} C={C} photoURL={appState.photoURL} frameData={item}/>;
   if (item.type === 'banner') return (
     <div className={item.animClass || ''} style={{ width: size, height: Math.round(size * 0.66), borderRadius: 9,
-      background: item.css, boxShadow: `inset 0 0 0 1px ${rc}40` }}/>
+      background: bannerBg(item, item.css), boxShadow: `inset 0 0 0 1px ${rc}40` }}/>
   );
   if (item.type === 'chest') {
     const cc = CHEST_SHOP_COLORS[item.rarity] || CHEST_SHOP_COLORS['común'];
@@ -14965,13 +15007,7 @@ function BazarPreview({ item, size = 60, C, user, appState }) {
       </div>
     );
   }
-  if (item.type === 'item') return (
-    <div style={{ width: size - 8, height: size - 8, borderRadius: '50%', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', background: `${rc}16`, border: `1.5px solid ${rc}45`,
-      boxShadow: `0 0 14px ${rc}33`, animation: 'breathe 2.6s ease-in-out infinite' }}>
-      <PkIc n={PODER_ICONS[item.id] || 'star'} s={Math.round(size * 0.42)} c={rc}/>
-    </div>
-  );
+  if (item.type === 'item') return <Amuleto id={item.id} size={size - 4} />;
   if (item.type === 'victory' || item.type === 'entrance') {
     const ic = { empanadas: 'empanada', llamarada: 'flame', tricolor: 'star', finisimo: 'swords',
       llamas: 'flame', cielo: 'people', portal: 'target' }[item.fx] || 'flame';
@@ -15115,7 +15151,7 @@ function AdminPanel({ C, appState, setAppState, pushNotif }) {
 function ProfileMiniCard({ C, name, code, titleItem, photoURL, frameItem, bannerItem,
   level = 1, streak = 0, ryo = 0, icfesBest = 0, icfesTotal = 0,
   friendsCount = 0, appDays = 1, isPreview = false }) {
-  const bannerCss = bannerItem?.css || `linear-gradient(135deg, ${C.accent}40 0%, ${C.accent}10 100%)`;
+  const bannerCss = bannerBg(bannerItem, `linear-gradient(135deg, ${C.accent}40 0%, ${C.accent}10 100%)`);
   let titleClass = '';
   if (titleItem?.rarity === 'legendario') titleClass = 'title-legendary';
   if (titleItem?.rarity === 'mítico')     titleClass = 'title-mythic';
@@ -15236,7 +15272,7 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
               <Av name={user?.name || '?'} sz={110} C={C} photoURL={appState.photoURL} frameData={item} />
             )}
             {item.type === 'banner' && (
-              <div className={item.animClass || ''} style={{ width: '100%', height: 110, borderRadius: 16, background: item.css,
+              <div className={item.animClass || ''} style={{ width: '100%', height: 110, borderRadius: 16, background: bannerBg(item, item.css),
                 boxShadow: `0 8px 30px ${rarity.color}40, inset 0 0 0 1px ${rarity.color}45` }} />
             )}
             {esCofre && (
@@ -15245,11 +15281,7 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
               </div>
             )}
             {esPoder && (
-              <div style={{ width: 104, height: 104, borderRadius: '50%', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', background: `${rarity.color}14`, border: `2px solid ${rarity.color}55`,
-                boxShadow: `0 0 30px ${rarity.color}44`, animation: 'breathe 2.6s ease-in-out infinite' }}>
-                <PkIc n={PODER_ICONS[item.id] || 'star'} s={46} c={rarity.color}/>
-              </div>
+              <Amuleto id={item.id} size={110} />
             )}
           </div>
         )}
@@ -16176,7 +16208,7 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, onBac
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {leaderboard.map((u, index) => {
               const rank = getRankColor(index);
-              const bannerCss = u.appState?.equipped?.banner?.css || `linear-gradient(135deg, ${C.accent}40, ${C.accent}10)`;
+              const bannerCss = bannerBg(u.appState?.equipped?.banner, `linear-gradient(135deg, ${C.accent}40, ${C.accent}10)`);
               const institution = u.appState?.institution || u.institution;
               const isMe = u.code === user?.code;
 
@@ -16600,7 +16632,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const lvl     = computeLevel(appState.xp || 0);
   const myTitle = appState.equipped?.title?.name || 'Iniciado';
   const myFrame = appState.equipped?.frame;
-  const myBanner = appState.equipped?.banner?.css || `linear-gradient(135deg, ${C.accent}40, ${C.accent}10)`;
+  const myBanner = bannerBg(appState.equipped?.banner, `linear-gradient(135deg, ${C.accent}40, ${C.accent}10)`);
 
   // Comprar un cofre: se descuenta y se abre INMEDIATAMENTE con el show completo
   const RARITY_RANK = ['común', 'poco común', 'raro', 'épico', 'legendario', 'mítico'];
@@ -17238,16 +17270,15 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                 <PkIc n="left" s={17} c={C.text}/>
               </button>
             )}
-            <div style={{ flex: 1 }}>
-              <div className="serif" style={{ fontSize: 21, fontWeight: 800, color: C.text }}>El Bazar del Páramo</div>
-              <div style={{ fontSize: 10.5, color: C.textMuted, fontWeight: 700, letterSpacing: 0.5 }}>Tesoros, poderes y cofres del más allá</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 99,
-              background: `${C.amberMid}14`, border: `1px solid ${C.amberMid}35`, flexShrink: 0 }}>
-              <PkIc n="empanada" s={14} c={C.amberMid}/>
-              <span style={{ fontSize: 14, fontWeight: 900, color: C.amberMid }}>{(appState.ryo || 0).toLocaleString()}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2.6, textTransform: 'uppercase', color: 'rgba(224,169,62,0.72)', marginBottom: 4 }}>Reliquias · Poderes · Cofres</div>
+              <div className="serif" style={{ fontSize: 24, fontWeight: 800, color: C.text, letterSpacing: '-0.01em', lineHeight: 1 }}>El Bazar del Páramo</div>
             </div>
           </div>
+
+          {/* Regla editorial bajo la cabecera */}
+          <div style={{ position: 'relative', height: 1, margin: '10px 20px 2px',
+            background: 'linear-gradient(90deg, rgba(224,169,62,0.4), rgba(224,169,62,0.06) 60%, transparent)' }}/>
 
           {/* Carrusel con snap */}
           <div className="bazar-carousel" style={{ position: 'relative' }}
@@ -17266,12 +17297,12 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                     if (s.tipo === 'bundle') { FX.play('tap'); setBundleConfirm(s.bundle); }
                     else abrirItem(s.item, s.tipo === 'oferta' ? s.precio : null);
                   }} style={{
-                    position: 'relative', width: '100%', height: 230, border: `1.5px solid ${rc}55`, borderRadius: 24,
+                    position: 'relative', width: '100%', height: 230, border: `1px solid ${rc}28`, borderRadius: 20,
                     cursor: 'pointer', fontFamily: 'inherit', overflow: 'hidden', textAlign: 'left',
                     background: s.item?.type === 'banner'
-                      ? s.item.css
-                      : `linear-gradient(150deg, ${rc}30 0%, #0B0F1A 55%, ${rc}14 100%)`,
-                    boxShadow: `0 12px 38px ${rc}30`,
+                      ? bannerBg(s.item, s.item.css)
+                      : `linear-gradient(150deg, ${rc}1C 0%, #0A0D16 60%, ${rc}0C 100%)`,
+                    boxShadow: `0 16px 34px -16px rgba(0,0,0,0.7)`,
                     animation: heroIdx === i ? 'bazarHeroIn 0.5s ease both' : 'none' }}>
                     {/* Overlay si el fondo es el propio banner */}
                     {s.item?.type === 'banner' && (
@@ -17338,8 +17369,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                         {obj.name}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 3 }}>
-                        <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: rc,
-                          textShadow: `0 0 12px ${rc}` }}>
+                        <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 2, color: rc }}>
                           {s.tipo === 'bundle' ? s.bundle.desc.toUpperCase().slice(0, 34) + '…' : rmeta.label}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 15, fontWeight: 900, color: C.amberMid }}>
@@ -17386,30 +17416,44 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           </button>
         </div>
 
-        {/* ══ MERCADO DEL DÍA (rota cada 24h) ══ */}
-        <div style={{ padding: '16px 0 2px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 10px' }}>
+        {/* ══ MERCADO DEL DÍA — mosaico de rareza (rota cada 24h) ══ */}
+        <div style={{ padding: '16px 20px 2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
             <span className="bz-sec">Mercado del día</span>
             <span className="bz-timer"><PkIc n="timer" s={11} c="#FFCF6B" />vuelve en {hh}h {mm2}m</span>
           </div>
-          <div className="bz-shelf">
-            {mercado.map(({ item, precio }) => {
-              const rc = (RARITY_META[item.rarity] || RARITY_META['común']).color;
-              const rank = rankOf(item.rarity);
-              return (
-                <button key={item.id} className={`bz-card${rank <= 1 ? ' bz-card--hot' : ''}`}
-                  onClick={() => abrirItem(item, precio)} style={{ '--rc': rc }}>
-                  <span className="bz-card__rare">{(RARITY_META[item.rarity] || {}).label}</span>
-                  <span className="bz-card__prev"><BazarPreview item={item} size={54} C={C} user={user} appState={appState} /></span>
-                  <span className="bz-card__name">{item.name}</span>
-                  <span className="bz-card__price">
-                    <span className="bz-card__old">{item.price.toLocaleString()}</span>
-                    <PkIc n="empanada" s={11} c="#FFCF6B" />{precio.toLocaleString()}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {(() => {
+            const ord = [...mercado].sort((a, b) => rankOf(a.item.rarity) - rankOf(b.item.rarity));
+            const feat = ord[0]; const rest = ord.slice(1);
+            const rcOf = (it) => (RARITY_META[it.rarity] || RARITY_META['común']).color;
+            const rareOf = (it) => (RARITY_META[it.rarity] || {}).label;
+            return (
+              <div className="bz-mosaic">
+                {feat && (
+                  <button className="bz-tile bz-tile--big" style={{ '--rc': rcOf(feat.item) }}
+                    onClick={() => abrirItem(feat.item, feat.precio)}>
+                    <span className="bz-tile__rare">{rareOf(feat.item)}</span>
+                    <span className="bz-tile__prev"><BazarPreview item={feat.item} size={106} C={C} user={user} appState={appState} /></span>
+                    <span className="bz-tile__nm">{feat.item.name}</span>
+                    <span className="bz-tile__pr"><span className="bz-tile__old">{feat.item.price.toLocaleString()}</span><PkIc n="empanada" s={12} c="#FFCF6B" />{feat.precio.toLocaleString()}</span>
+                  </button>
+                )}
+                <div className="bz-tile-col">
+                  {rest.map(({ item, precio }) => (
+                    <button key={item.id} className="bz-tile bz-tile--sm" style={{ '--rc': rcOf(item) }}
+                      onClick={() => abrirItem(item, precio)}>
+                      <span className="bz-tile__prevsm"><BazarPreview item={item} size={46} C={C} user={user} appState={appState} /></span>
+                      <span className="bz-tile__tx">
+                        <span className="bz-tile__rare">{rareOf(item)}</span>
+                        <span className="bz-tile__nm">{item.name}</span>
+                        <span className="bz-tile__pr"><PkIc n="empanada" s={11} c="#FFCF6B" />{precio.toLocaleString()}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* ══ COMBOS DEL PÁRAMO — cartas grandes (rompe la repetición de cartas chicas) ══ */}

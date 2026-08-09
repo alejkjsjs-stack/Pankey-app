@@ -1220,15 +1220,14 @@
 .chx-btn:active{transform:scale(.97)}
 
 /* ══ BAZAR ASCUA · Regalo del día + Mercado + estanterías ══ */
-.bz-sec{font:800 11px/1 'Instrument Sans';letter-spacing:1.6px;text-transform:uppercase;color:var(--t2)}
-.bz-timer{display:inline-flex;align-items:center;gap:5px;font:700 10.5px/1 'Instrument Sans';color:var(--amber);
-  padding:5px 9px;border-radius:99px;background:rgba(255,207,107,.12)}
+.bz-sec{position:relative;font:800 11px/1 'Instrument Sans';letter-spacing:2px;text-transform:uppercase;color:var(--t2);padding-left:22px}
+.bz-sec::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:14px;height:2px;background:currentColor;opacity:.55}
+.bz-timer{display:inline-flex;align-items:center;gap:5px;font:700 10px/1 'Instrument Sans';letter-spacing:.3px;color:var(--t3)}
 /* Regalo del día */
-.bz-gift{display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:20px;padding:12px 14px;text-align:left;font-family:inherit;
-  background:linear-gradient(120deg,rgba(255,207,107,.16),rgba(255,107,84,.10));
-  box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px rgba(255,207,107,.35),0 10px 28px -12px rgba(255,150,80,.5);
-  transition:transform .12s var(--ez);animation:bzGiftBreath 3.4s ease-in-out infinite}
-@keyframes bzGiftBreath{50%{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px rgba(255,207,107,.55),0 14px 36px -8px rgba(255,150,80,.6)}}
+.bz-gift{display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:16px;padding:13px 15px;text-align:left;font-family:inherit;
+  background:linear-gradient(120deg,rgba(255,207,107,.08),rgba(255,107,84,.045));
+  box-shadow:inset 0 0 0 1px rgba(255,207,107,.22);transition:transform .12s var(--ez)}
+@keyframes bzGiftBreath{50%{opacity:.9}}
 .bz-gift:active{transform:scale(.985)}
 .bz-gift--done{background:var(--gl-2);box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px var(--gl-bd);animation:none;cursor:default}
 .bz-gift__ic{width:46px;height:46px;flex:none;border-radius:14px;display:grid;place-items:center;
@@ -1245,14 +1244,15 @@
 /* Estantería horizontal con snap */
 .bz-shelf{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 20px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .bz-shelf::-webkit-scrollbar{display:none}
-.bz-card{scroll-snap-align:start;flex:none;width:132px;display:flex;flex-direction:column;align-items:center;gap:7px;
-  border:none;cursor:pointer;border-radius:18px;padding:14px 10px 12px;text-align:center;font-family:inherit;position:relative;
-  background:var(--gl-2);box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px var(--gl-bd);
-  transition:transform .14s var(--pop),box-shadow .2s}
+.bz-card{scroll-snap-align:start;flex:none;width:120px;display:flex;flex-direction:column;align-items:center;gap:9px;
+  border:none;cursor:pointer;padding:8px 8px 15px;text-align:center;font-family:inherit;position:relative;
+  background:none;box-shadow:none;transition:transform .14s var(--pop)}
+.bz-card::after{content:'';position:absolute;left:16%;right:16%;bottom:0;height:1px;background:linear-gradient(90deg,transparent,var(--gl-bd) 30%,var(--gl-bd) 70%,transparent)}
 .bz-card:active{transform:translateY(2px) scale(.97)}
-.bz-card--hot{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px color-mix(in srgb,var(--rc) 55%,transparent),0 0 22px -6px var(--rc)}
-.bz-card__rare{font:800 8px/1 'Instrument Sans';letter-spacing:1.2px;color:var(--rc)}
-.bz-card__prev{width:56px;height:56px;display:grid;place-items:center}
+.bz-card__rare{font:800 8px/1 'Instrument Sans';letter-spacing:1.4px;color:var(--rc);opacity:.92}
+.bz-card__prev{position:relative;width:60px;height:60px;display:grid;place-items:center}
+.bz-card--hot .bz-card__prev::before{content:'';position:absolute;inset:-9px;z-index:-1;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--rc) 32%,transparent),transparent 70%)}
 .bz-card__name{font:700 11.5px/1.25 'Instrument Sans';color:var(--t1);min-height:28px;display:flex;align-items:center}
 .bz-card__price{display:inline-flex;align-items:center;gap:4px;font:800 13px/1 'Instrument Sans';color:var(--amber)}
 .bz-card__old{font:600 9px/1 'Instrument Sans';color:var(--t3);text-decoration:line-through}
@@ -1261,11 +1261,32 @@
 .bz-card--lock{opacity:.82}
 .bz-card--lock .bz-card__prev{filter:grayscale(.85) brightness(.8)}
 .bz-card__lockic{position:absolute;inset:0;display:grid;place-items:center;background:rgba(4,6,12,.4);border-radius:12px}
+/* Mercado del día — mosaico de rareza (1 destacado grande + chicos) */
+.bz-mosaic{display:grid;grid-template-columns:1.3fr 1fr;gap:11px;align-items:stretch}
+.bz-tile{position:relative;border:none;cursor:pointer;font-family:inherit;text-align:left;border-radius:15px;overflow:hidden;
+  background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .14s var(--pop)}
+.bz-tile:active{transform:scale(.98)}
+.bz-tile--big{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px 12px;min-height:236px;
+  background:radial-gradient(90% 68% at 50% 32%,color-mix(in srgb,var(--rc) 15%,transparent),transparent 62%),rgba(255,255,255,.03);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rc) 30%,transparent)}
+.bz-tile__rare{font:800 8px/1 'Instrument Sans';letter-spacing:1.4px;text-transform:uppercase;color:var(--rc)}
+.bz-tile__prev{display:grid;place-items:center;margin:12px 0}
+.bz-tile__nm{font:700 13px/1.2 'Instrument Sans';color:var(--t1)}
+.bz-tile--big .bz-tile__nm{margin-top:8px}
+.bz-tile__pr{display:inline-flex;align-items:center;gap:4px;font:800 13px/1 'Instrument Sans';color:var(--amber);margin-top:5px}
+.bz-tile__old{font:600 9px/1 'Instrument Sans';color:var(--t3);text-decoration:line-through;margin-right:2px}
+.bz-tile-col{display:flex;flex-direction:column;gap:11px}
+.bz-tile--sm{display:flex;align-items:center;gap:11px;padding:11px;flex:1}
+.bz-tile__prevsm{display:grid;place-items:center;flex:none;width:46px;height:46px}
+.bz-tile__tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bz-tile--sm .bz-tile__nm{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bz-tile--sm .bz-tile__pr{font-size:11px;margin-top:2px}
 /* Combos del Páramo — cartas grandes full-width */
-.bz-combo{display:flex;align-items:center;gap:12px;width:100%;border:none;cursor:pointer;border-radius:20px;padding:13px 14px;text-align:left;font-family:inherit;
-  background:linear-gradient(120deg,color-mix(in srgb,var(--rc) 13%,transparent),var(--gl-2));
-  box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px color-mix(in srgb,var(--rc) 36%,transparent);transition:transform .12s var(--ez)}
-.bz-combo:active{transform:scale(.99)}
+.bz-combo{position:relative;display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:0;padding:15px 8px 15px 18px;text-align:left;font-family:inherit;
+  background:none;box-shadow:none;border-bottom:1px solid var(--gl-bd);transition:transform .14s var(--ez)}
+.bz-combo::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:2px;background:var(--rc)}
+.bz-combo:last-child{border-bottom:none}
+.bz-combo:active{transform:translateX(3px)}
 .bz-combo__prevs{position:relative;display:flex;flex:none;align-items:center}
 .bz-combo__prev{width:46px;height:46px;display:grid;place-items:center;margin-left:-14px;border-radius:13px;background:var(--ink-2);box-shadow:0 0 0 2px var(--ink)}
 .bz-combo__prev:first-child{margin-left:0}
@@ -1280,13 +1301,12 @@
 .bz-combo__price{display:inline-flex;align-items:center;gap:3px;font:900 15px/1 'Instrument Sans'}
 
 /* Promo grande de Pankey Pro */
-.bz-pro{position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:22px;padding:16px 15px;text-align:left;font-family:inherit;
-  background:linear-gradient(120deg,rgba(255,207,107,.18),rgba(255,46,76,.14));
-  box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px rgba(255,150,80,.4),0 14px 34px -12px rgba(255,80,60,.55);
-  transition:transform .12s var(--ez)}
+.bz-pro{position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:18px;padding:16px 15px;text-align:left;font-family:inherit;
+  background:linear-gradient(120deg,rgba(255,207,107,.09),rgba(255,46,76,.06));
+  box-shadow:inset 0 0 0 1px rgba(255,150,80,.24);transition:transform .12s var(--ez)}
 .bz-pro:active{transform:scale(.99)}
-.bz-pro__aura{position:absolute;right:-30px;top:-40px;width:160px;height:160px;border-radius:50%;pointer-events:none;
-  background:radial-gradient(circle,rgba(255,62,76,.4),transparent 68%);filter:blur(6px);animation:bzGiftBreath 3.4s ease-in-out infinite}
+.bz-pro__aura{position:absolute;right:-40px;top:-50px;width:150px;height:150px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,62,76,.16),transparent 68%);filter:blur(10px)}
 .bz-pro__badge{position:relative;width:52px;height:52px;flex:none;border-radius:16px;display:grid;place-items:center;
   background:radial-gradient(circle at 34% 28%,#FFE6A6,#FF8A3D);box-shadow:0 6px 18px -6px rgba(255,120,50,.8)}
 .bz-pro__tx{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
@@ -1324,7 +1344,7 @@
 .bz-fxc__buy{display:inline-flex;align-items:center;gap:4px;border:none;cursor:pointer;border-radius:99px;padding:6px 13px;
   font:800 12px/1 'Instrument Sans';background:rgba(255,255,255,.05);transition:transform .12s var(--ez)}
 .bz-fxc__buy:active{transform:scale(.94)}
-.bz-fxc__eq{font:800 12px/1 'Instrument Sans';color:#34D399;padding:6px 0}
+.bz-fxc__eq{font:800 12px/1 'Instrument Sans';color:#E0A93E;padding:6px 0}
 
 /* "Ver todo" + grid de la categoría */
 /* Selector de eje del fueguito (Color / Forma / Movimiento) */
@@ -1337,14 +1357,14 @@
 .bz-anim{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;cursor:pointer;border-radius:15px;padding:9px 6px 8px;font-family:inherit;
   background:var(--gl-2);box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1px var(--gl-bd);transition:transform .12s var(--pop)}
 .bz-anim:active{transform:scale(.96)}
-.bz-anim--on{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1.5px #34D399,0 0 16px -6px #34D399}
+.bz-anim--on{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1.5px #E0A93E,0 0 16px -6px #E0A93E}
 .bz-anim__f{position:relative;width:34px;height:34px;overflow:hidden;display:block}
 .bz-anim__f .fire{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%) scale(.28);transform-origin:center bottom;display:flex;flex-direction:column;align-items:center}
 .bz-anim b{font:700 11px/1 'Instrument Sans';color:var(--t1)}
 .bz-anim small{font:700 9px/1 'Instrument Sans';color:var(--t3)}
 
 /* Estado equipado (fueguito) */
-.bz-card--eq{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1.5px #34D399,0 0 20px -8px #34D399}
+.bz-card--eq{box-shadow:inset 0 1px 0 var(--gl-top),inset 0 0 0 1.5px #E0A93E,0 0 18px -8px #E0A93E}
 /* Mini-fuego vivo dentro de la carta */
 .bz-fire{position:relative;width:56px;height:56px;overflow:hidden;display:block}
 .bz-fire .fire{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%) scale(.46);transform-origin:center bottom;display:flex;flex-direction:column;align-items:center}
