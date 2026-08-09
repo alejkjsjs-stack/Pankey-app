@@ -14913,9 +14913,12 @@ const SHOP_BUNDLES = [
     price: 8000, rarity: 'legendario', items: ['c_tumbaga', 'i_arepa', 'i_boost'],            linea: 'Pa\' los que ya son leyenda del páramo.' },
 ];
 
-// Oferta del día: 1 ítem aleatorio con 30% de descuento, cambia cada 24h
+// Oferta del día: 1 ítem VISUAL (banner/marco/cofre) con 30% de descuento, cambia cada 24h.
+// Se prefieren objetos llamativos con arte, no títulos de texto.
 function ofertaDelDia() {
-  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id]);
+  const visual = ['banner', 'frame', 'chest'];
+  let pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && visual.includes(i.type));
+  if (!pool.length) pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id]);
   const idx = hashStr('oferta-' + dateKeyISO()) % pool.length;
   const item = pool[idx];
   return { item, precio: Math.round(item.price * 0.7) };
@@ -16978,9 +16981,10 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     const rankOf = (r) => RARITY_ORDER.indexOf(r);
     const oferta = ofertaDelDia();
 
-    // ZONA 1 — EL ESCAPARATE: oferta del día + los 3 más raros + bundles
+    // ZONA 1 — EL ESCAPARATE: oferta del día + los 3 más raros VISUALES (banner/marco/cofre)
+    const escVisual = ['banner', 'frame', 'chest'];
     const rarest = SHOP_ITEMS
-      .filter(i => !SHOP_UNLOCKS[i.id] && i.price > 0 && i.id !== oferta.item.id)
+      .filter(i => !SHOP_UNLOCKS[i.id] && i.price > 0 && i.id !== oferta.item.id && escVisual.includes(i.type))
       .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price)
       .slice(0, 3);
     const slides = [
@@ -17462,37 +17466,65 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
             <span className="bz-sec" style={{ color: '#FFCF6B' }}>Combos del Páramo</span>
             <span className="bz-timer">ahorra en grande</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {SHOP_BUNDLES.map(b => {
-              const rc = (RARITY_META[b.rarity] || RARITY_META['común']).color;
-              const valor = b.items.reduce((s, id) => { const it = SHOP_ITEMS.find(x => x.id === id); return s + (it?.price || 0); }, 0);
-              const ahorro = valor > b.price ? Math.round((1 - b.price / valor) * 100) : 0;
-              const alcanza = (appState.ryo || 0) >= b.price;
-              return (
-                <button key={b.id} className="bz-combo" onClick={() => { FX.play('tap'); setBundleConfirm(b); }} style={{ '--rc': rc }}>
-                  <span className="bz-combo__prevs">
-                    {b.items.slice(0, 3).map((id, idx) => {
-                      const it = SHOP_ITEMS.find(x => x.id === id); if (!it) return null;
-                      return <span key={id} className="bz-combo__prev" style={{ zIndex: 3 - idx }}><BazarPreview item={it} size={42} C={C} user={user} appState={appState} /></span>;
-                    })}
-                    {b.items.length > 3 && <span className="bz-combo__more">+{b.items.length - 3}</span>}
+          {(() => {
+            const featIdx = hashStr('combofeat-' + dateKeyISO()) % SHOP_BUNDLES.length;
+            const feat = SHOP_BUNDLES[featIdx];
+            const rest = SHOP_BUNDLES.filter((_, i) => i !== featIdx);
+            const valorDe = (b) => b.items.reduce((s, id) => { const it = SHOP_ITEMS.find(x => x.id === id); return s + (it?.price || 0); }, 0);
+            const rcOf = (b) => (RARITY_META[b.rarity] || RARITY_META['común']).color;
+            const fv = valorDe(feat); const fa = fv > feat.price ? Math.round((1 - feat.price / fv) * 100) : 0;
+            return (
+              <>
+                <button className="bz-combofeat" style={{ '--rc': rcOf(feat) }} onClick={() => { FX.play('tap'); setBundleConfirm(feat); }}>
+                  {fa > 0 && <span className="bz-combofeat__badge">AHORRA {fa}%</span>}
+                  <span className="bz-combofeat__prevs">
+                    {feat.items.slice(0, 4).map(id => { const it = SHOP_ITEMS.find(x => x.id === id); return it ? <span key={id} className="bz-combofeat__prev"><BazarPreview item={it} size={58} C={C} user={user} appState={appState} /></span> : null; })}
                   </span>
-                  <span className="bz-combo__tx">
-                    <span className="bz-combo__k" style={{ color: rc }}>{(RARITY_META[b.rarity] || {}).label} · COMBO</span>
-                    <b>{b.name}</b>
-                    <small>{b.linea || b.desc}</small>
-                  </span>
-                  <span className="bz-combo__buy">
-                    {ahorro > 0 && <span className="bz-combo__save">−{ahorro}%</span>}
-                    {ahorro > 0 && <span className="bz-combo__old">{valor.toLocaleString()}</span>}
-                    <span className="bz-combo__price" style={{ color: alcanza ? '#FFCF6B' : '#7C6E74' }}>
-                      <PkIc n="empanada" s={12} c={alcanza ? '#FFCF6B' : '#7C6E74'} />{b.price.toLocaleString()}
+                  <span className="bz-combofeat__info">
+                    <span className="bz-combofeat__k">{(RARITY_META[feat.rarity] || {}).label} · Combo destacado</span>
+                    <b>{feat.name}</b>
+                    <small>{feat.linea || feat.desc}</small>
+                    <span className="bz-combofeat__buy">
+                      {fa > 0 && <span className="bz-combofeat__old">{fv.toLocaleString()}</span>}
+                      <span className="bz-combofeat__price"><PkIc n="empanada" s={17} c="#FFCF6B" />{feat.price.toLocaleString()}</span>
+                      <span className="bz-combofeat__cta">Llévatelo</span>
                     </span>
                   </span>
                 </button>
-              );
-            })}
-          </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                  {rest.map(b => {
+                    const rc = rcOf(b);
+                    const valor = valorDe(b);
+                    const ahorro = valor > b.price ? Math.round((1 - b.price / valor) * 100) : 0;
+                    const alcanza = (appState.ryo || 0) >= b.price;
+                    return (
+                      <button key={b.id} className="bz-combo" onClick={() => { FX.play('tap'); setBundleConfirm(b); }} style={{ '--rc': rc }}>
+                        <span className="bz-combo__prevs">
+                          {b.items.slice(0, 3).map((id, idx) => {
+                            const it = SHOP_ITEMS.find(x => x.id === id); if (!it) return null;
+                            return <span key={id} className="bz-combo__prev" style={{ zIndex: 3 - idx }}><BazarPreview item={it} size={42} C={C} user={user} appState={appState} /></span>;
+                          })}
+                          {b.items.length > 3 && <span className="bz-combo__more">+{b.items.length - 3}</span>}
+                        </span>
+                        <span className="bz-combo__tx">
+                          <span className="bz-combo__k" style={{ color: rc }}>{(RARITY_META[b.rarity] || {}).label} · COMBO</span>
+                          <b>{b.name}</b>
+                          <small>{b.linea || b.desc}</small>
+                        </span>
+                        <span className="bz-combo__buy">
+                          {ahorro > 0 && <span className="bz-combo__save">−{ahorro}%</span>}
+                          {ahorro > 0 && <span className="bz-combo__old">{valor.toLocaleString()}</span>}
+                          <span className="bz-combo__price" style={{ color: alcanza ? '#FFCF6B' : '#7C6E74' }}>
+                            <PkIc n="empanada" s={12} c={alcanza ? '#FFCF6B' : '#7C6E74'} />{b.price.toLocaleString()}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {/* ══ PANKEY PRO — promo grande y llamativa ══ */}

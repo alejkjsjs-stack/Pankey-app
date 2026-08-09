@@ -1299,6 +1299,23 @@
 .bz-combo__save{font:800 9px/1 'Instrument Sans';color:#34D399;background:rgba(52,211,153,.14);border-radius:6px;padding:2px 6px;margin-bottom:2px}
 .bz-combo__old{font:600 9px/1 'Instrument Sans';color:var(--t3);text-decoration:line-through}
 .bz-combo__price{display:inline-flex;align-items:center;gap:3px;font:900 15px/1 'Instrument Sans'}
+/* Combo DESTACADO — showcase grande (tipo héroe) */
+.bz-combofeat{position:relative;width:100%;border:none;cursor:pointer;font-family:inherit;text-align:left;border-radius:18px;overflow:hidden;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;
+  background:radial-gradient(120% 92% at 22% 0,color-mix(in srgb,var(--rc) 22%,transparent),transparent 62%),rgba(255,255,255,.03);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rc) 42%,transparent),0 12px 30px -16px rgba(0,0,0,.7);transition:transform .14s var(--pop)}
+.bz-combofeat:active{transform:scale(.99)}
+.bz-combofeat__badge{position:absolute;top:12px;right:12px;font:900 10px/1 'Instrument Sans';letter-spacing:.6px;color:#3A2606;background:linear-gradient(90deg,#FFE7A2,#E0A93E);border-radius:8px;padding:5px 9px;box-shadow:0 4px 12px -4px rgba(224,169,62,.7)}
+.bz-combofeat__prevs{display:flex;align-items:center;justify-content:center;gap:15px;padding:10px 0 6px}
+.bz-combofeat__prev{filter:drop-shadow(0 5px 12px rgba(0,0,0,.55))}
+.bz-combofeat__info{display:flex;flex-direction:column;min-width:0}
+.bz-combofeat__k{font:800 9px/1 'Instrument Sans';letter-spacing:1.6px;text-transform:uppercase;color:var(--rc)}
+.bz-combofeat__info b{font:800 19px/1.1 'Fraunces',serif;color:var(--t1);margin:5px 0 4px}
+.bz-combofeat__info small{font:500 11px/1.35 'Instrument Sans';color:var(--t3)}
+.bz-combofeat__buy{display:flex;align-items:center;gap:10px;margin-top:12px}
+.bz-combofeat__old{font:600 12px/1 'Instrument Sans';color:var(--t3);text-decoration:line-through}
+.bz-combofeat__price{display:inline-flex;align-items:center;gap:5px;font:900 20px/1 'Instrument Sans';color:var(--amber);font-variant-numeric:tabular-nums}
+.bz-combofeat__cta{margin-left:auto;padding:11px 17px;border-radius:12px;font:900 13px/1 'Instrument Sans';color:#2E220A;
+  background:linear-gradient(158deg,#FFF4C6,#FBD569 20%,#E6A836 46%,#C7963A);box-shadow:0 6px 16px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,250,224,.8)}
 
 /* Promo grande de Pankey Pro */
 .bz-pro{position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:18px;padding:16px 15px;text-align:left;font-family:inherit;
