@@ -14995,6 +14995,21 @@ function Amuleto({ id, size = 52 }) {
   );
 }
 
+// Destacados de la semana: set rotativo SEMANAL de cosméticos (estilo Fortnite).
+// Cambian cada 7 días; deterministas por semana. Los poderes NO entran (siempre comprables aparte).
+function destacadosSemana(n = 4) {
+  const semana = Math.floor(Date.now() / (7 * 86400000));
+  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ['frame', 'banner', 'title', 'chest'].includes(i.type));
+  const picks = []; const used = new Set();
+  for (let k = 0; picks.length < n && k < pool.length * 4 && used.size < pool.length; k++) {
+    const idx = hashStr('dest-' + semana + '-' + k) % pool.length;
+    if (!used.has(idx)) { used.add(idx); picks.push(pool[idx]); }
+  }
+  return picks;
+}
+const msProxSemana = () => { const wk = 7 * 86400000; return wk - (Date.now() % wk); };
+const fmtDH = (ms) => { const h = Math.floor(ms / 3600000); const d = Math.floor(h / 24); return d > 0 ? `${d}d ${h % 24}h` : `${h}h`; };
+
 function BazarPreview({ item, size = 60, C, user, appState }) {
   const rc = (RARITY_META[item.rarity] || {}).color || '#888';
   if (item.type === 'frame') return <Av name={user?.name || '?'} sz={size - 8} C={C} photoURL={appState.photoURL} frameData={item}/>;
@@ -16742,11 +16757,25 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [bundleConfirm, setBundleConfirm] = useState(null); // pack pendiente de confirmar
   const [, setBazarTick] = useState(0);              // tick del countdown de la oferta
   const fileInputRef = useRef(null);
+  const escRef = useRef(null); // carrusel del escaparate (auto-avance)
 
   // Countdown de la Oferta del Día (solo late cuando el Bazar está abierto)
   useEffect(() => {
     if (view !== 'shop') return undefined;
     const iv = setInterval(() => setBazarTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [view]);
+
+  // Escaparate: auto-avanza al siguiente objeto cada 6s (como Fortnite/Clash)
+  useEffect(() => {
+    if (view !== 'shop') return undefined;
+    const iv = setInterval(() => {
+      const el = escRef.current; if (!el) return;
+      const w = el.clientWidth || 1;
+      const total = Math.max(1, Math.round(el.scrollWidth / w));
+      const next = (Math.round(el.scrollLeft / w) + 1) % total;
+      el.scrollTo({ left: next * w, behavior: 'smooth' });
+    }, 6000);
     return () => clearInterval(iv);
   }, [view]);
 
@@ -17404,7 +17433,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
             background: 'linear-gradient(90deg, rgba(224,169,62,0.4), rgba(224,169,62,0.06) 60%, transparent)' }}/>
 
           {/* Carrusel con snap */}
-          <div className="bazar-carousel" style={{ position: 'relative' }}
+          <div className="bazar-carousel" ref={escRef} style={{ position: 'relative' }}
             onScroll={e => {
               const w = e.currentTarget.clientWidth || 1;
               const idx = Math.round(e.currentTarget.scrollLeft / w);
@@ -17541,6 +17570,27 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
 
         {/* ══ LA RULETA DEL PÁRAMO — tiro diario gratis ══ */}
         <RuletaBazar appState={appState} setAppState={setAppState} C={C} user={user} onCoinBurst={onCoinBurst} />
+
+        {/* ══ DESTACADOS DE LA SEMANA — rotación semanal (estilo Fortnite) ══ */}
+        <div style={{ padding: '16px 20px 2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
+            <span className="bz-sec" style={{ color: '#FFCF6B' }}>Destacados de la semana</span>
+            <span className="bz-timer"><PkIc n="timer" s={11} c="#FFCF6B" />cambia en {fmtDH(msProxSemana())}</span>
+          </div>
+          <div className="bz-dgrid">
+            {destacadosSemana(4).map(item => {
+              const rc = (RARITY_META[item.rarity] || RARITY_META['común']).color;
+              return (
+                <button key={item.id} className="bz-dcard" style={{ '--rc': rc }} onClick={() => abrirItem(item)}>
+                  <span className="bz-dcard__rare">{(RARITY_META[item.rarity] || {}).label}</span>
+                  <span className="bz-dcard__prev"><BazarPreview item={item} size={item.type === 'banner' ? 96 : 68} C={C} user={user} appState={appState} /></span>
+                  <span className="bz-dcard__nm">{item.name}</span>
+                  <span className="bz-dcard__pr"><PkIc n="empanada" s={12} c="#FFCF6B" />{item.price.toLocaleString()}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* ══ MERCADO DEL DÍA — mosaico de rareza (rota cada 24h) ══ */}
         <div style={{ padding: '16px 20px 2px' }}>
