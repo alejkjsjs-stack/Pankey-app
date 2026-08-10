@@ -772,7 +772,7 @@ const injectFirebase = () => {
 // ─────────────────────────────────────────────
 const FX = {
   ctx: null,
-  ambient: { audio: null, key: null, enabled: false },
+  ambient: { audio: null, key: null, enabled: false, playlist: [], idx: 0 },
 
   init: function() {
     if (!this.ctx) {
@@ -1171,22 +1171,22 @@ const FX = {
     } catch (e) {}
   },
 
-  // ── AMBIENTACIÓN DE FONDO (audios externos en loop, opcional) ──
-  // Pega tus links de audio (de bancos libres tipo Freesound) en AMBIENT_TRACKS.
-  setAmbient: function(themeKey, tracksMap) {
-    const url = tracksMap?.[themeKey] || null;
-    // Si está apagado o no hay pista para este tema, silencio
-    if (!this.ambient.enabled || !url) {
-      if (this.ambient.audio) { try { this.ambient.audio.pause(); } catch (e) {} }
-      this.ambient.key = themeKey;
-      return;
-    }
-    // Si ya suena la misma pista, no reiniciar
-    if (this.ambient.key === themeKey && this.ambient.audio && !this.ambient.audio.paused) return;
+  // ── AMBIENTACIÓN DE FONDO (playlist en loop, opcional) ──
+  // AMBIENT_TRACKS por tema es un ARREGLO de pistas: rotan solas (variedad).
+  // Con una sola pista, hace loop; con varias, al terminar una pasa a la siguiente.
+  _startTrack: function(url) {
     if (this.ambient.audio) { try { this.ambient.audio.pause(); } catch (e) {} }
     const a = new Audio(url);
-    a.loop = true;
     a.volume = 0.18; // bajito, de fondo
+    const single = (this.ambient.playlist || []).length <= 1;
+    a.loop = single;
+    if (!single) {
+      a.addEventListener('ended', () => { if (this.ambient.enabled && this.ambient.audio === a) this._next(); });
+    }
+    // Si una pista falta/no carga, salta a la siguiente (no se queda pegada)
+    a.addEventListener('error', () => {
+      if (this.ambient.enabled && this.ambient.audio === a && (this.ambient.playlist || []).length > 1) this._next();
+    });
     a.play().catch(() => {
       // El navegador bloquea el autoplay hasta que haya un gesto del usuario:
       // reintentamos una sola vez en el primer toque/click.
@@ -1197,13 +1197,43 @@ const FX = {
       try { document.addEventListener('pointerdown', retry, { once: true }); } catch (e) {}
     });
     this.ambient.audio = a;
+  },
+  _next: function() {
+    const pl = this.ambient.playlist || [];
+    if (!pl.length) return;
+    this.ambient.idx = (this.ambient.idx + 1) % pl.length;
+    this._startTrack(pl[this.ambient.idx]);
+  },
+  setAmbient: function(themeKey, tracksMap) {
+    let list = (tracksMap && tracksMap[themeKey]) || [];
+    if (typeof list === 'string') list = [list];
+    list = list.filter(Boolean);
+    // Si está apagado o no hay pistas para este tema, silencio
+    if (!this.ambient.enabled || !list.length) {
+      if (this.ambient.audio) { try { this.ambient.audio.pause(); } catch (e) {} }
+      this.ambient.key = themeKey; this.ambient.playlist = list;
+      return;
+    }
+    // Si ya suena una pista de este mismo tema, no reiniciar
+    if (this.ambient.key === themeKey && this.ambient.audio && !this.ambient.audio.paused) return;
     this.ambient.key = themeKey;
+    this.ambient.playlist = list;
+    this.ambient.idx = Math.floor(Math.random() * list.length); // arranca en una al azar → variedad entre sesiones
+    this._startTrack(list[this.ambient.idx]);
   },
 
   toggleAmbient: function(on, themeKey, tracksMap) {
     this.ambient.enabled = on;
     if (on) this.setAmbient(themeKey, tracksMap);
     else if (this.ambient.audio) { try { this.ambient.audio.pause(); } catch (e) {} }
+  },
+
+  // Pausar/retomar sin perder la pista (para cuando sales de la app o cambias de pestaña)
+  pauseAmbient: function() { if (this.ambient.audio) { try { this.ambient.audio.pause(); } catch (e) {} } },
+  resumeAmbient: function() {
+    if (this.ambient.enabled && this.ambient.audio && this.ambient.audio.paused) {
+      try { this.ambient.audio.play().catch(() => {}); } catch (e) {}
+    }
   },
 };
 
@@ -1250,8 +1280,15 @@ const DESTACADOS_IDS = ['f_koi', 'b_void', 't_kami', 'f_celestial', 'b_cosmos'];
 //  La música arranca sola cuando el usuario activa "Ambiente" en Ajustes
 //  (y suena bajita, en loop). Si lo dejas en null, no suena nada.
 // ═══════════════════════════════════════════════════════════════════════
+// VARIEDAD: pon VARIOS .mp3 en public/ y agrégalos a esta lista → rotan solos
+// (al terminar una pista pasa a la siguiente; entre sesiones arranca en una al azar).
+// Ej: suelta public/ambient2.mp3 y public/ambient3.mp3 y descomenta las líneas.
 const AMBIENT_TRACKS = {
-  aizome_dark: '/ambient.mp3',   // ← archivo en public/ambient.mp3 (para cambiarlo, reemplaza ese archivo)
+  aizome_dark: [
+    '/ambient.mp3',
+    // '/ambient2.mp3',
+    // '/ambient3.mp3',
+  ],
 };
 // ─────────────────────────────────────────────
 //  MOTOR DE DUELOS 1v1 EN VIVO (Firebase)
@@ -3271,6 +3308,20 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
   useEffect(() => {
     FX.toggleAmbient(ambientOn, themeKey, AMBIENT_TRACKS);
   }, [ambientOn, themeKey]);
+  // La música se apaga al salir de la app / cambiar de pestaña, y retoma al volver
+  useEffect(() => {
+    const onVis = () => { if (document.hidden) FX.pauseAmbient(); else FX.resumeAmbient(); };
+    const onBlur = () => FX.pauseAmbient();
+    const onFocus = () => { if (!document.hidden) FX.resumeAmbient(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
   // Motor de vigilancia de notificaciones (duelos + solicitudes entrantes)
   useEffect(() => {
     if (!fbLoaded || !user?.code) return;
