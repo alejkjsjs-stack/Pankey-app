@@ -334,6 +334,8 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes liquidWave { 0%{transform:translateX(0);}100%{transform:translateX(-50%);} }
 @keyframes selloDrop { 0%{transform:translate(-50%,-150px) rotate(-45deg) scale(1.5);opacity:0;} 55%{opacity:1;} 78%{transform:translate(-50%,6px) rotate(8deg) scale(1);} 100%{transform:translate(-50%,0) rotate(0) scale(1);opacity:1;} }
 @keyframes plantPop { 0%{transform:scale(1);}45%{transform:scale(1.18);}100%{transform:scale(1);} }
+@keyframes plantSway { 0%,100%{transform:rotate(-2deg);} 50%{transform:rotate(2deg);} }
+@keyframes plantGrow { 0%{transform:scale(.5) translateY(11px);opacity:.4;} 55%{transform:scale(1.12) translateY(-2px);opacity:1;} 78%{transform:scale(.97) translateY(1px);} 100%{transform:scale(1) translateY(0);} }
 @keyframes syncGlow { 0%,100%{box-shadow:0 0 0 1px rgba(74,158,255,0.28),0 0 16px rgba(74,158,255,0.12);} 50%{box-shadow:0 0 0 1px rgba(74,158,255,0.6),0 0 32px rgba(74,158,255,0.4);} }
 @keyframes jardinFloat { 0%{transform:translateY(0) scale(1);opacity:0;} 20%{opacity:0.9;} 100%{transform:translateY(-40px) scale(0.4);opacity:0;} }
 @keyframes moonGlowPulse { 0%,100%{opacity:0.88;} 50%{opacity:1;} }
@@ -5111,67 +5113,91 @@ const GENRES = ['Ficción', 'Romance', 'Misterio', 'Fantasía', 'Terror', 'Cienc
 
 // ── Planta generativa del jardín de hábitos (SVG puro, evoluciona con la racha) ──
 function PlantSVG({ streak = 0, color = '#4A7EB8', done = false, size = 56 }) {
-  const st = streak >= 14 ? 4 : streak >= 6 ? 3 : streak >= 3 ? 2 : streak >= 1 ? 1 : 0;
-  const leaf = done ? color : `${color}D8`;
-  const stem = done ? color : `${color}C0`;
-  // Hoja tipo gota reutilizable (se posiciona con translate/rotate/scale)
+  const st = streak >= 21 ? 5 : streak >= 14 ? 4 : streak >= 6 ? 3 : streak >= 3 ? 2 : streak >= 1 ? 1 : 0;
+  const leaf = done ? color : `${color}E4`;
+  const leafDk = `${color}`;                 // borde/sombra de la hoja
+  const stem = done ? color : `${color}CC`;
+  // Hoja detallada: cuerpo + brillo interior + vena central
   const Leaf = ({ x, y, r, s = 1 }) => (
-    <path d="M0 0 C -6.5 -2.5 -6.5 -12 0 -17 C 6.5 -12 6.5 -2.5 0 0 Z"
-      fill={leaf} transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`} />
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>
+      <path d="M0 0 C -7 -3 -7 -13.5 0 -18.5 C 7 -13.5 7 -3 0 0 Z" fill={leaf} stroke={leafDk} strokeWidth="0.4" strokeOpacity="0.4" />
+      <path d="M-0.4 -2 C -3.4 -5 -3.2 -12 -0.4 -15.5 C 0.6 -12 0.6 -6 -0.4 -2 Z" fill="rgba(255,255,255,0.32)" />
+      <path d="M0 -1.5 L0 -16" stroke="rgba(0,0,0,0.16)" strokeWidth="0.7" strokeLinecap="round" />
+    </g>
+  );
+  // Copa frondosa reutilizable (árbol)
+  const Crown = ({ cx, cy, sc }) => (
+    <g transform={`translate(${cx} ${cy}) scale(${sc})`}>
+      <circle cx="-8" cy="2" r="9.5" fill={leaf} /><circle cx="8" cy="2" r="9.5" fill={leaf} />
+      <circle cx="0" cy="-6" r="11" fill={leaf} /><circle cx="-4" cy="6" r="8" fill={leaf} /><circle cx="5" cy="6" r="8" fill={leaf} />
+      <circle cx="-3" cy="-7" r="6" fill="rgba(255,255,255,0.18)" /><circle cx="3" cy="-2" r="4.5" fill="rgba(255,255,255,0.12)" />
+    </g>
   );
   return (
-    <svg width={size} height={size * 80 / 64} viewBox="0 0 64 80"
-      style={{ display: 'block', overflow: 'visible', transition: 'opacity 0.4s ease, filter 0.4s ease',
-        opacity: done ? 1 : 0.86, filter: done ? `drop-shadow(0 2px 7px ${color}55)` : 'none' }}>
+    <svg width={size} height={size * 82 / 64} viewBox="0 0 64 82"
+      style={{ display: 'block', overflow: 'visible', transition: 'opacity .4s ease, filter .4s ease',
+        opacity: done ? 1 : 0.9, filter: done ? `drop-shadow(0 3px 9px ${color}66)` : `drop-shadow(0 2px 5px rgba(0,0,0,.25))` }}>
       {/* Sombra bajo la maceta */}
-      <ellipse cx="32" cy="75" rx="16" ry="2.8" fill="rgba(0,0,0,0.22)" />
+      <ellipse cx="32" cy="77" rx="17" ry="3" fill="rgba(0,0,0,0.24)" />
 
-      {/* ── Tallo / tronco ── */}
-      {st >= 1 && st < 4 && (
-        <path d={st >= 3 ? "M32 56 Q29.5 42 32 28" : st === 2 ? "M32 56 Q29.5 44 32 31" : "M32 56 Q30.5 50 32 44"}
-          stroke={stem} strokeWidth="2.6" fill="none" strokeLinecap="round" />
-      )}
-      {st >= 4 && (
-        <path d="M32 56 Q29.5 46 32 37" stroke={done ? color : `${color}C0`} strokeWidth="4.2" fill="none" strokeLinecap="round" />
-      )}
+      {/* ── Follaje (con vaivén suave) ── */}
+      <g style={{ transformBox: 'view-box', transformOrigin: '32px 58px', animation: 'plantSway 4.6s ease-in-out infinite' }}>
+        {/* Tallo / tronco */}
+        {st >= 1 && st < 4 && (
+          <path d={st >= 3 ? "M32 57 Q29 42 32 27" : st === 2 ? "M32 57 Q29 45 32 32" : "M32 57 Q30.5 51 32 45"}
+            stroke={stem} strokeWidth="2.8" fill="none" strokeLinecap="round" />
+        )}
+        {st >= 4 && (<>
+          <path d="M32 57 Q29 46 31 34" stroke="#7A4A28" strokeWidth="5" fill="none" strokeLinecap="round" />
+          <path d="M31 46 q-5 -3 -8 -6 M31 42 q5 -3 8 -7" stroke="#7A4A28" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+        </>)}
 
-      {/* ── Brote (1+) ── */}
-      {st === 1 && (<><Leaf x={26} y={46} r={-40} s={0.7} /><Leaf x={38} y={45} r={40} s={0.7} /></>)}
+        {/* Brote (1) */}
+        {st === 1 && (<><Leaf x={25} y={47} r={-42} s={0.72} /><Leaf x={39} y={46} r={42} s={0.72} /></>)}
 
-      {/* ── Planta (2) ── */}
-      {st === 2 && (<>
-        <Leaf x={24} y={46} r={-42} s={0.9} /><Leaf x={40} y={45} r={42} s={0.9} />
-        <Leaf x={26} y={35} r={-30} s={0.72} /><Leaf x={38} y={34} r={30} s={0.72} />
-      </>)}
+        {/* Planta (2) */}
+        {st === 2 && (<>
+          <Leaf x={23} y={47} r={-44} s={0.95} /><Leaf x={41} y={46} r={44} s={0.95} />
+          <Leaf x={26} y={35} r={-28} s={0.75} /><Leaf x={38} y={34} r={28} s={0.75} />
+        </>)}
 
-      {/* ── Con flor (3) ── */}
-      {st === 3 && (<>
-        <Leaf x={24} y={47} r={-42} s={0.92} /><Leaf x={40} y={46} r={42} s={0.92} />
-        <Leaf x={26} y={37} r={-30} s={0.72} /><Leaf x={38} y={36} r={30} s={0.72} />
-        <g transform="translate(32 23)">
-          {[0, 72, 144, 216, 288].map(a => (
-            <ellipse key={a} cx="0" cy="-6.2" rx="3.1" ry="5.4" fill={color} transform={`rotate(${a})`} />
-          ))}
-          <circle cx="0" cy="0" r="3.4" fill="#FFD877" />
-        </g>
-      </>)}
+        {/* Con flor (3) */}
+        {st === 3 && (<>
+          <Leaf x={22} y={48} r={-46} s={1} /><Leaf x={42} y={47} r={46} s={1} />
+          <Leaf x={25} y={37} r={-30} s={0.76} /><Leaf x={39} y={36} r={30} s={0.76} />
+          <g transform="translate(32 22)">
+            {[0, 72, 144, 216, 288].map(a => (
+              <g key={a} transform={`rotate(${a})`}>
+                <ellipse cx="0" cy="-6.6" rx="3.3" ry="5.8" fill={color} />
+                <ellipse cx="-0.9" cy="-7.4" rx="1.2" ry="3" fill="rgba(255,255,255,0.4)" />
+              </g>
+            ))}
+            <circle cx="0" cy="0" r="3.6" fill="#FFD877" /><circle cx="-1" cy="-1" r="1.4" fill="#FFF0B8" />
+          </g>
+        </>)}
 
-      {/* ── Árbol (4): copa cohesiva + florecitas ── */}
-      {st >= 4 && (<>
-        <path d="M32 12 C 20 12 15 21 19.5 28.5 C 13.5 30.5 14 40 23 40 L 41 40 C 50 40 50.5 30.5 44.5 28.5 C 49 21 44 12 32 12 Z"
-          fill={leaf} />
-        <path d="M32 12 C 24 12 20 17 20.5 23 C 22 18 26 15 32 15 Z" fill="rgba(255,255,255,0.14)" />
-        {[[26, 24], [38, 22], [32, 30], [40, 31], [24, 32]].map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="1.9" fill="#FFD877" />
-        ))}
-      </>)}
+        {/* Árbol (4) */}
+        {st === 4 && (<>
+          <Crown cx={32} cy={22} sc={1} />
+          {[[24, 20], [40, 19], [30, 12], [39, 27], [22, 28]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2" fill="#FF9EB0" />)}
+        </>)}
 
-      {/* ── Maceta de terracota (siempre encima de la base del tallo) ── */}
-      <path d="M20 57 h24 l-2 13.5 a2.4 2.4 0 0 1 -2.4 2 h-13.2 a2.4 2.4 0 0 1 -2.4 -2 z" fill="#B5714A" />
-      <path d="M20 57 h24 l-0.5 3.6 h-23 z" fill="#9A5C39" />
-      <rect x="17" y="52.5" width="30" height="5.6" rx="2.6" fill="#C67F53" />
-      <ellipse cx="32" cy="55" rx="12.5" ry="2.2" fill="#5A3A22" />
-      {st === 0 && <><ellipse cx="32" cy="53.6" rx="9" ry="1.6" fill="#3A2716" /><circle cx="32" cy="52.5" r="1.8" fill={`${color}AA`} /></>}
+        {/* Árbol florecido máximo (5) */}
+        {st >= 5 && (<>
+          <Crown cx={32} cy={20} sc={1.16} />
+          {[[22, 16], [42, 15], [30, 8], [41, 25], [20, 26], [33, 30]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2.2" fill="#FFD35E" />)}
+          {[0, 1, 2, 3, 4].map(i => <circle key={'p' + i} cx={16 + i * 8} cy={40 + (i % 2) * 4} r="1.1" fill="#FFC8D6" opacity="0.85" />)}
+        </>)}
+      </g>
+
+      {/* ── Maceta de terracota con relieve ── */}
+      <path d="M20 58 h24 l-2 13.8 a2.4 2.4 0 0 1 -2.4 2 h-13.2 a2.4 2.4 0 0 1 -2.4 -2 z" fill="#B5714A" />
+      <path d="M21 58 q3 12 3 15.8" stroke="rgba(255,255,255,0.14)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <path d="M20 58 h24 l-0.4 3.4 h-23.2 z" fill="#9A5C39" />
+      <rect x="16.5" y="53" width="31" height="6" rx="3" fill="#C67F53" />
+      <rect x="16.5" y="53" width="31" height="2.4" rx="1.2" fill="rgba(255,255,255,0.18)" />
+      <ellipse cx="32" cy="56" rx="12.8" ry="2.3" fill="#4E3220" />
+      {st === 0 && <><ellipse cx="32" cy="54.6" rx="9" ry="1.6" fill="#3A2716" /><circle cx="32" cy="53.4" r="2" fill={color} /><circle cx="31.3" cy="52.8" r="0.7" fill="rgba(255,255,255,0.5)" /></>}
     </svg>
   );
 }
@@ -5899,7 +5925,7 @@ function HabitCard({ C, habit, onToggle }) {
         <span key={k} style={{ position: 'absolute', top: `${26 + (k % 2) * 8}%`, left: `${24 + k * 16}%`, width: 5, height: 5, borderRadius: '50%',
           background: habit.color, boxShadow: `0 0 6px ${habit.color}`, animation: `jardinFloat 0.75s ease-out ${k * 0.07}s both`, pointerEvents: 'none' }} />
       ))}
-      <div style={{ animation: pop ? 'plantPop 0.6s ease' : 'none', padding: '2px 0' }}>
+      <div style={{ transformOrigin: 'bottom center', animation: pop ? 'plantGrow 0.62s cubic-bezier(.2,.85,.25,1)' : 'none', padding: '2px 0' }}>
         <PlantSVG streak={habit.streak} color={habit.color} done={done} size={52} />
       </div>
       <div style={{ fontSize: 10.5, fontWeight: 700, color: done ? C.text : C.textMid, textAlign: 'center', lineHeight: 1.2, minHeight: 26,
@@ -5926,14 +5952,16 @@ function SanctuarioHabitos({ C, appState, setAppState, pushNotif, onCoinBurst })
   const addHabit = (h) => setAppState(s => ({ ...s, habits: [...(s.habits || []), h] }));
 
   const toggleHabit = (id) => setAppState(s => {
+    const cur = (s.habits || []).find(h => h.id === id);
+    if (!cur || cur.completedToday) return s; // ya cumplido HOY → no se puede desmarcar (arregla el bug de racha −1)
     const before = (s.habits || []).filter(h => h.type !== 'task').every(h => h.completedToday);
     let bonusFired = false;
     const habits = (s.habits || []).map(h => {
       if (h.id !== id) return h;
-      const now = !h.completedToday;
-      return { ...h, completedToday: now,
-        streak: now ? (h.streak || 0) + 1 : Math.max(0, (h.streak || 0) - 1),
-        completedDates: now ? [...(h.completedDates || []), todayStr()] : (h.completedDates || []).filter(d => d !== todayStr()) };
+      return { ...h, completedToday: true,
+        streak: (h.streak || 0) + 1,
+        done: h.type === 'task' ? true : h.done, // las TAREAS se cumplen 1 vez y desaparecen
+        completedDates: [...(h.completedDates || []), todayStr()] };
     });
     const toggled = habits.find(h => h.id === id);
     // Recompensa por racha de 7 en un hábito
