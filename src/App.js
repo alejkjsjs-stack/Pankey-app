@@ -14954,10 +14954,48 @@ function otorgarBotinSesion(appState, setAppState, pushNotif, onCoinBurst) {
 }
 
 // Ítems bloqueados por logro: candado visible + precio reducido al desbloquear
+// Candados: además de PAGAR, hay que GANARSE el derecho a comprar lo top.
+// (Economía "Mixto": común/poco común/raro libres; épico caro; legendario con
+//  candado + precio alto; mítico casi solo por cofres/ruleta — ver ventaDirecta.)
 const SHOP_UNLOCKS = {
-  t_leyenda:   { desc: 'Completa 25 simulacros para desbloquear', check: s => (s.icfesHistory || []).length >= 25, price: 2000 },
-  f_supernova: { desc: 'Alcanza 30 días de racha para desbloquear', check: s => (s.streakDays || 0) >= 30, price: 10000 },
+  // Títulos
+  t_shogun:    { desc: 'Sube a nivel 15 para desbloquear',          check: s => computeLevel(s.xp || 0).level >= 15, price: 4000 },
+  t_tengu:     { desc: 'Mantén 20 días de racha para desbloquear',  check: s => (s.streakDays || 0) >= 20, price: 4500 },
+  t_leyenda:   { desc: 'Completa 25 simulacros para desbloquear',   check: s => (s.icfesHistory || []).length >= 25, price: 4000 },
+  // Marcos legendarios / hito mítico
+  f_aurora:    { desc: 'Sube a nivel 18 para desbloquear',          check: s => computeLevel(s.xp || 0).level >= 18, price: 14000 },
+  f_supernova: { desc: 'Alcanza 30 días de racha para desbloquear', check: s => (s.streakDays || 0) >= 30, price: 24000 },
+  // Banners legendarios
+  b_cosmos:    { desc: 'Mantén 25 días de racha para desbloquear',  check: s => (s.streakDays || 0) >= 25, price: 15000 },
+  b_gold_rush: { desc: 'Completa 20 simulacros para desbloquear',   check: s => (s.icfesHistory || []).length >= 20, price: 13000 },
 };
+
+// ── Re-escalado económico por rareza (rarity ∝ esfuerzo) ──
+// Mapea el precio original de cada cosmético (marco/banner/título) a la banda de
+// su rareza, conservando el orden relativo dentro de la rareza. Cofres y poderes
+// NO se tocan. Corre una vez al cargar el módulo.
+(function reescalarPreciosPorRareza() {
+  const PISO = { 'común': 200, 'poco común': 600, 'raro': 1500, 'épico': 5000, 'legendario': 14000, 'mítico': 32000 };
+  const TOPE = { 'común': 500, 'poco común': 1300, 'raro': 3200, 'épico': 7500, 'legendario': 19000, 'mítico': 45000 };
+  const grupos = {};
+  SHOP_ITEMS.forEach(i => {
+    if (i.type === 'chest' || i.type === 'item' || !i.price) return; // cofres/poderes/gratis: sin tocar
+    (grupos[i.rarity] = grupos[i.rarity] || []).push(i);
+  });
+  Object.entries(grupos).forEach(([rar, items]) => {
+    const piso = PISO[rar]; if (piso == null) return;
+    const tope = TOPE[rar];
+    const precios = items.map(i => i.price), min = Math.min(...precios), max = Math.max(...precios);
+    items.forEach(i => {
+      const t = max > min ? (i.price - min) / (max - min) : 0.5;
+      i.price = Math.round((piso + t * (tope - piso)) / 50) * 50;
+    });
+  });
+})();
+
+// Venta directa en la tienda: los MÍTICOS sin candado NO se compran (solo caen de
+// cofres altos / ruleta). Los míticos con candado (hito) sí pueden aparecer, bloqueados.
+const ventaDirecta = (i) => !(i.rarity === 'mítico' && !SHOP_UNLOCKS[i.id]);
 
 // Probabilidad de botín POR RAREZA: común muy probable, mítico rarísimo.
 const RARITY_WEIGHTS = { 'común': 50, 'poco común': 26, 'raro': 14, 'épico': 7, 'legendario': 2.5, 'mítico': 0.5 };
@@ -14994,24 +15032,24 @@ const SHOP_BUNDLES = [
     price: 8000, rarity: 'legendario', items: ['c_tumbaga', 'i_arepa', 'i_boost'],            linea: 'Pa\' los que ya son leyenda del páramo.' },
 
   // ── Combos de LOOK: marco + banner de la misma temática (se equipan al comprar) ──
+  // Precios acordes a la economía re-escalada. Si el combo trae una pieza con candado,
+  // comprarBundle exige cumplir el requisito (no se puede saltar el gate pagando).
   { id: 'bd_look_neon',   name: 'Rumba de Neón',        desc: 'Neón Caribe + Ciudad de Neón', look: true,
-    price: 4900,  rarity: 'épico',      items: ['f_neon', 'b_neon_city'],   linea: 'Medellín a las 2am, y tú brillando.' },
+    price: 6500,  rarity: 'épico',      items: ['f_neon', 'b_neon_city'],   linea: 'Medellín a las 2am, y tú brillando.' },
   { id: 'bd_look_volcan', name: 'Corazón de Volcán',    desc: 'El Volcán + Fuego del Volcán', look: true,
-    price: 8900,  rarity: 'épico',      items: ['f_dragon', 'b_flame'],     linea: 'Ardes por dentro y por fuera.' },
+    price: 10500, rarity: 'épico',      items: ['f_dragon', 'b_flame'],     linea: 'Ardes por dentro y por fuera.' },
   { id: 'bd_look_aurora', name: 'Cielo del Sur',        desc: 'Aurora Boreal + Cielo de Estrellas', look: true,
-    price: 12900, rarity: 'legendario', items: ['f_aurora', 'b_aurora'],    linea: 'El firmamento entero, encima tuyo.' },
+    price: 19900, rarity: 'legendario', items: ['f_aurora', 'b_aurora'],    linea: 'El firmamento entero, encima tuyo.' },
   { id: 'bd_look_dorado', name: 'Fiebre de El Dorado',  desc: 'Rana Dorada + Fiebre del Oro', look: true,
-    price: 11200, rarity: 'legendario', items: ['f_koi', 'b_gold_rush'],    linea: 'El Dorado sí era real, y es tuyo.' },
-  { id: 'bd_look_muisca', name: 'Leyenda Muisca',       desc: 'Corona de Estrellas + Universo Muisca', look: true,
-    price: 22000, rarity: 'mítico',     items: ['f_celestial', 'b_cosmos'], linea: 'El cielo que inspiró las leyendas de oro.' },
+    price: 15900, rarity: 'legendario', items: ['f_koi', 'b_gold_rush'],    linea: 'El Dorado sí era real, y es tuyo.' },
 ];
 
 // Oferta del día: 1 ítem VISUAL (banner/marco/cofre) con 30% de descuento, cambia cada 24h.
 // Se prefieren objetos llamativos con arte, no títulos de texto.
 function ofertaDelDia() {
   const visual = ['banner', 'frame', 'chest'];
-  let pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && visual.includes(i.type));
-  if (!pool.length) pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id]);
+  let pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ventaDirecta(i) && visual.includes(i.type));
+  if (!pool.length) pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ventaDirecta(i));
   const idx = hashStr('oferta-' + dateKeyISO()) % pool.length;
   const item = pool[idx];
   return { item, precio: Math.round(item.price * 0.7) };
@@ -15037,7 +15075,7 @@ function regaloDelDia() {
 // determinista por fecha. Mañana es otra cosa → razón para volver.
 function mercadoDelDia() {
   const oferta = ofertaDelDia().item;
-  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && i.id !== oferta.id);
+  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ventaDirecta(i) && i.id !== oferta.id);
   const seed = 'mercado-' + dateKeyISO();
   const picks = [], usados = new Set();
   ['frame', 'title', 'item', 'chest', 'banner'].forEach(tipo => {
@@ -15055,7 +15093,7 @@ function mercadoDelDia() {
 function mercadoMisterioso() {
   const oferta = ofertaDelDia().item;
   const yaEnMercado = new Set(mercadoDelDia().map(m => m.item.id));
-  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id]
+  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ventaDirecta(i)
     && i.id !== oferta.id && !yaEnMercado.has(i.id)
     && ['frame', 'banner', 'title', 'chest'].includes(i.type));
   const seed = 'misterio-' + dateKeyISO();
@@ -15110,7 +15148,7 @@ function Amuleto({ id, size = 52 }) {
 // Cambian cada 7 días; deterministas por semana. Los poderes NO entran (siempre comprables aparte).
 function destacadosSemana(n = 4) {
   const semana = Math.floor(Date.now() / (7 * 86400000));
-  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ['frame', 'banner', 'title', 'chest'].includes(i.type));
+  const pool = SHOP_ITEMS.filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ventaDirecta(i) && ['frame', 'banner', 'title', 'chest'].includes(i.type));
   const picks = []; const used = new Set();
   for (let k = 0; picks.length < n && k < pool.length * 4 && used.size < pool.length; k++) {
     const idx = hashStr('dest-' + semana + '-' + k) % pool.length;
@@ -15201,7 +15239,7 @@ function ruletaPool() {
     { kind: 'emp', amount: 800, rarity: 'raro',       w: 3 },
   ];
   const items = SHOP_ITEMS
-    .filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ['frame', 'banner', 'title', 'chest'].includes(i.type))
+    .filter(i => i.price > 0 && !SHOP_UNLOCKS[i.id] && ventaDirecta(i) && ['frame', 'banner', 'title', 'chest'].includes(i.type))
     .map(i => ({ kind: 'item', item: i, rarity: i.rarity, w: RULETA_W[i.rarity] || 1 }));
   return [...emp, ...items];
 }
@@ -17287,7 +17325,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     // ZONA 1 — EL ESCAPARATE: oferta del día + los 3 más raros VISUALES (banner/marco/cofre)
     const escVisual = ['banner', 'frame', 'chest'];
     const rarest = SHOP_ITEMS
-      .filter(i => !SHOP_UNLOCKS[i.id] && i.price > 0 && i.id !== oferta.item.id && escVisual.includes(i.type))
+      .filter(i => !SHOP_UNLOCKS[i.id] && ventaDirecta(i) && i.price > 0 && i.id !== oferta.item.id && escVisual.includes(i.type))
       .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price)
       .slice(0, 3);
     const slides = [
@@ -17440,6 +17478,9 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
     };
 
     const comprarBundle = (b) => {
+      // No se puede saltar un candado pagando el combo: si trae una pieza bloqueada, exige el requisito.
+      const gated = b.items.map(id => SHOP_UNLOCKS[id]).find(un => un && !un.check(appState));
+      if (gated) { FX.play('error'); FX.vibrate('error'); pushNotif?.(gated.desc); return; }
       if ((appState.ryo || 0) < b.price) { FX.play('error'); FX.vibrate('error'); pushNotif?.('No te alcanzan las empanadas para este pack.'); return; }
       FX.play('coin'); FX.vibrate('heavy');
       let chestPremio = null, chestItem = null;
@@ -18013,6 +18054,26 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
             </div>
           );
         })}
+
+        {/* ══ RELIQUIAS DEL PÁRAMO — piezas de prestigio: se GANAN (candado) y se compran ══ */}
+        {(() => {
+          const reliquias = Object.keys(SHOP_UNLOCKS)
+            .map(id => SHOP_ITEMS.find(i => i.id === id))
+            .filter(Boolean)
+            .sort((a, b) => rankOf(a.rarity) - rankOf(b.rarity) || b.price - a.price);
+          if (!reliquias.length) return null;
+          return (
+            <div style={{ padding: '18px 0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 9px' }}>
+                <span className="bz-sec" style={{ color: '#E6C15A' }}>Reliquias del Páramo</span>
+                <span className="bz-timer" style={{ color: '#E6C15A', background: 'rgba(224,169,62,.13)' }}>se ganan con el tiempo</span>
+              </div>
+              <div className="bz-shelf">
+                {reliquias.map(item => cardDe(item))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ══ COFRES y PODERES — SIEMPRE disponibles (los cosméticos van por rotación) ══ */}
         {(() => {
