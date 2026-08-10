@@ -569,11 +569,11 @@ function TexturaFondo({ C, isLight }) {
   const farRef = useRef(null);
   const nearRef = useRef(null);
 
-  const starsFar = useMemo(() => Array.from({ length: 90 }, () => ({
+  const starsFar = useMemo(() => Array.from({ length: 45 }, () => ({
     left: Math.random() * 100, top: Math.random() * 100,
     o: (0.22 + Math.random() * 0.5).toFixed(2), dur: (4 + Math.random() * 5).toFixed(1), del: (Math.random() * 5).toFixed(1),
   })), []);
-  const starsNear = useMemo(() => Array.from({ length: 32 }, () => ({
+  const starsNear = useMemo(() => Array.from({ length: 16 }, () => ({
     left: Math.random() * 100, top: Math.random() * 100,
     o: (0.3 + Math.random() * 0.6).toFixed(2), dur: (5 + Math.random() * 5).toFixed(1), del: (Math.random() * 5).toFixed(1),
   })), []);
@@ -1849,13 +1849,12 @@ function AvatarFrame({ frameData, sz, c }) {
     return (
       <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', zIndex: 3, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #10B981',
-          boxShadow: '0 0 14px #10B98180, inset 0 0 10px #10B98130', animation: 'jadePulse 2.5s ease-in-out infinite' }} />
+          boxShadow: '0 0 12px #10B98170, inset 0 0 8px #10B98130' }} />
         {sparks.map((p, i) => (
           <div key={i} style={{ position: 'absolute', top: p.top, left: p.left, transform: 'translate(-50%,-50%)' }}>
-            <div style={{ width: 6, height: 6, background: '#fff',
+            <div style={{ width: 5, height: 5, background: '#fff',
               clipPath: 'polygon(50% 0%,65% 35%,100% 50%,65% 65%,50% 100%,35% 65%,0% 50%,35% 35%)',
-              boxShadow: '0 0 6px #6EE7B7, 0 0 12px #34D39990',
-              animation: `sparkleFlash 3.2s ${i * 0.8}s ease-in-out infinite` }} />
+              boxShadow: '0 0 5px #6EE7B7' }} />
           </div>
         ))}
       </div>
@@ -1923,7 +1922,7 @@ function AvatarFrame({ frameData, sz, c }) {
     return (
       <div style={{ position: 'absolute', inset: -3, zIndex: 3, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2.5px solid #FBBF24',
-          boxShadow: '0 0 16px #FBBF2490, inset 0 0 10px #FBBF2430', animation: 'jadePulse 3s ease-in-out infinite' }} />
+          boxShadow: '0 0 12px #FBBF2470, inset 0 0 8px #FBBF2430' }} />
          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', animation: 'inkSpin 22s linear infinite' }}>
           {frogs.map((deg, i) => (
             <div key={i} style={{
@@ -1937,8 +1936,7 @@ function AvatarFrame({ frameData, sz, c }) {
         </div>
         {dust.map((d, i) => (
           <div key={i} style={{ position: 'absolute', top: d.top, left: d.left, transform: 'translate(-50%,-50%)' }}>
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFE9A8',
-              boxShadow: '0 0 6px #FBBF24', animation: `sparkleFlash 2.6s ${i * 0.7}s ease-in-out infinite` }} />
+            <div style={{ width: 3.5, height: 3.5, borderRadius: '50%', background: '#FFE9A8', boxShadow: '0 0 5px #FBBF24' }} />
           </div>
         ))}
       </div>
@@ -1953,12 +1951,11 @@ function AvatarFrame({ frameData, sz, c }) {
       { top: '90%', left: '72%' },
     ];
     return (
-      <div style={{ position: 'absolute', inset: -4, zIndex: 3, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: 0, border: '3px solid #EF4444',
-          animation: 'fireDistort 2s ease-in-out infinite',
-          boxShadow: '0 0 24px #EF444490,0 0 48px #EF444440', filter: 'blur(.4px)' }} />
+      <div style={{ position: 'absolute', inset: -3, zIndex: 3, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #EF4444',
+          boxShadow: '0 0 14px #EF444470, inset 0 0 8px #EF444430' }} />
         <div style={{ position: 'absolute', inset: 3, borderRadius: '50%', border: '2px solid #F59E0B',
-          boxShadow: '0 0 16px #EF4444,inset 0 0 10px #EF444430' }} />
+          boxShadow: '0 0 10px #EF444460' }} />
         {embers.map((e, i) => (
           <div key={i} style={{ position: 'absolute', top: e.top, left: e.left, transform: 'translate(-50%,-50%)' }}>
             <div style={{ width: 5, height: 5, borderRadius: '50%',
@@ -1970,26 +1967,24 @@ function AvatarFrame({ frameData, sz, c }) {
     );
   }
 
-  // ── Corona de Estrellas ──
+  // ── Corona de Estrellas ── (con sus anillos girando; ceñida al avatar; glow ESTABLE + estrellas fijas, sin titilar)
   if (id === 'f_celestial') {
-    const stars = [0,51,102,153,204,255,306];
+    const stars = [0, 51, 102, 153, 204, 255, 306];
+    const rr = sz / 2 + 2; // órbita ceñida (ya no se sale del avatar)
     return (
-      <div style={{ position: 'absolute', inset: -5, zIndex: 3, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '3px solid #C084FC',
-          boxShadow: '0 0 24px #C084FC90,0 0 48px #C084FC50,0 0 80px #C084FC25' }} />
-        <div style={{ position: 'absolute', inset: -2, borderRadius: '50%', border: '1.5px solid #C084FC70', animation: 'inkSpin 10s linear infinite' }} />
-        <div style={{ position: 'absolute', inset: -5, borderRadius: '50%', border: '1px solid #C084FC40', animation: 'inkSpinRev 15s linear infinite' }} />
-        {stars.map((deg, i) => (
-          <div key={i} style={{ position: 'absolute', top: '50%', left: '50%',
-            transform: `rotate(${deg}deg) translate(${r + 2}px,-50%)` }}>
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#fff',
-              boxShadow: '0 0 6px #C084FC,0 0 12px #C084FC',
-              animation: `sparkleFlash 2.4s ${i * 0.28}s ease-in-out infinite` }} />
-          </div>
-        ))}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', width: 3, height: 3, borderRadius: '50%',
-          background: '#fff', boxShadow: '0 0 8px #fff, 0 0 16px #C084FC',
-          animation: 'shootingStar 6s ease-in infinite' }} />
+      <div style={{ position: 'absolute', inset: -2, zIndex: 3, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2.5px solid #C084FC',
+          boxShadow: '0 0 16px #C084FC80, inset 0 0 8px #C084FC30' }} />
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1.5px solid #C084FC70', animation: 'inkSpin 10s linear infinite' }} />
+        <div style={{ position: 'absolute', inset: -2, borderRadius: '50%', border: '1px solid #C084FC40', animation: 'inkSpinRev 15s linear infinite' }} />
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', animation: 'inkSpin 26s linear infinite' }}>
+          {stars.map((deg, i) => (
+            <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 3.5, height: 3.5, marginLeft: -1.75, marginTop: -1.75,
+              transform: `rotate(${deg}deg) translateX(${rr}px)` }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#fff', boxShadow: '0 0 5px #C084FC' }} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -2035,29 +2030,23 @@ function AvatarFrame({ frameData, sz, c }) {
     </div>
   );
 
-  // ── Supernova: anillo pulsante + partículas orbitando + destellos ──
+  // ── Supernova ── (rosado; anillo + partículas orbitando; ceñido; glow ESTABLE, sin parpadeo blanco)
   if (id === 'f_supernova') {
     const orbs = [0, 120, 240];
+    const rr = sz / 2 + 2;
     return (
-      <div style={{ position: 'absolute', inset: -5, zIndex: 3, pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', inset: -2, zIndex: 3, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid #F472B6',
-          animation: 'supernovaPulse 2.2s ease-in-out infinite' }} />
-        <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '1.5px solid #C084FC66',
-          animation: 'inkSpin 8s linear infinite' }} />
+          boxShadow: '0 0 16px #F472B680, inset 0 0 8px #F472B630' }} />
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1.5px solid #C084FC66', animation: 'inkSpin 8s linear infinite' }} />
         <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', animation: 'inkSpinRev 6s linear infinite' }}>
           {orbs.map((deg, i) => (
-            <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 6, height: 6,
-              marginLeft: -3, marginTop: -3, borderRadius: '50%',
-              transform: `rotate(${deg}deg) translateY(-${r + 3}px)`,
-              background: '#fff', boxShadow: '0 0 8px #F472B6, 0 0 16px #C084FC' }} />
+            <div key={i} style={{ position: 'absolute', top: '50%', left: '50%', width: 5, height: 5,
+              marginLeft: -2.5, marginTop: -2.5, borderRadius: '50%',
+              transform: `rotate(${deg}deg) translateX(${rr}px)`,
+              background: '#fff', boxShadow: '0 0 6px #F472B6, 0 0 12px #C084FC' }} />
           ))}
         </div>
-        {[{ top: '2%', left: '78%' }, { top: '85%', left: '15%' }].map((p, i) => (
-          <div key={`s${i}`} style={{ position: 'absolute', top: p.top, left: p.left, width: 7, height: 7,
-            background: '#fff', clipPath: 'polygon(50% 0%,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0% 50%,38% 38%)',
-            filter: 'drop-shadow(0 0 5px #F472B6)',
-            animation: `sparkleFlash 2s ${i * 0.9}s ease-in-out infinite` }} />
-        ))}
       </div>
     );
   }
@@ -3353,29 +3342,42 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     }
   }, [user, appState, books, themeKey, notifications]);
 
-  // Descarga multi-dispositivo
+  // Descarga multi-dispositivo — MERGE, no reemplazo.
+  // Antes hacía setAppState(cloud) cuando la nube tenía más XP, y eso PISABA el
+  // inventario local con el de la nube: si la nube traía menos objetos (p. ej. por
+  // un guardado viejo desde otro dispositivo), se "perdían" marcos/banners.
+  // Ahora la PROPIEDAD (inventory y lo desbloqueado) es la UNIÓN de local + nube:
+  // nunca se pierde nada, y el progreso (xp/minutos/racha) lo aporta el más avanzado.
   useEffect(() => {
     if (fbLoaded && user?.code) {
       FB().get(FB().ref(FB().db, `users/${user.code}`)).then(snap => {
-        if (snap.exists()) {
-          const cloudData = snap.val();
-          if (cloudData.appState) {
-            const cloudXp = cloudData.appState.xp || 0;
-            const localXp = appState.xp || 0;
-            const cloudMins = cloudData.appState.totalMinutesRead || 0;
-            const localMins = appState.totalMinutesRead || 0;
-            
-            // Si la nube detecta que tienes más XP o más minutos en otro lado, jala los datos
-            if (cloudXp > localXp || cloudMins > localMins) {
-              setAppState(cloudData.appState);
-              if (cloudData.books) setBooks(cloudData.books);
-              pushNotif("Datos sincronizados desde la nube ☁️");
-            }
+        if (!snap.exists()) return;
+        const cloudData = snap.val();
+        const cloud = cloudData.appState;
+        if (!cloud) return;
+        const uni = (a, b) => [...new Set([...(a || []), ...(b || [])])];
+        setAppState(local => {
+          const cloudAhead = (cloud.xp || 0) > (local.xp || 0) || (cloud.totalMinutesRead || 0) > (local.totalMinutesRead || 0);
+          const base = cloudAhead ? cloud : local;          // progreso: gana el más avanzado
+          const merged = {
+            ...base,
+            // Propiedad = unión (monótona): jamás se pierde un cosmético ni un fueguito comprado
+            inventory:  uni(local.inventory,  cloud.inventory),
+            fireOwned:  uni(local.fireOwned,  cloud.fireOwned),
+            animOwned:  uni(local.animOwned,  cloud.animOwned),
+            formaOwned: uni(local.formaOwned, cloud.formaOwned),
+            // Lo equipado lo decide el estado más avanzado; si no tuviera, cae al otro
+            equipped: { ...((cloudAhead ? local : cloud).equipped || {}), ...(base.equipped || {}) },
+          };
+          if (cloudAhead) {
+            if (cloudData.books) setBooks(cloudData.books);
+            setTimeout(() => pushNotif("Datos sincronizados desde la nube ☁️"), 0);
           }
-        }
+          return merged;
+        });
       });
     }
-  }, [fbLoaded, user?.code]);
+  }, [fbLoaded, user?.code]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Posición en el ranking (para el escudo del header)
   useEffect(() => {

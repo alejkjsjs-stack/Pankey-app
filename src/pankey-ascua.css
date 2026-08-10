@@ -43,6 +43,8 @@
 .asc-far i{width:1px;height:1px}
 .asc-near i{width:2px;height:2px;box-shadow:0 0 3px rgba(255,255,255,.55)}
 @keyframes ascTw{0%,100%{opacity:var(--o,.5)}50%{opacity:.07}}
+/* Con "reducir movimiento": estrellas quietas (siguen visibles) en vez de titilar 45+ nodos por frame. */
+@media (prefers-reduced-motion:reduce){.asc-stars i{animation:none;opacity:var(--o,.5)}.asc-shoot{animation:none;opacity:0}.asc-aura{animation:none}}
 .asc-aura{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:460px;height:460px;max-width:130vw;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,rgba(255,46,76,.17) 0%,rgba(255,90,60,.06) 40%,transparent 68%);filter:blur(10px);mix-blend-mode:screen;animation:ascAuraG 6s ease-in-out infinite}
 @keyframes ascAuraG{0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}}
@@ -1187,7 +1189,9 @@
 @media (prefers-reduced-motion:reduce){.dfxh *{animation:none!important}}
 
 /* ══ APERTURA DE COFRE (Ascua): 3 golpes → explota → objeto con preview ══ */
-.chx-scrim{position:fixed;inset:0;z-index:99997;background:rgba(2,3,7,.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:24px}
+/* Sin backdrop-filter: el fondo ya es 95% opaco, así el blur no se nota y sí costaba
+   recalcularse cada frame sobre las estrellas animadas (lag al abrir cofre). */
+.chx-scrim{position:fixed;inset:0;z-index:99997;background:rgba(2,3,7,.96);display:flex;align-items:center;justify-content:center;padding:24px}
 .chx{position:relative;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .chx-aura{position:absolute;top:44%;left:50%;width:330px;height:330px;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;filter:blur(8px);mix-blend-mode:screen;transition:opacity .4s,background .4s;animation:chxAura 3s ease-in-out infinite}
 @keyframes chxAura{50%{transform:translate(-50%,-50%) scale(1.1)}}
