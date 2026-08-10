@@ -435,6 +435,15 @@
 .csab-practice{display:flex;align-items:center;justify-content:center;gap:9px;padding:16px;border-radius:18px;cursor:pointer;font-family:inherit;margin-top:2px;
   background:rgba(255,255,255,.04);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);color:var(--t1,#F6F1F2);font:700 14px/1 'Instrument Sans',sans-serif;letter-spacing:-.01em;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
 .csab-practice:active{transform:scale(.98)}
+/* Arte SVG procedural detrás de cada función (HubArt): va al fondo sin tocar el contenido */
+.hart{z-index:-1}
+.hub-adn,.hub-tile,.hub-sensei,.hub-banco,.hub-rep,.hub-diag,.hub-live{position:relative;overflow:hidden;isolation:isolate}
+@keyframes hartDrift{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes hartSpin{to{transform:rotate(360deg)}}
+@keyframes hartDash{to{stroke-dashoffset:-22}}
+@keyframes hartPulse{0%,100%{opacity:.2}50%{opacity:.6}}
+@keyframes hartRise{0%,100%{transform:translateY(4px);opacity:.28}50%{transform:translateY(-4px);opacity:.55}}
+@keyframes hartGrow{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
 
 /* ── Plan de Batalla ── */
 .plan-wrap{position:fixed;inset:0;z-index:99992;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;
@@ -652,7 +661,8 @@
 .hub-diag__k{font:900 9px/1.2 'Instrument Sans',sans-serif;letter-spacing:1.4px;color:rgba(251,191,36,.9)}
 .hub-diag__t{font:700 15px/1.15 'Instrument Sans',sans-serif;color:#F6F1F2}
 .hub-diag__go{font:800 12px/1 'Instrument Sans',sans-serif;margin-top:4px}
-.hub-diag__score{flex-shrink:0;font:800 34px/1 'Sora','Instrument Sans',sans-serif;color:#FBBF24;text-shadow:0 0 24px rgba(251,191,36,.4)}
+.hub-diag__score{flex-shrink:0;font:800 34px/1 'Sora','Instrument Sans',sans-serif;color:#FBBF24;text-shadow:0 0 24px rgba(251,191,36,.4);animation:diagPulse 2.8s ease-in-out infinite}
+@keyframes diagPulse{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.07);opacity:1;text-shadow:0 0 32px rgba(251,191,36,.7)}}
 .hub-diag__score span{font-size:13px;color:rgba(255,255,255,.45)}
 .diag-wrap{position:fixed;inset:0;z-index:99992;display:flex;flex-direction:column}
 .diag-scroll{position:relative;z-index:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:44px 20px 24px;max-width:440px;margin:0 auto;width:100%}

@@ -13467,6 +13467,86 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
 }
 
 // Preview del hub (compartido por el Centro del Sabio y su paywall borroso).
+// Arte "de canvas" (SVG procedural) DETRÁS de cada función del Centro del Sabio:
+// liviano, tintado por color y con animación sutil. Da imágenes propias a cada tarjeta.
+function HubArt({ kind, color = '#A78BFA' }) {
+  const wrap = { position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', borderRadius: 'inherit', zIndex: 0 };
+  const S = (children, op = 0.5) => (
+    <svg viewBox="0 0 200 120" preserveAspectRatio="xMidYMid slice"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: op }} aria-hidden="true">{children}</svg>
+  );
+  const vbSpin = (cx, cy, dur) => ({ transformBox: 'view-box', transformOrigin: `${cx}px ${cy}px`, animation: `hartSpin ${dur}s linear infinite` });
+
+  if (kind === 'dna') {
+    const N = 13, L = [], R = [], rungs = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, y = 4 + t * 112, ph = t * Math.PI * 3;
+      const xl = 100 - 30 * Math.cos(ph), xr = 100 + 30 * Math.cos(ph);
+      L.push(`${xl.toFixed(1)},${y.toFixed(1)}`); R.push(`${xr.toFixed(1)},${y.toFixed(1)}`);
+      rungs.push([xl, xr, y]);
+    }
+    return <div className="hart" style={wrap}><div style={{ position: 'absolute', inset: 0, animation: 'hartDrift 9s ease-in-out infinite' }}>{S(
+      <g stroke={color} fill="none">
+        <polyline points={L.join(' ')} strokeWidth="1.5" opacity="0.7" />
+        <polyline points={R.join(' ')} strokeWidth="1.5" opacity="0.7" />
+        {rungs.map(([a, b, y], i) => <line key={i} x1={a} y1={y} x2={b} y2={y} strokeWidth="1" opacity={0.14 + 0.16 * Math.abs(Math.cos(i))} />)}
+        {rungs.filter((_, i) => i % 2 === 0).map(([a, b, y], i) => <circle key={i} cx={a} cy={y} r="1.8" fill={color} stroke="none" opacity="0.85" />)}
+      </g>)}</div></div>;
+  }
+  if (kind === 'radar') {
+    return <div className="hart" style={wrap}>{S(<g>
+      {[16, 30, 44].map(r => <circle key={r} cx="150" cy="60" r={r} fill="none" stroke={color} strokeWidth="1" opacity="0.35" />)}
+      <line x1="104" y1="60" x2="196" y2="60" stroke={color} strokeWidth="0.6" opacity="0.18" />
+      <line x1="150" y1="14" x2="150" y2="106" stroke={color} strokeWidth="0.6" opacity="0.18" />
+      <g style={vbSpin(150, 60, 4.5)}>
+        <path d="M150 60 L150 14 A46 46 0 0 1 192 40 Z" fill={color} opacity="0.16" />
+        <line x1="150" y1="60" x2="150" y2="14" stroke={color} strokeWidth="1.4" opacity="0.75" />
+      </g>
+      <circle cx="168" cy="44" r="2" fill={color} /><circle cx="138" cy="80" r="1.6" fill={color} opacity="0.6" />
+    </g>)}</div>;
+  }
+  if (kind === 'map') {
+    return <div className="hart" style={wrap}>{S(<g fill="none" stroke={color}>
+      <path d="M14 100 C 60 92, 50 50, 96 46 S 150 30, 186 22" strokeWidth="1.5" strokeDasharray="5 6" opacity="0.6" style={{ animation: 'hartDash 6s linear infinite' }} />
+      {[[14, 100], [96, 46], [186, 22]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i === 2 ? 4 : 2.6} fill={color} stroke="none" opacity="0.8" />)}
+      <g transform="translate(186 22)" style={{ animation: 'hartPulse 2.6s ease-in-out infinite' }}><circle r="8" fill="none" strokeWidth="1.4" opacity="0.7" /></g>
+    </g>)}</div>;
+  }
+  if (kind === 'layers') {
+    return <div className="hart" style={wrap}>{S(<g stroke={color} fill="none">
+      {[0, 1, 2, 3].map(i => <rect key={i} x={44 + i * 4} y={30 + i * 8} width="112" height="20" rx="4" strokeWidth="1.2"
+        opacity={0.25 + i * 0.14} style={{ animation: `hartRise 5s ease-in-out ${i * 0.4}s infinite` }} />)}
+    </g>)}</div>;
+  }
+  if (kind === 'waves') {
+    return <div className="hart" style={wrap}>{S(<g fill="none" stroke={color}>
+      {[10, 22, 34, 46].map((r, i) => <circle key={r} cx="26" cy="60" r={r} strokeWidth="1.3" opacity={0.5 - i * 0.1}
+        style={{ animation: `hartPulse ${2.4 + i * 0.3}s ease-in-out ${i * 0.25}s infinite` }} />)}
+    </g>)}</div>;
+  }
+  if (kind === 'vault') {
+    return <div className="hart" style={wrap}>{S(<g stroke={color} opacity="0.4">
+      {[0, 1, 2, 3, 4, 5].map(i => <line key={'v' + i} x1={20 + i * 32} y1="10" x2={20 + i * 32} y2="110" strokeWidth="0.7" />)}
+      {[0, 1, 2, 3].map(i => <line key={'h' + i} x1="10" y1={22 + i * 26} x2="190" y2={22 + i * 26} strokeWidth="0.7" />)}
+    </g>, 0.4)}</div>;
+  }
+  if (kind === 'bars') {
+    const bs = [26, 44, 34, 58, 48, 70, 62];
+    return <div className="hart" style={wrap}>{S(<g>
+      {bs.map((hh, i) => <rect key={i} x={20 + i * 24} y={104 - hh} width="13" height={hh} rx="3" fill={color}
+        opacity={0.25 + i * 0.06} style={{ transformBox: 'fill-box', transformOrigin: 'bottom', animation: `hartGrow 3.6s ease-in-out ${i * 0.18}s infinite` }} />)}
+    </g>)}</div>;
+  }
+  if (kind === 'nodes') {
+    return <div className="hart" style={wrap}>{S(<g>
+      <line x1="70" y1="60" x2="130" y2="60" stroke={color} strokeWidth="1.6" strokeDasharray="4 5" opacity="0.6" style={{ animation: 'hartDash 3s linear infinite' }} />
+      {[[70, 60], [130, 60]].map(([x, y], i) => <g key={i}><circle cx={x} cy={y} r="9" fill="none" stroke={color} strokeWidth="1.4" opacity="0.6" />
+        <circle cx={x} cy={y} r="14" fill="none" stroke={color} strokeWidth="1" opacity="0.3" style={{ animation: `hartPulse ${2.4 + i * 0.4}s ease-in-out infinite` }} /></g>)}
+    </g>)}</div>;
+  }
+  return null;
+}
+
 function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
   const d = useMemo(() => computeAdn(appState), [appState]);
   const arch = useMemo(() => computeArchivo(appState), [appState]);
@@ -13498,6 +13578,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
 
       {/* ADN — hero con barras */}
       <Tag className="hub-adn" onClick={p('adn')}>
+        <HubArt kind="dna" color="#A78BFA" />
         <span className="hub-adn__aura" />
         <div className="hub-adn__top">
           <span className="hub-ic hub-ic--adn"><ProIcon id="adn" s={30} c="#C4B5FD" /></span>
@@ -13522,6 +13603,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
       {/* Dúo: Plan + Archivo (previews distintas, lado a lado) */}
       <div className="hub-duo">
         <Tag className="hub-tile" style={{ '--fc': F.plan.color }} onClick={p('plan')}>
+          <HubArt kind="map" color={F.plan.color} />
           <span className="hub-ic hub-ic--sm"><ProIcon id="plan" s={20} c={F.plan.color} /></span>
           <div className="hub-tile__name">Plan de Batalla</div>
           {planPrev ? (
@@ -13535,6 +13617,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
           )}
         </Tag>
         <Tag className="hub-tile" style={{ '--fc': F.srs.color }} onClick={p('srs')}>
+          <HubArt kind="layers" color={F.srs.color} />
           <span className="hub-ic hub-ic--sm"><ProIcon id="srs" s={20} c={F.srs.color} /></span>
           <div className="hub-tile__name">Archivo del Sabio</div>
           {arch.total > 0 ? (
@@ -13551,6 +13634,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
 
       {/* Sensei — burbuja de chat */}
       <Tag className="hub-sensei" style={{ '--fc': F.sensei.color }} onClick={p('sensei')}>
+        <HubArt kind="waves" color={F.sensei.color} />
         <div className="hub-row">
           <span className="hub-ic hub-ic--sensei"><ProIcon id="sensei" s={24} c="#5CB8FF" /></span>
           <div style={{ flex: 1, minWidth: 0 }}><div className="hub-t">Sensei Ilimitado</div><div className="hub-d">Pregúntale lo que sea, 24/7</div></div>
@@ -13561,6 +13645,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
 
       {/* Banco — chips de subtemas */}
       <Tag className="hub-banco" style={{ '--fc': F.banco.color }} onClick={p('banco')}>
+        <HubArt kind="vault" color={F.banco.color} />
         <div className="hub-row">
           <span className="hub-ic hub-ic--banco"><ProIcon id="banco" s={24} c="#C084FC" /></span>
           <div style={{ flex: 1, minWidth: 0 }}><div className="hub-t">Banco por Tema</div><div className="hub-d">Forja preguntas de un subtema exacto</div></div>
@@ -13571,6 +13656,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
 
       {/* Simulacro Diagnóstico — teaser de proyección */}
       <Tag className="hub-diag" style={{ '--fc': F.diag.color }} onClick={p('diag')}>
+        <HubArt kind="radar" color={F.diag.color} />
         <div className="hub-diag__l">
           <span className="hub-diag__k">SIMULACRO DIAGNÓSTICO</span>
           <span className="hub-diag__t">Tu puntaje proyectado</span>
@@ -13581,6 +13667,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
 
       {/* Reporte del Sabio — teaser editorial */}
       <Tag className="hub-rep" style={{ '--fc': F.reporte.color }} onClick={p('reporte')}>
+        <HubArt kind="bars" color={F.reporte.color} />
         <div className="hub-row">
           <span className="hub-ic hub-ic--rep"><ProIcon id="reporte" s={24} c="#FF8A4C" /></span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -13593,6 +13680,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
 
       {/* Estudio en Vivo — dos avatares */}
       <Tag className="hub-live" style={{ '--fc': F.live.color }} onClick={p('live')}>
+        <HubArt kind="nodes" color={F.live.color} />
         <div className="hub-live__avs">
           <span className="hub-live__av"><ProIcon id="live" s={22} c="#F472B6" /></span>
           <span className="hub-live__av hub-live__av--2"><PkIc n="sabio" s={20} c="#F472B6" /></span>
