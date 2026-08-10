@@ -8019,6 +8019,58 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
       accion: () => onFlash?.() },
   ];
 
+  // Lanzar un modo (con la animación full-screen de expansión ya existente)
+  const lanzarModo = (m) => {
+    FX.play('duel'); FX.vibrate('medium');
+    setExpandiendo(m);
+    setTimeout(() => { m.accion(); setTimeout(() => setExpandiendo(null), 500); }, 430);
+  };
+
+  // Tarjeta de modo en PROPORCIONES variadas (hero | med | sm), cada una con su
+  // preview animado propio (icono/extra), rareza de dificultad y recompensa.
+  const renderModo = (m, variant) => {
+    const hero = variant === 'hero';
+    const sm = variant === 'sm';
+    const h = hero ? 198 : sm ? 134 : 158;
+    return (
+      <button key={m.id} onClick={() => lanzarModo(m)} style={{
+        position: 'relative', height: h, width: '100%', border: 'none', borderRadius: hero ? 26 : 20, overflow: 'hidden',
+        cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', padding: 0,
+        background: m.grad, boxShadow: '0 12px 30px rgba(0,0,0,0.42)' }}>
+        {/* textura + glow + acento */}
+        <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5,
+          background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 9px)' }}/>
+        <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: m.glow }}/>
+        <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: m.color, boxShadow: `0 0 10px ${m.color}` }}/>
+        {/* preview: icono animado en su cápsula */}
+        <span style={{ position: 'absolute', top: hero ? 18 : 13, left: hero ? 18 : 13, width: hero ? 54 : 44, height: hero ? 54 : 44, borderRadius: 14,
+          background: 'rgba(0,0,0,0.32)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {m.icono}
+        </span>
+        {/* récord */}
+        <span style={{ position: 'absolute', top: hero ? 22 : 15, right: 13, padding: '4px 9px', borderRadius: 20,
+          background: 'rgba(0,0,0,0.4)', fontSize: 9, fontWeight: 900, color: m.color, whiteSpace: 'nowrap' }}>{m.record}</span>
+        {/* detalle-preview del modo (arco 90s, corazones…) solo donde hay espacio */}
+        {!sm && (m.extra || null)}
+        {/* contenido inferior */}
+        <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: hero ? '0 18px 17px' : '0 13px 12px', display: 'block' }}>
+          <span className="serif" style={{ display: 'block', fontSize: hero ? 23 : sm ? 15.5 : 17.5, fontWeight: 800, color: '#fff', lineHeight: 1.12, textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>{m.nombre}</span>
+          {!sm && <span style={{ display: 'block', fontSize: hero ? 12.5 : 11, color: 'rgba(255,255,255,0.72)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{m.desc}</span>}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: hero ? 10 : 7 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 900, color: '#E8B84B',
+              background: 'rgba(60,35,5,0.7)', border: '1px solid rgba(232,184,75,0.35)', borderRadius: 99, padding: '3px 8px' }}>
+              <PkIc n="empanada" s={9} c="#E8B84B"/>{m.rec}
+            </span>
+            <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+              {[0, 1, 2, 3, 4].map(i => <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i < m.dif ? '#fff' : 'rgba(255,255,255,0.22)' }}/>)}
+            </span>
+          </span>
+        </span>
+        {hero && <span style={{ position: 'absolute', right: 16, bottom: 17, fontSize: 11.5, fontWeight: 900, color: '#fff', opacity: 0.92, letterSpacing: 0.5, textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>JUGAR →</span>}
+      </button>
+    );
+  };
+
   // Días con simulacro en las últimas 2 semanas (para la historia de la racha)
   const dias14 = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (13 - i));
@@ -8076,74 +8128,17 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
           )}
         </div>
 
-        {/* Carrusel horizontal con snap */}
-        <div className="modos-carousel" onScroll={e => {
-          const w = e.currentTarget.clientWidth * 0.88 + 12;
-          const idx = Math.min(MODOS.length - 1, Math.round(e.currentTarget.scrollLeft / w));
-          if (idx !== modoIdx) setModoIdx(idx);
-        }}>
-          {MODOS.map((m, idx) => (
-            <button key={m.id} className="modos-slide" onClick={() => {
-              FX.play('duel'); FX.vibrate('medium');
-              setExpandiendo(m);
-              setTimeout(() => { m.accion(); setTimeout(() => setExpandiendo(null), 500); }, 430);
-            }} style={{
-              position: 'relative', height: 180, border: 'none', borderRadius: 24, overflow: 'hidden',
-              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', padding: 0,
-              background: m.grad, boxShadow: '0 12px 32px rgba(0,0,0,0.4)' }}>
-              {/* Capa 2: textura sutil a 45° */}
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5,
-                background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 9px)' }}/>
-              {/* Capa 3: glow radial */}
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: m.glow }}/>
-              {/* Línea de acento a la izquierda */}
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-                background: m.color, borderRadius: '24px 0 0 24px', boxShadow: `0 0 10px ${m.color}` }}/>
-
-              {/* Ícono superior izquierda */}
-              <div style={{ position: 'absolute', top: 16, left: 18, width: 48, height: 48, borderRadius: 14,
-                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {m.icono}
-              </div>
-              {/* Badge de récord superior derecha */}
-              <div style={{ position: 'absolute', top: 20, right: 16, padding: '4px 10px', borderRadius: 20,
-                background: 'rgba(0,0,0,0.4)', fontSize: 10, fontWeight: 900, color: m.color, whiteSpace: 'nowrap' }}>
-                {m.record}
-              </div>
-              {/* Detalle especial del modo */}
-              {m.extra || null}
-
-              {/* Contenido inferior */}
-              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 18px 18px' }}>
-                <div className="serif" style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.15 }}>{m.nombre}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 3,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.desc}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 900,
-                    color: '#E8B84B', background: 'rgba(60,35,5,0.65)', border: '1px solid rgba(232,184,75,0.35)',
-                    borderRadius: 99, padding: '3.5px 10px' }}>
-                    <PkIc n="empanada" s={10} c="#E8B84B"/>{m.rec}
-                  </span>
-                  <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
-                    {[0, 1, 2, 3, 4].map(i => (
-                      <span key={i} style={{ width: 6, height: 6, borderRadius: '50%',
-                        background: i < m.dif ? '#fff' : 'rgba(255,255,255,0.22)' }}/>
-                    ))}
-                  </span>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-        {/* Dots de navegación */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 2 }}>
-          {MODOS.map((m, i) => (
-            <div key={m.id} style={{ width: modoIdx === i ? 20 : 6, height: 6, borderRadius: 99,
-              background: modoIdx === i ? '#fff' : 'rgba(255,255,255,0.25)',
-              boxShadow: modoIdx === i ? '0 0 8px rgba(255,255,255,0.5)' : 'none',
-              transition: 'width 0.3s ease, background 0.3s ease' }}/>
-          ))}
+        {/* Tablero de modos: HÉROE grande + mosaico en proporciones variadas */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {renderModo(MODOS[0], 'hero')}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {renderModo(MODOS[1], 'med')}
+            {renderModo(MODOS[2], 'med')}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {renderModo(MODOS[3], 'sm')}
+            {renderModo(MODOS[4], 'sm')}
+          </div>
         </div>
       </div>
 
