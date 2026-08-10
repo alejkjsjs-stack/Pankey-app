@@ -45,6 +45,8 @@
 @keyframes ascTw{0%,100%{opacity:var(--o,.5)}50%{opacity:.07}}
 /* Con "reducir movimiento": estrellas quietas (siguen visibles) en vez de titilar 45+ nodos por frame. */
 @media (prefers-reduced-motion:reduce){.asc-stars i{animation:none;opacity:var(--o,.5)}.asc-shoot{animation:none;opacity:0}.asc-aura{animation:none}}
+/* Destello satinado que barre las pastas de los libros (premium, esporádico) */
+@keyframes bookSheen{0%,64%{background-position:185% 0}84%,100%{background-position:-85% 0}}
 .asc-aura{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:460px;height:460px;max-width:130vw;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,rgba(255,46,76,.17) 0%,rgba(255,90,60,.06) 40%,transparent 68%);filter:blur(10px);mix-blend-mode:screen;animation:ascAuraG 6s ease-in-out infinite}
 @keyframes ascAuraG{0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}}

@@ -54,6 +54,12 @@ export function BookCover({book, size="md", floating=false, onClick}) {
         <div style={{position:"absolute",bottom:12,left:10,right:10,color:pal.spine,fontSize:d.authorSize,fontWeight:600,fontFamily:"'Noto Serif JP',serif",letterSpacing:"0.04em",opacity:0.9}}>
           {author}
         </div>
+        {/* Brillo tipo pasta satinada: un destello diagonal que barre de vez en cuando */}
+        {size!=="sm"&&(
+          <div style={{position:"absolute",inset:0,pointerEvents:"none",mixBlendMode:"screen",
+            background:"linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.22) 50%, transparent 58%)",
+            backgroundSize:"260% 100%",animation:"bookSheen 7s ease-in-out infinite"}}/>
+        )}
       </div>
     </div>
   );

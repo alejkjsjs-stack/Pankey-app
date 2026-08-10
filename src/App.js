@@ -5188,6 +5188,19 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
   const [copied, setCopied] = useState(false);
   const [sentTo, setSentTo] = useState(null); // nombre/código al que envié solicitud
 
+  // Cronómetro de "leyendo juntos": corre mientras ambos tienen el timer activo
+  const [juntosSec, setJuntosSec] = useState(0);
+  const juntosRef = useRef(null);
+  useEffect(() => {
+    if (bothReading) {
+      if (!juntosRef.current) juntosRef.current = Date.now();
+      const t = setInterval(() => setJuntosSec(Math.floor((Date.now() - juntosRef.current) / 1000)), 1000);
+      return () => clearInterval(t);
+    }
+    juntosRef.current = null; setJuntosSec(0);
+  }, [bothReading]);
+  const juntosTxt = `${Math.floor(juntosSec / 60)}:${String(juntosSec % 60).padStart(2, '0')}`;
+
   const miEstado = myReading
     ? { txt: 'Leyendo ahora', dot: C.tealMid, pulse: true }
     : { txt: 'En el sanctuario', dot: C.tealMid, pulse: false };
@@ -5263,10 +5276,24 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
         )}
       </div>
 
-      {/* Estado de sesión sincronizada (sin racha) */}
+      {/* EN VIVO: ambos leyendo → banner con cronómetro compartido */}
       {connected && bothReading && (
-        <div style={{ marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: C.accent, letterSpacing: 0.3 }}>✨ Sesión sincronizada · leyendo juntos</div>
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+          borderRadius: 14, padding: '10px 14px', border: `1px solid ${C.accent}66`,
+          background: `linear-gradient(135deg, ${C.accent}22, ${C.tealMid}18)`, animation: 'syncGlow 2.2s ease-in-out infinite' }}>
+          <span style={{ position: 'relative', width: 9, height: 9 }}>
+            <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: C.accent, animation: 'dotPulse 1.4s ease-in-out infinite', boxShadow: `0 0 8px ${C.accent}` }} />
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>Leyendo juntos</span>
+          <span style={{ fontSize: 12.5, fontWeight: 900, color: C.accent, fontFamily: "'Fraunces', serif", letterSpacing: 0.5, fontVariantNumeric: 'tabular-nums' }}>{juntosTxt}</span>
+        </div>
+      )}
+      {/* EN VIVO: el parcero está leyendo y tú no → invitación a unirte */}
+      {connected && partnerReading && !myReading && (
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          borderRadius: 14, padding: '9px 13px', border: `1px dashed ${C.tealMid}66`, background: `${C.tealMid}12` }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.tealMid, boxShadow: `0 0 6px ${C.tealMid}`, animation: 'dotPulse 1.6s ease-in-out infinite' }} />
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: C.textMid }}>{partner} está leyendo ahora — <b style={{ color: C.tealMid }}>únete abajo</b></span>
         </div>
       )}
 
