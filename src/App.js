@@ -5918,24 +5918,26 @@ function HabitCard({ C, habit, onToggle }) {
     onToggle(habit.id);
   };
   return (
-    <button onClick={toggle} style={{ position: 'relative', borderRadius: 16, padding: '12px 8px 10px', cursor: 'pointer', fontFamily: 'inherit',
-      background: done ? `${habit.color}14` : 'rgba(255,255,255,0.03)', border: `1.5px solid ${done ? habit.color + '55' : C.border}`,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-      {/* Partículas al completar (color del hábito, sin emojis) */}
+    <button onClick={toggle} style={{ position: 'relative', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
+      padding: '4px 2px 2px', width: 82, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      {/* Halo suave bajo la planta cuando está cumplida (sin recuadro) */}
+      {done && <span style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', width: 58, height: 58, borderRadius: '50%',
+        background: `radial-gradient(circle, ${habit.color}30, transparent 70%)`, filter: 'blur(3px)', pointerEvents: 'none' }} />}
+      {/* Partículas al completar */}
       {pop && [0, 1, 2, 3].map(k => (
-        <span key={k} style={{ position: 'absolute', top: `${26 + (k % 2) * 8}%`, left: `${24 + k * 16}%`, width: 5, height: 5, borderRadius: '50%',
+        <span key={k} style={{ position: 'absolute', top: `${20 + (k % 2) * 8}%`, left: `${24 + k * 16}%`, width: 5, height: 5, borderRadius: '50%',
           background: habit.color, boxShadow: `0 0 6px ${habit.color}`, animation: `jardinFloat 0.75s ease-out ${k * 0.07}s both`, pointerEvents: 'none' }} />
       ))}
-      <div style={{ transformOrigin: 'bottom center', animation: pop ? 'plantGrow 0.62s cubic-bezier(.2,.85,.25,1)' : 'none', padding: '2px 0' }}>
-        <PlantSVG streak={habit.streak} color={habit.color} done={done} size={52} />
+      <div style={{ position: 'relative', transformOrigin: 'bottom center', animation: pop ? 'plantGrow 0.62s cubic-bezier(.2,.85,.25,1)' : 'none' }}>
+        <PlantSVG streak={habit.streak} color={habit.color} done={done} size={58} />
       </div>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: done ? C.text : C.textMid, textAlign: 'center', lineHeight: 1.2, minHeight: 26,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', width: '100%' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '100%' }}><PkIc n={habit.icon} s={11} c={habit.color} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span></span>
+      <div style={{ position: 'relative', fontSize: 10.5, fontWeight: 700, color: done ? C.text : C.textMid, textAlign: 'center', lineHeight: 1.15, width: '100%',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+        <PkIc n={habit.icon} s={10} c={habit.color} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
       </div>
       {habit.streak > 0 && (
-        <div style={{ fontSize: 9.5, fontWeight: 800, color: habit.color, display: 'flex', alignItems: 'center', gap: 3 }}>
-          <PkIc n="flame" s={10} c={habit.color} />{habit.streak}
+        <div style={{ position: 'relative', fontSize: 9, fontWeight: 800, color: habit.color, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <PkIc n="flame" s={9} c={habit.color} />{habit.streak}
         </div>
       )}
     </button>
@@ -6014,7 +6016,7 @@ function SanctuarioHabitos({ C, appState, setAppState, pushNotif, onCoinBurst })
             <span key={k} style={{ position: 'absolute', top: '8%', left: `${12 + k * 19}%`, width: 5, height: 5, borderRadius: '50%', background: '#FFD877',
               boxShadow: '0 0 7px #FFD877', pointerEvents: 'none', animation: `jardinFloat ${2.2 + k * 0.4}s ease-out ${k * 0.5}s infinite` }} />
           ))}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px 2px' }}>
             {dailies.map(h => <HabitCard key={h.id} C={C} habit={h} onToggle={toggleHabit} />)}
           </div>
           {allDone && (
@@ -6155,7 +6157,7 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
   });
 
   return (
-    <div className="fi" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8, position: 'relative' }}>
+    <div className="fi" style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
       {/* Atmósfera de biblioteca nocturna */}
       <div style={{ position: 'absolute', top: -20, left: -20, right: -20, height: 300, pointerEvents: 'none', zIndex: 0,
         background: 'radial-gradient(ellipse 100% 50% at 50% 0%, rgba(74,158,255,0.08) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 50% 100%, rgba(34,197,94,0.05) 0%, transparent 55%)' }} />
@@ -6197,8 +6199,8 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
         )}
       </div>
 
-      {/* ── El jardín (hábitos / rutinas / tareas), frameless — llena el resto ── */}
-      <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 6 }}>
+      {/* ── El jardín (hábitos / rutinas / tareas), frameless ── */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
         <SanctuarioHabitos C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif} onCoinBurst={onCoinBurst} />
       </div>
 
