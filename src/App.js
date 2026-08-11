@@ -335,6 +335,7 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 @keyframes selloDrop { 0%{transform:translate(-50%,-150px) rotate(-45deg) scale(1.5);opacity:0;} 55%{opacity:1;} 78%{transform:translate(-50%,6px) rotate(8deg) scale(1);} 100%{transform:translate(-50%,0) rotate(0) scale(1);opacity:1;} }
 @keyframes plantPop { 0%{transform:scale(1);}45%{transform:scale(1.18);}100%{transform:scale(1);} }
 @keyframes plantSway { 0%,100%{transform:rotate(-2deg);} 50%{transform:rotate(2deg);} }
+@keyframes bookOpenIn { 0%{transform:perspective(700px) rotateY(-32deg) scale(.82);opacity:0;} 100%{transform:perspective(700px) rotateY(0) scale(1);opacity:1;} }
 @keyframes plantGrow { 0%{transform:scale(.5) translateY(11px);opacity:.4;} 55%{transform:scale(1.12) translateY(-2px);opacity:1;} 78%{transform:scale(.97) translateY(1px);} 100%{transform:scale(1) translateY(0);} }
 @keyframes syncGlow { 0%,100%{box-shadow:0 0 0 1px rgba(74,158,255,0.28),0 0 16px rgba(74,158,255,0.12);} 50%{box-shadow:0 0 0 1px rgba(74,158,255,0.6),0 0 32px rgba(74,158,255,0.4);} }
 @keyframes jardinFloat { 0%{transform:translateY(0) scale(1);opacity:0;} 20%{opacity:0.9;} 100%{transform:translateY(-40px) scale(0.4);opacity:0;} }
@@ -5203,7 +5204,7 @@ function PlantSVG({ streak = 0, color = '#4A7EB8', done = false, size = 56 }) {
 }
 
 // ── Sección 1: El Dúo de Lectura Activa ──
-function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPhotoURL, myReading, partnerReqs = [], onSendRequest, onAcceptRequest, onDeclineRequest }) {
+function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPhotoURL, myReading, partnerReqs = [], onSendRequest, onAcceptRequest, onDeclineRequest, bare = false }) {
   const connected = !!user?.partnerConnected;
   const partnerReading = !!appState.theirTimerActive && partnerOnline;
   const bothReading = myReading && partnerReading;
@@ -5250,10 +5251,10 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
   const accept = async (req) => { setErr(''); await onAcceptRequest?.(req.fromCode, req.fromName); };
 
   return (
-    <div style={{ position: 'relative', borderRadius: 22, padding: '15px 16px',
-      background: `linear-gradient(135deg, ${C.accent}14 0%, rgba(255,255,255,0.02) 100%)`,
-      border: `1px solid ${bothReading ? C.accent + '66' : C.accent + '2E'}`,
-      animation: bothReading ? 'syncGlow 2.2s ease-in-out infinite' : 'none' }}>
+    <div style={{ position: 'relative', borderRadius: bare ? 0 : 22, padding: bare ? '2px 4px' : '15px 16px',
+      background: bare ? 'none' : `linear-gradient(135deg, ${C.accent}14 0%, rgba(255,255,255,0.02) 100%)`,
+      border: bare ? 'none' : `1px solid ${bothReading ? C.accent + '66' : C.accent + '2E'}`,
+      animation: (bothReading && !bare) ? 'syncGlow 2.2s ease-in-out infinite' : 'none' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {/* TÚ */}
         <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
@@ -6128,6 +6129,9 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
   const [nb, setNb] = useState({ title: '', author: '', totalChapters: 10, totalPages: 0, genre: 'Ficción' });
   const [myReading, setMyReading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false); // libro abierto a pantalla completa
+  const [notesOpen, setNotesOpen] = useState(false); // notas del libro (overlay)
+  const [libOpen, setLibOpen] = useState(false); // biblioteca (cambiar de libro)
   const partner = user?.partner || 'Parcero';
   const currentBook = books.find(b => b.id === appState.currentBookId) || null;
   const otherBooks = books.filter(b => b.id !== appState.currentBookId);
@@ -6144,113 +6148,162 @@ function PergaminosTab({ C, isLight, appState, setAppState, user, books, setBook
     setNb({ title: '', author: '', totalChapters: 10, totalPages: 0, genre: 'Ficción' });
     setShowAdd(false);
   };
+  const pillBtn = (col, filled) => ({
+    padding: '7px 14px', borderRadius: 99, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11.5, fontWeight: 800,
+    background: filled ? col : 'rgba(255,255,255,.05)', color: filled ? '#0A0A0A' : col,
+    border: `1px solid ${filled ? col : 'rgba(255,255,255,.12)'}`,
+  });
 
   return (
-    <div className="fi su" style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }}>
+    <div className="fi" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8, position: 'relative' }}>
       {/* Atmósfera de biblioteca nocturna */}
-      <div style={{ position: 'absolute', top: -20, left: -20, right: -20, height: 320, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 100% 50% at 50% 0%, rgba(74,158,255,0.07) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 20% 100%, rgba(34,197,94,0.05) 0%, transparent 55%)' }} />
+      <div style={{ position: 'absolute', top: -20, left: -20, right: -20, height: 300, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse 100% 50% at 50% 0%, rgba(74,158,255,0.08) 0%, transparent 60%), radial-gradient(ellipse 80% 40% at 50% 100%, rgba(34,197,94,0.05) 0%, transparent 55%)' }} />
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {/* 1. Dúo de lectura activa */}
-        <DuoReadingHeader C={C} user={user} partner={partner} appState={appState} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} myReading={myReading}
-          partnerReqs={partnerReqs} onSendRequest={onSendPartnerRequest} onAcceptRequest={onAcceptPartnerRequest} onDeclineRequest={onDeclinePartnerRequest} />
+      {/* ── Parceros: conexión frameless (dos avatares + hilo) ── */}
+      <DuoReadingHeader bare C={C} user={user} partner={partner} appState={appState} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL} myReading={myReading}
+        partnerReqs={partnerReqs} onSendRequest={onSendPartnerRequest} onAcceptRequest={onAcceptPartnerRequest} onDeclineRequest={onDeclinePartnerRequest} />
 
-        {/* 2. Tu libro */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ flex: 1, fontSize: 10, color: C.textMuted, fontWeight: 800, letterSpacing: 1.5 }}>TU LIBRO</div>
-            <button onClick={() => setShowAdd(v => !v)} style={{ background: showAdd ? 'transparent' : `${C.accent}18`, color: showAdd ? C.textMuted : C.accent,
-              border: `1px solid ${showAdd ? C.border : C.accent + '40'}`, borderRadius: 10, padding: '6px 13px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {showAdd ? 'Cancelar' : '+ Añadir'}
+      {/* ── Libro flotante (centro), sin cuadro — se toca para leer ── */}
+      <div style={{ position: 'relative', zIndex: 1, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, padding: '6px 0 4px' }}>
+        {currentBook ? (
+          <>
+            <button onClick={() => { FX.play('open'); FX.vibrate('light'); setBookOpen(true); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, position: 'relative' }}>
+              <span style={{ position: 'absolute', inset: '-16% -8% 0', pointerEvents: 'none',
+                background: `radial-gradient(ellipse at 50% 42%, ${getPalette(currentBook.genre).spine}44, transparent 66%)`, filter: 'blur(7px)' }} />
+              <span style={{ display: 'block', animation: 'coverFloat 5s ease-in-out infinite' }}><BookCover book={currentBook} size="lg" /></span>
             </button>
-          </div>
+            <div className="serif" style={{ fontSize: 17, fontWeight: 800, color: C.text, textAlign: 'center', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentBook.title}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <span style={{ fontSize: 10.5, fontWeight: 800, color: C.textMuted, letterSpacing: 0.5 }}>CAP. {appState.currentChapter || 1}</span>
+              <span style={{ width: 130, height: 6, borderRadius: 99, background: 'rgba(255,255,255,.1)', overflow: 'hidden' }}>
+                <span style={{ display: 'block', height: '100%', width: `${myPct}%`, background: getPalette(currentBook.genre).spine, borderRadius: 99, transition: 'width .5s ease' }} />
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 900, color: getPalette(currentBook.genre).spine }}>{myPct}%</span>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 1 }}>
+              <button onClick={() => { FX.play('open'); FX.vibrate('light'); setBookOpen(true); }} style={pillBtn(getPalette(currentBook.genre).spine, true)}>Leer ahora</button>
+              <button onClick={() => { FX.play('tap'); setLibOpen(true); }} style={pillBtn(C.textMid)}>Biblioteca</button>
+              <button onClick={() => { FX.play('tap'); setNotesOpen(true); }} style={pillBtn(C.textMid)}>Notas</button>
+            </div>
+          </>
+        ) : (
+          <button onClick={() => setShowAdd(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, background: 'none', border: 'none', cursor: 'pointer', padding: '26px 0', fontFamily: 'inherit' }}>
+            <span style={{ opacity: .5 }}><PkIc n="book" s={42} c={C.textMuted} /></span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: C.textMid }}>Añade el libro que estás leyendo</span>
+            <span style={{ fontSize: 12, color: C.textMuted }}>Toca para empezar</span>
+          </button>
+        )}
+      </div>
 
-          {showAdd && (
-            <div style={{ borderRadius: 18, padding: '20px 18px', background: C.bgAlt, border: `1px solid ${C.border}`, marginBottom: 16, animation: 'fadeUp 0.3s ease both' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
-                <BookCover book={{ ...nb, title: nb.title || 'Nuevo Libro', author: nb.author || 'Autor' }} size="md" />
+      {/* ── El jardín (hábitos / rutinas / tareas), frameless — llena el resto ── */}
+      <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 6 }}>
+        <SanctuarioHabitos C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif} onCoinBurst={onCoinBurst} />
+      </div>
+
+      {/* ══ LIBRO ABIERTO a pantalla completa: Cafetal + capítulo/páginas ══ */}
+      {bookOpen && currentBook && (
+        <Portal>
+          <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99990, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '20px 20px 44px',
+            background: `radial-gradient(120% 70% at 50% 0%, ${getPalette(currentBook.genre).from} 0%, #0a0708 62%, #050304 100%)` }}>
+            <button onClick={() => { FX.play('close'); setBookOpen(false); }} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,.1)', display: 'grid', placeItems: 'center', marginBottom: 6 }}>
+              <PkIc n="left" s={16} c="#fff" />
+            </button>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14, animation: 'bookOpenIn .5s cubic-bezier(.2,.8,.2,1) both' }}>
+              <BookCover book={currentBook} size="hero" floating />
+            </div>
+            <div className="serif" style={{ fontSize: 22, fontWeight: 800, color: '#fff', textAlign: 'center' }}>{currentBook.title}</div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.55)', textAlign: 'center', marginBottom: 18 }}>{currentBook.author || 'Autor desconocido'}</div>
+            <ProgresoLibro C={C} appState={appState} setAppState={setAppState} book={currentBook} />
+            <div style={{ marginTop: 18 }}>
+              <CafetalRitual C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif} currentBook={currentBook} setBooks={setBooks}
+                onCoinBurst={onCoinBurst} onAchievement={onAchievement} user={user} onReadingChange={setMyReading} partnerName={partner} partnerPhoto={partnerPhotoURL} />
+            </div>
+            <button onClick={() => { setBookOpen(false); setNotesOpen(true); }} style={{ width: '100%', marginTop: 14, padding: 13, borderRadius: 14, border: `1px solid ${C.border}`, background: 'rgba(255,255,255,.04)', color: C.textMid, fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Notas del libro →</button>
+          </div>
+        </Portal>
+      )}
+
+      {/* ══ Añadir libro (overlay) ══ */}
+      {showAdd && (
+        <Portal>
+          <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99991, overflowY: 'auto', padding: '24px 20px 44px', background: 'rgba(6,5,8,0.97)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+              <button onClick={() => setShowAdd(false)} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,.1)', display: 'grid', placeItems: 'center' }}><PkIc n="left" s={16} c="#fff" /></button>
+              <div className="serif" style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>Nuevo libro</div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+              <BookCover book={{ ...nb, title: nb.title || 'Nuevo Libro', author: nb.author || 'Autor' }} size="lg" />
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, justifyContent: 'center' }}>
+              {GENRES.map(g => (
+                <button key={g} onClick={() => setNb(b => ({ ...b, genre: g }))} style={{ padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  border: `1px solid ${nb.genre === g ? C.accent : C.border}`, background: nb.genre === g ? `${C.accent}18` : 'transparent', color: nb.genre === g ? C.accent : C.textMuted, fontFamily: 'inherit' }}>{g}</button>
+              ))}
+            </div>
+            {[{ label: 'TÍTULO *', key: 'title', ph: 'Nombre del libro…' }, { label: 'AUTOR', key: 'author', ph: 'Nombre del autor…' }].map(({ label, key, ph }) => (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 800, letterSpacing: 1.2 }}>{label}</div>
+                <input value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))} placeholder={ph}
+                  style={{ width: '100%', fontSize: 15, padding: '10px 0', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontFamily: 'inherit' }} />
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-                {GENRES.map(g => (
-                  <button key={g} onClick={() => setNb(b => ({ ...b, genre: g }))} style={{ padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    border: `1px solid ${nb.genre === g ? C.accent : C.border}`, background: nb.genre === g ? `${C.accent}18` : 'transparent', color: nb.genre === g ? C.accent : C.textMuted, fontFamily: 'inherit' }}>{g}</button>
-                ))}
-              </div>
-              {[{ label: 'TÍTULO *', key: 'title', ph: 'Nombre del libro…' }, { label: 'AUTOR', key: 'author', ph: 'Nombre del autor…' }].map(({ label, key, ph }) => (
-                <div key={key} style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 800, letterSpacing: 1.2 }}>{label}</div>
-                  <input value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))} placeholder={ph}
-                    style={{ width: '100%', fontSize: 15, padding: '10px 0', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontFamily: 'inherit' }} />
+            ))}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+              {[{ label: 'CAPÍTULOS', key: 'totalChapters' }, { label: 'PÁGINAS (0=sin límite)', key: 'totalPages' }].map(({ label, key }) => (
+                <div key={key} style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 800, letterSpacing: 1.1 }}>{label}</div>
+                  <input type="number" value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))}
+                    style={{ width: '100%', fontSize: 20, fontWeight: 700, padding: '8px 0', textAlign: 'center', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontFamily: 'inherit' }} />
                 </div>
               ))}
-              <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
-                {[{ label: 'CAPÍTULOS', key: 'totalChapters' }, { label: 'PÁGINAS (0=sin límite)', key: 'totalPages' }].map(({ label, key }) => (
-                  <div key={key} style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 800, letterSpacing: 1.1 }}>{label}</div>
-                    <input type="number" value={nb[key]} onChange={e => setNb(b => ({ ...b, [key]: e.target.value }))}
-                      style={{ width: '100%', fontSize: 20, fontWeight: 700, padding: '8px 0', textAlign: 'center', border: 'none', borderBottom: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontFamily: 'inherit' }} />
-                  </div>
-                ))}
-              </div>
-              <PrimaryBtn C={C} onClick={doAdd}>Guardar en los Pergaminos</PrimaryBtn>
             </div>
-          )}
+            <PrimaryBtn C={C} onClick={doAdd}>Guardar en los Pergaminos</PrimaryBtn>
+          </div>
+        </Portal>
+      )}
 
-          {!currentBook ? (
-            <div style={{ borderRadius: 20, padding: '36px 24px', textAlign: 'center', border: `1px dashed ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              <PkIc n="book" s={32} c={C.textMuted} />
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.textMid }}>Sin libro activo</div>
-              <div style={{ fontSize: 12, color: C.textMuted }}>Usa "+ Añadir" para empezar tu lectura</div>
+      {/* ══ Biblioteca (cambiar de libro) ══ */}
+      {libOpen && (
+        <Portal>
+          <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99991, overflowY: 'auto', padding: '24px 20px 44px', background: 'rgba(6,5,8,0.97)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+              <button onClick={() => setLibOpen(false)} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,.1)', display: 'grid', placeItems: 'center' }}><PkIc n="left" s={16} c="#fff" /></button>
+              <div className="serif" style={{ fontSize: 22, fontWeight: 800, color: '#fff', flex: 1 }}>Tu biblioteca</div>
+              <button onClick={() => { setLibOpen(false); setShowAdd(true); }} style={{ background: `${C.accent}18`, color: C.accent, border: `1px solid ${C.accent}40`, borderRadius: 10, padding: '7px 13px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>+ Añadir</button>
             </div>
-          ) : (
-            <>
-              <LibroHero C={C} book={currentBook} pct={myPct} dimmed={myReading} />
-              <div style={{ marginTop: -2, borderRadius: '0 0 20px 20px', background: 'rgba(0,0,0,0.28)', border: `1px solid ${C.border}`, borderTop: 'none', padding: '4px 18px 20px', marginLeft: 2, marginRight: 2 }}>
-                <ProgresoLibro C={C} appState={appState} setAppState={setAppState} book={currentBook} />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* 3. Cafetal de Enfoque */}
-        {currentBook && (
-          <CafetalRitual C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif} currentBook={currentBook} setBooks={setBooks}
-            onCoinBurst={onCoinBurst} onAchievement={onAchievement} user={user} onReadingChange={setMyReading} partnerName={partner} partnerPhoto={partnerPhotoURL} />
-        )}
-
-        {/* 4. El libro del parcero */}
-        <LibroParcero C={C} isLight={isLight} appState={appState} partner={partner} partnerOnline={partnerOnline} partnerPhotoURL={partnerPhotoURL}
-          myBook={currentBook} notes={notes} user={user} onRemind={onRemindPartner} onOpenChat={() => setChatOpen(true)} />
-
-        {/* 5. Sanctuario de hábitos */}
-        <SanctuarioHabitos C={C} appState={appState} setAppState={setAppState} pushNotif={pushNotif} onCoinBurst={onCoinBurst} />
-
-        {/* Biblioteca (otros libros) */}
-        {otherBooks.length > 0 && (
-          <div>
-            <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10, fontWeight: 800, letterSpacing: 1.5 }}>EN LA BIBLIOTECA · {otherBooks.length}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {otherBooks.map(book => (
-                <button key={book.id} onClick={() => setAppState(s => ({ ...s, currentBookId: book.id, currentChapter: 1, currentPage: 1, yourProgress: 0 }))}
-                  style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderRadius: 14, background: C.bgAlt, border: `1px solid ${C.border}`, fontFamily: 'inherit', textAlign: 'left' }}>
+              {books.map(book => (
+                <button key={book.id} onClick={() => { setAppState(s => ({ ...s, currentBookId: book.id })); setLibOpen(false); }}
+                  style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderRadius: 14, background: book.id === appState.currentBookId ? `${C.accent}14` : 'rgba(255,255,255,.03)', border: `1px solid ${book.id === appState.currentBookId ? C.accent + '55' : C.border}`, fontFamily: 'inherit', textAlign: 'left' }}>
                   <BookCover book={book} size="sm" />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</div>
                     <div style={{ fontSize: 11.5, color: C.textMuted }}>{book.author || 'Autor desconocido'}</div>
                   </div>
-                  <PkIc n="right" s={14} c={C.border} />
+                  {book.id === appState.currentBookId && <PkIc n="check" s={16} c={C.accent} />}
                 </button>
               ))}
+              {books.length === 0 && <div style={{ textAlign: 'center', color: C.textMuted, fontSize: 13, padding: '30px 0' }}>Aún no tienes libros. Toca "+ Añadir".</div>}
             </div>
           </div>
-        )}
+        </Portal>
+      )}
 
-        {/* 6. Notas del libro (colapsable) */}
-        <NotasColapsable C={C} isLight={isLight} notes={notes} user={user} appState={appState} partnerPhotoURL={partnerPhotoURL}
-          noteText={noteText} setNoteText={setNoteText} onAddNote={onAddNote} onReactNote={onReactNote}
-          forceOpen={chatOpen} onConsumeForceOpen={() => setChatOpen(false)} />
-      </div>
+      {/* ══ Notas del libro (overlay) ══ */}
+      {notesOpen && (
+        <Portal>
+          <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99991, overflowY: 'auto', padding: '24px 20px 44px', background: 'rgba(6,5,8,0.97)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <button onClick={() => setNotesOpen(false)} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,.1)', display: 'grid', placeItems: 'center' }}><PkIc n="left" s={16} c="#fff" /></button>
+              <div className="serif" style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>Notas del libro</div>
+            </div>
+            <NotasColapsable C={C} isLight={isLight} notes={notes} user={user} appState={appState} partnerPhotoURL={partnerPhotoURL}
+              noteText={noteText} setNoteText={setNoteText} onAddNote={onAddNote} onReactNote={onReactNote}
+              forceOpen={true} onConsumeForceOpen={() => {}} />
+          </div>
+        </Portal>
+      )}
     </div>
   );
 }
