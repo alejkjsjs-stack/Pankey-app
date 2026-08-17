@@ -4077,94 +4077,97 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
 // ─────────────────────────────────────────────
 //  SPLASH (Caverna Animada + Cóndor + Frases)
 // ─────────────────────────────────────────────
+// ── SPLASH "Oro líquido": oro fundido que sube con calma y llena el negro; al
+//    TOCAR, clímax que inunda la pantalla. PANKEY fino tipo Apple en liquid glass.
+//    Paleta estricta: oro / carmesí / negro (sin cafés). ──
 function Splash({ onDone, C, isLight }) {
-  const [phase, setPhase] = useState(0);
-  const [phrase, setPhrase] = useState({ top: '', bottom: '' });
-
+  const [phase, setPhase] = useState('enter'); // enter | ready | burst
+  const [fill, setFill] = useState(4);          // % de altura del oro líquido
+  const doneRef = useRef(false);
+  const finish = () => {
+    if (doneRef.current) return; doneRef.current = true;
+    try { FX.play('reward'); FX.vibrate('medium'); } catch (e) {}
+    setPhase('burst'); setFill(128);
+    setTimeout(() => onDone?.(), 950);
+  };
   useEffect(() => {
-    const PHRASES = [
-      { top: "COLANDO EL TINTO...", bottom: "PA' DESPERTAR LAS NEURONAS" },
-      { top: "ALISTANDO EL MACHETE...", bottom: "ABRIENDO CAMINO AL SABER" },
-      { top: "EMPACANDO EMPANADAS...", bottom: "LA EXPEDICIÓN DA HAMBRE" },
-      { top: "PRENDIENDO LA FOGATA...", bottom: "ACOMODE SU RUANA Y EMPECEMOS" },
-      { top: "PONIÉNDOSE LAS PILAS...", bottom: "QUE ESE ICFES NO SE PASA SOLO" },
-      { top: "ECHÁNDOLE GAFA...", bottom: "A LAS PREGUNTAS MÁS CORCHADORAS" }
-    ];
-    setPhrase(PHRASES[Math.floor(Math.random() * PHRASES.length)]);
-    const t1 = setTimeout(() => setPhase(1), 950);
-    const t2 = setTimeout(() => setPhase(2), 1650);
-    const t3 = setTimeout(onDone, 4600);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [onDone]);
+    const r = setTimeout(() => setFill(42), 90);          // el oro sube con calma
+    const t = setTimeout(() => setPhase('ready'), 2000);  // aparece marca + "toca para entrar"
+    const fb = setTimeout(() => finish(), 14000);         // salvavidas: nunca se queda pegado
+    return () => { clearTimeout(r); clearTimeout(t); clearTimeout(fb); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Estrellas deterministas del fondo del splash
-  const stars = Array.from({ length: 48 }, (_, i) => ({
-    left: (i * 47.3) % 100, top: (i * 29.7) % 100,
-    o: (0.2 + (i % 5) * 0.13).toFixed(2), dur: 3 + (i % 5), del: ((i * 0.4) % 4).toFixed(1), s: (i % 7 === 0) ? 2 : 1,
+  const motes = Array.from({ length: 14 }, (_, i) => ({
+    left: (i * 53) % 100, top: (i * 37) % 60, dur: (5 + (i % 5)).toFixed(1), del: ((i * 0.6) % 5).toFixed(1), s: (i % 4 === 0) ? 2.4 : 1.4,
   }));
+  // Ola horizontal sin costura (periodo 720; se repite en el viewBox de 1440).
+  const WAVE = "M0 22 C 120 4 240 4 360 22 C 480 40 600 40 720 22 C 840 4 960 4 1080 22 C 1200 40 1320 40 1440 22 L1440 60 L0 60 Z";
+  const WAVE_TOP = "M0 22 C 120 4 240 4 360 22 C 480 40 600 40 720 22 C 840 4 960 4 1080 22 C 1200 40 1320 40 1440 22";
 
   return (
-    <div style={{ width: '100%', height: '100dvh', background: '#000',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      position: 'relative', overflow: 'hidden' }}>
-
+    <div onClick={() => { if (phase !== 'burst') finish(); }}
+      style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#050303', cursor: 'pointer' }}>
       <style>{`
-        @keyframes spkStar { 0%,100%{opacity:var(--o,.5)} 50%{opacity:.06} }
-        @keyframes spkRise { 0%{opacity:0;transform:translateY(26px) scale(.72)} 100%{opacity:1;transform:translateY(0) scale(1)} }
-        @keyframes spkAura { 0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)} }
-        @keyframes spkTitle { 0%{letter-spacing:22px;opacity:0;filter:blur(7px)} 100%{letter-spacing:8px;opacity:1;filter:blur(0)} }
-        @keyframes spkLoad { 0%{width:0%} 20%{width:24%} 45%{width:52%} 70%{width:74%} 100%{width:100%} }
-        @keyframes spkShoot { 0%{opacity:0;transform:translate(-40px,-24px) rotate(32deg) scaleX(.4)} 8%{opacity:.9} 22%{opacity:0;transform:translate(150px,94px) rotate(32deg)} 100%{opacity:0} }
+        @keyframes lgWave  { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        @keyframes lgMote  { 0%,100%{opacity:.16;transform:translateY(0)} 50%{opacity:.7;transform:translateY(-10px)} }
+        @keyframes lgSheen { 0%{transform:translateX(-160%)} 62%,100%{transform:translateX(160%)} }
+        @keyframes lgTitle { 0%{opacity:0;filter:blur(9px);transform:translate(-50%,12px) scale(.96)} 100%{opacity:1;filter:blur(0);transform:translate(-50%,0) scale(1)} }
+        @keyframes lgPrompt{ 0%,100%{opacity:.35} 50%{opacity:1} }
+        @keyframes goldShine{ from{background-position:210% 0} to{background-position:-70% 0} }
+        @keyframes lgFlash { 0%{opacity:0} 32%{opacity:.75} 100%{opacity:0} }
       `}</style>
 
-      {/* ── Campo de estrellas ── */}
-      {stars.map((s, i) => (
-        <span key={i} style={{ position: 'absolute', left: `${s.left}%`, top: `${s.top}%`, width: s.s, height: s.s,
-          borderRadius: '50%', background: '#fff', '--o': s.o, opacity: s.o,
-          animation: `spkStar ${s.dur}s ease-in-out ${s.del}s infinite`, pointerEvents: 'none' }}/>
+      {/* motas de oro flotando (atmósfera) */}
+      {phase !== 'burst' && motes.map((m, i) => (
+        <span key={i} style={{ position: 'absolute', left: `${m.left}%`, top: `${m.top}%`, width: m.s, height: m.s, borderRadius: '50%',
+          background: '#E8B84E', boxShadow: '0 0 6px #E8B84E', animation: `lgMote ${m.dur}s ease-in-out ${m.del}s infinite`, pointerEvents: 'none' }} />
       ))}
-      {/* ── Estrella fugaz ── */}
-      <span style={{ position: 'absolute', top: '20%', left: '12%', width: 64, height: 1.5, borderRadius: 2,
-        background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.9))', boxShadow: '0 0 6px rgba(255,255,255,.5)',
-        animation: 'spkShoot 4.6s ease-in 1.2s infinite', pointerEvents: 'none' }}/>
 
-      {/* ── CONTENIDO ── */}
-      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* halo cálido justo sobre la superficie del oro */}
+      <div style={{ position: 'absolute', left: '50%', bottom: `${fill}%`, transform: 'translate(-50%,50%)', width: '160%', height: 300, pointerEvents: 'none', zIndex: 1,
+        background: 'radial-gradient(ellipse at 50% 100%, rgba(232,184,78,.34), transparent 68%)', filter: 'blur(22px)', mixBlendMode: 'screen',
+        transition: phase === 'burst' ? 'bottom .95s cubic-bezier(.5,0,.15,1)' : 'bottom 2.3s cubic-bezier(.3,.7,.3,1)', opacity: phase === 'burst' ? 0 : 1 }} />
 
-        {/* Fuego criatura — el alma de Pankey (misma llama del Inicio) */}
-        <div style={{ position: 'relative', animation: 'spkRise 0.9s cubic-bezier(.2,.8,.2,1) both', marginBottom: 34 }}>
-          <div style={{ position: 'absolute', left: '50%', top: '54%', width: 210, height: 210, transform: 'translate(-50%,-50%)',
-            borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,62,76,.5) 0%, rgba(255,90,60,.14) 44%, transparent 70%)',
-            filter: 'blur(8px)', mixBlendMode: 'screen', animation: 'spkAura 3s ease-in-out infinite', pointerEvents: 'none' }}/>
-          <div className="fire" style={{ transform: 'scale(1.35)' }}>
-            <div className="fl"><i /><i /><i /><i /></div>
-            <div className="eyes"><b /><b /></div>
-          </div>
-        </div>
-
-        {/* Título carmesí, fino tipo Apple */}
-        <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 46, fontWeight: 200, letterSpacing: 8, marginBottom: 16,
-          background: 'linear-gradient(140deg,#FFCF6B 0%,#FF6B54 46%,#FF2E4C 100%)',
+      {/* PANKEY — serif fino con brillo de oro líquido (sin cuadro) */}
+      <div style={{ position: 'absolute', top: '31%', left: '50%', transform: 'translate(-50%,0)', zIndex: 4, whiteSpace: 'nowrap',
+        opacity: phase === 'enter' ? 0 : 1, animation: phase === 'enter' ? 'none' : 'lgTitle 1.3s cubic-bezier(.22,1,.36,1) both' }}>
+        <span style={{ fontFamily: "'Fraunces','Playfair Display',serif", fontWeight: 500, fontSize: 56, letterSpacing: 1,
+          background: 'linear-gradient(100deg, #B9821A 0%, #E8B84E 34%, #FFF7E0 50%, #E8B84E 66%, #B9821A 100%)', backgroundSize: '250% 100%',
           WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-          filter: 'drop-shadow(0 6px 26px rgba(255,62,76,.35))',
-          animation: phase >= 1 ? 'spkTitle 1s cubic-bezier(.22,1,.36,1) both' : 'none', opacity: phase >= 1 ? 1 : 0 }}>
-          PANKEY
-        </div>
-
-        {/* Frases del Sabio */}
-        <div style={{ opacity: phase >= 2 ? 1 : 0, transition: 'opacity 0.8s ease', minHeight: 36,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <div style={{ fontFamily: "'Instrument Sans',sans-serif", fontSize: 11.5, letterSpacing: 3, fontWeight: 700, color: '#FFCF6B' }}>{phrase.top}</div>
-          <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: 2, color: '#8A7B80' }}>{phrase.bottom}</div>
-        </div>
-
-        {/* Barra de carga carmesí */}
-        <div style={{ marginTop: 28, width: 160, height: 4, borderRadius: 99, overflow: 'hidden', background: 'rgba(255,255,255,.09)' }}>
-          <div style={{ height: '100%', borderRadius: 99,
-            background: 'linear-gradient(90deg,#FF2E4C,#FF6B54,#FFCF6B)', boxShadow: '0 0 10px rgba(255,62,76,.6)',
-            animation: 'spkLoad 4.3s ease-in-out both' }}/>
-        </div>
+          filter: 'drop-shadow(0 5px 22px rgba(232,184,78,.32))', animation: 'goldShine 4.2s linear infinite' }}>Pankey</span>
       </div>
+
+      {/* Toca para entrar (sobre el negro, encima de la superficie del oro) */}
+      <div style={{ position: 'absolute', top: '46%', left: '50%', transform: 'translateX(-50%)', zIndex: 5,
+        fontFamily: "'Instrument Sans',sans-serif", fontSize: 11.5, fontWeight: 800, letterSpacing: 3.5, color: '#E8B84E', whiteSpace: 'nowrap',
+        opacity: phase === 'ready' ? 1 : 0, transition: 'opacity .6s ease', animation: phase === 'ready' ? 'lgPrompt 2s ease-in-out infinite' : 'none' }}>
+        TOCA PARA ENTRAR
+      </div>
+
+      {/* ── ORO LÍQUIDO que sube ── */}
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${fill}%`, zIndex: phase === 'burst' ? 9 : 2, pointerEvents: 'none',
+        transition: phase === 'burst' ? 'height .95s cubic-bezier(.5,0,.15,1)' : 'height 2.3s cubic-bezier(.3,.7,.3,1)' }}>
+        {/* cuerpo del oro con profundidad carmesí abajo */}
+        <div style={{ position: 'absolute', top: 16, left: 0, right: 0, bottom: 0,
+          background: 'linear-gradient(0deg, #5A0E1A 0%, #A21026 12%, #C9911F 42%, #E8B84E 74%, #FFF0C2 100%)',
+          boxShadow: '0 -24px 70px rgba(232,184,78,.45)' }} />
+        {/* ola trasera (más lenta y tenue) */}
+        <svg width="200%" height="46" viewBox="0 0 1440 60" preserveAspectRatio="none" style={{ position: 'absolute', top: -14, left: 0, animation: 'lgWave 9s linear infinite', opacity: .5 }}>
+          <path d={WAVE} fill="#C9911F" />
+        </svg>
+        {/* ola frontal */}
+        <svg width="200%" height="42" viewBox="0 0 1440 60" preserveAspectRatio="none" style={{ position: 'absolute', top: -6, left: 0, animation: 'lgWave 5.5s linear infinite' }}>
+          <path d={WAVE} fill="#E8B84E" />
+        </svg>
+        {/* brillo especular de la superficie */}
+        <svg width="200%" height="42" viewBox="0 0 1440 60" preserveAspectRatio="none" style={{ position: 'absolute', top: -6, left: 0, animation: 'lgWave 5.5s linear infinite' }}>
+          <path d={WAVE_TOP} fill="none" stroke="#FFF6DC" strokeWidth="2" opacity=".85" />
+        </svg>
+      </div>
+
+      {/* fogonazo dorado suave al entrar */}
+      {phase === 'burst' && <div style={{ position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none', mixBlendMode: 'screen',
+        background: 'radial-gradient(circle at 50% 80%, rgba(255,240,194,.7), rgba(232,184,78,.28) 42%, transparent 74%)', animation: 'lgFlash .95s ease-out forwards' }} />}
     </div>
   );
 }
