@@ -39,7 +39,7 @@ export function BookCover({book, size="md", floating=false, onClick}) {
   return(
     <div onClick={onClick} style={{position:"relative",width:d.w+d.spine,height:d.h,flexShrink:0,cursor:onClick?"pointer":"default",filter:"drop-shadow(0 8px 24px rgba(0,0,0,0.45))",transform:floating?"rotate(-2deg)":"none",transition:"transform 0.3s ease",animation:floating?"coverFloat 5s ease-in-out infinite":"none"}}>
       <div style={{position:"absolute",left:0,top:0,width:d.spine,height:d.h,background:pal.spine,borderRadius:"3px 0 0 3px",display:"flex",alignItems:"center",justifyContent:"center"}}>
-        <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:d.authorSize-1,fontWeight:700,color:pal.from,letterSpacing:"0.08em",maxHeight:d.h-12,overflow:"hidden",fontFamily:"'Noto Serif JP',serif"}}>{title.slice(0,18)}</div>
+        <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:d.authorSize-1,fontWeight:700,color:pal.from,letterSpacing:"0.08em",maxHeight:d.h-12,overflow:"hidden",fontFamily:"'Space Grotesk',serif"}}>{title.slice(0,18)}</div>
       </div>
       <div style={{position:"absolute",left:d.spine,top:0,width:d.w,height:d.h,borderRadius:"0 4px 4px 0",overflow:"hidden",background:`linear-gradient(155deg, ${pal.from} 0%, ${pal.to} 100%)`}}>
         <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.02) 2px,rgba(255,255,255,0.02) 3px)",pointerEvents:"none"}}/>
@@ -48,10 +48,10 @@ export function BookCover({book, size="md", floating=false, onClick}) {
           <div style={{position:"absolute",top:10,right:8,fontSize:d.authorSize-2,fontWeight:700,color:pal.spine,fontFamily:"'Share Tech Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",opacity:0.9}}>{book.genre.slice(0,8)}</div>
         )}
         <div style={{position:"absolute",bottom:-20,right:-20,width:d.w*0.7,height:d.w*0.7,borderRadius:"50%",border:`1px solid ${pal.spine}18`,pointerEvents:"none"}}/>
-        <div style={{position:"absolute",left:10,right:10,top:"30%",color:pal.text,fontFamily:"'Playfair Display',Georgia,serif",fontWeight:900,fontSize:d.titleSize,lineHeight:1.25,fontStyle:"italic",textShadow:"0 2px 8px rgba(0,0,0,0.3)",wordBreak:"break-word"}}>
+        <div style={{position:"absolute",left:10,right:10,top:"30%",color:pal.text,fontFamily:"'Space Grotesk',Georgia,serif",fontWeight:900,fontSize:d.titleSize,lineHeight:1.25,fontStyle:"italic",textShadow:"0 2px 8px rgba(0,0,0,0.3)",wordBreak:"break-word"}}>
           {title}
         </div>
-        <div style={{position:"absolute",bottom:12,left:10,right:10,color:pal.spine,fontSize:d.authorSize,fontWeight:600,fontFamily:"'Noto Serif JP',serif",letterSpacing:"0.04em",opacity:0.9}}>
+        <div style={{position:"absolute",bottom:12,left:10,right:10,color:pal.spine,fontSize:d.authorSize,fontWeight:600,fontFamily:"'Space Grotesk',serif",letterSpacing:"0.04em",opacity:0.9}}>
           {author}
         </div>
         {/* Brillo tipo pasta satinada: un destello diagonal que barre de vez en cuando */}

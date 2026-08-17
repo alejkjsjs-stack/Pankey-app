@@ -22,7 +22,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -41,11 +41,11 @@ input, textarea {
   -webkit-user-select: auto;
   user-select: auto;
   outline: none;
-  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 button {
-  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   cursor: pointer;
   transition: opacity 0.15s ease, transform 0.15s ease, background 0.22s ease, box-shadow 0.22s ease;
 }
@@ -55,11 +55,11 @@ button:active { transform: scale(0.95); opacity: 0.88; }
 ::-webkit-scrollbar { width: 0; }
 
 .serif {
-  font-family: 'Fraunces', 'Noto Serif JP', Georgia, serif !important;
+  font-family: 'Space Grotesk', 'Space Grotesk', Georgia, serif !important;
   font-weight: 700 !important;
 }
 .serif-light {
-  font-family: 'Fraunces', 'Noto Serif JP', Georgia, serif !important;
+  font-family: 'Space Grotesk', 'Space Grotesk', Georgia, serif !important;
   font-weight: 400 !important;
 }
 
@@ -3163,7 +3163,7 @@ function OracleView({ C, isLight, appState, onBack, pushNotif }) {
               <div style={{ position: 'relative', width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `3px dashed ${result.prob >= 80 ? '#34D399' : result.prob >= 50 ? C.amberMid : '#EF4444'}`, animation: 'spin 12s linear infinite' }} />
                 <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', background: `radial-gradient(circle, ${result.prob >= 80 ? '#34D399' : result.prob >= 50 ? C.amberMid : '#EF4444'}10 0%, transparent 60%)` }} />
-                <div style={{ fontSize: 48, fontWeight: 900, color: result.prob >= 80 ? '#34D399' : result.prob >= 50 ? C.amberMid : '#EF4444', fontFamily: "'Fraunces', serif" }}>
+                <div style={{ fontSize: 48, fontWeight: 900, color: result.prob >= 80 ? '#34D399' : result.prob >= 50 ? C.amberMid : '#EF4444', fontFamily: "'Space Grotesk', serif" }}>
                   {result.prob}%
                 </div>
               </div>
@@ -4131,7 +4131,7 @@ function Splash({ onDone, C, isLight }) {
       {/* PANKEY — serif fino con brillo de oro líquido (sin cuadro) */}
       <div style={{ position: 'absolute', top: '31%', left: '50%', transform: 'translate(-50%,0)', zIndex: 4, whiteSpace: 'nowrap',
         opacity: phase === 'enter' ? 0 : 1, animation: phase === 'enter' ? 'none' : 'lgTitle 1.3s cubic-bezier(.22,1,.36,1) both' }}>
-        <span style={{ fontFamily: "'Fraunces','Playfair Display',serif", fontWeight: 500, fontSize: 56, letterSpacing: 1,
+        <span style={{ fontFamily: "'Space Grotesk','Space Grotesk',serif", fontWeight: 500, fontSize: 56, letterSpacing: 1,
           background: 'linear-gradient(100deg, #B9821A 0%, #E8B84E 34%, #FFF7E0 50%, #E8B84E 66%, #B9821A 100%)', backgroundSize: '250% 100%',
           WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
           filter: 'drop-shadow(0 5px 22px rgba(232,184,78,.32))', animation: 'goldShine 4.2s linear infinite' }}>Pankey</span>
@@ -4139,7 +4139,7 @@ function Splash({ onDone, C, isLight }) {
 
       {/* Toca para entrar (sobre el negro, encima de la superficie del oro) */}
       <div style={{ position: 'absolute', top: '46%', left: '50%', transform: 'translateX(-50%)', zIndex: 5,
-        fontFamily: "'Instrument Sans',sans-serif", fontSize: 11.5, fontWeight: 800, letterSpacing: 3.5, color: '#E8B84E', whiteSpace: 'nowrap',
+        fontFamily: "'Inter',sans-serif", fontSize: 11.5, fontWeight: 800, letterSpacing: 3.5, color: '#E8B84E', whiteSpace: 'nowrap',
         opacity: phase === 'ready' ? 1 : 0, transition: 'opacity .6s ease', animation: phase === 'ready' ? 'lgPrompt 2s ease-in-out infinite' : 'none' }}>
         TOCA PARA ENTRAR
       </div>
@@ -4376,7 +4376,7 @@ function Onboarding({ C, isLight, onDone }) {
                 <input value={username}
                   onChange={e => { setUsername(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setError(''); }}
                   placeholder="EXPLORADOR"
-                  style={{ width: '100%', fontSize: 22, fontWeight: 700, border: 'none', background: 'transparent', color: C.text, fontFamily: "'Plus Jakarta Sans', monospace", outline: 'none' }} />
+                  style={{ width: '100%', fontSize: 22, fontWeight: 700, border: 'none', background: 'transparent', color: C.text, fontFamily: "'Inter', monospace", outline: 'none' }} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
@@ -4492,7 +4492,7 @@ function Connect({ C, isLight, user, onDone, onSkip }) {
           }}>
             <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 16, fontWeight: 700, letterSpacing: 2.5 }}>TU CÓDIGO ÚNICO</div>
             <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: 4, color: accent, marginBottom: 22,
-              textShadow: `0 0 20px ${accent}40`, fontFamily: "'Noto Serif JP', monospace", wordBreak: 'break-all' }}>
+              textShadow: `0 0 20px ${accent}40`, fontFamily: "'Space Grotesk', monospace", wordBreak: 'break-all' }}>
               @{user?.code}
             </div>
             <button onClick={copyCode} style={{
@@ -4534,7 +4534,7 @@ function Connect({ C, isLight, user, onDone, onSkip }) {
                 onChange={e => { setPCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')); setError(''); }}
                 placeholder="USUARIO" autoFocus
                 style={{ width: '100%', fontSize: 24, fontWeight: 800, letterSpacing: 3, padding: '8px 0', border: 'none',
-                  background: 'transparent', color: C.text, fontFamily: "'Plus Jakarta Sans', monospace", outline: 'none' }} />
+                  background: 'transparent', color: C.text, fontFamily: "'Inter', monospace", outline: 'none' }} />
             </div>
             {error && <div style={{ fontSize: 12, color: '#EF4444', marginTop: 12, fontWeight: 600 }}>⚠ {error}</div>}
           </div>
@@ -4966,7 +4966,7 @@ function CafetalTimer({ C, isLight, appState, setAppState, pushNotif, currentBoo
   return (
     <div className="fi su" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 800, marginBottom: 4, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontFamily: "'Space Grotesk', serif", fontSize: 26, fontWeight: 800, marginBottom: 4, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}>
           <PkIc n="coffee" s={24} c={C.accent} /> Cafetal de Enfoque
         </div>
         <div style={{ fontSize: 13, color: C.textMuted }}>
@@ -5315,7 +5315,7 @@ function DuoReadingHeader({ C, user, partner, appState, partnerOnline, partnerPh
             <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: C.accent, animation: 'dotPulse 1.4s ease-in-out infinite', boxShadow: `0 0 8px ${C.accent}` }} />
           </span>
           <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>Leyendo juntos</span>
-          <span style={{ fontSize: 12.5, fontWeight: 900, color: C.accent, fontFamily: "'Fraunces', serif", letterSpacing: 0.5, fontVariantNumeric: 'tabular-nums' }}>{juntosTxt}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 900, color: C.accent, fontFamily: "'Space Grotesk', serif", letterSpacing: 0.5, fontVariantNumeric: 'tabular-nums' }}>{juntosTxt}</span>
         </div>
       )}
       {/* EN VIVO: el parcero está leyendo y tú no → invitación a unirte */}
@@ -6728,7 +6728,7 @@ function richLite(text) {
     const rendered = mathParts.map((mp, mi) => {
       if (mi % 2 !== 0) {
         return (
-          <span key={mi} style={{ fontFamily: "'Noto Serif JP', monospace", background: 'rgba(255,255,255,0.08)',
+          <span key={mi} style={{ fontFamily: "'Space Grotesk', monospace", background: 'rgba(255,255,255,0.08)',
             padding: '1px 7px', borderRadius: 6, color: '#FBBF24', fontWeight: 700, fontSize: '1.04em',
             letterSpacing: 0.4, margin: '0 3px' }}>{mp}</span>
         );
@@ -8644,7 +8644,7 @@ function IcfesVisualContext({ context, accent = '#FF6B54' }) {
   const Rotulo = ({ icon, children, sobrePapel }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 11,
       fontSize: 9, fontWeight: 800, letterSpacing: 1.7, textTransform: 'uppercase',
-      fontFamily: "'Instrument Sans', sans-serif", color: sobrePapel ? '#9A7B2E' : accent }}>
+      fontFamily: "'Inter', sans-serif", color: sobrePapel ? '#9A7B2E' : accent }}>
       <PkIc n={icon} s={11} c={sobrePapel ? '#9A7B2E' : accent} />
       {children}
     </div>
@@ -8840,7 +8840,7 @@ function IcfesVisualContextLegacy({ context }) {
     borderRadius: '16px',
     border: '1px solid #E7E5E4',
     boxShadow: 'inset 0 0 40px rgba(0,0,0,0.02)',
-    fontFamily: "'Noto Serif JP', serif",
+    fontFamily: "'Space Grotesk', serif",
     marginBottom: '20px'
   };
 
@@ -8866,7 +8866,7 @@ function IcfesVisualContextLegacy({ context }) {
       {/* 2. TABLAS DE DATOS */}
       {context.type === 'table' && context.data && context.data.headers && (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
             <thead>
               <tr style={{ background: '#E7E5E4' }}>
                 {context.data.headers.map((h, i) => (
@@ -8889,7 +8889,7 @@ function IcfesVisualContextLegacy({ context }) {
 
       {/* 3. GRÁFICAS DE BARRAS */}
       {context.type === 'bar_chart' && context.data && (
-        <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div style={{ fontFamily: "'Inter', sans-serif" }}>
           {context.title && <div style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', marginBottom: 16 }}>{context.title}</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {context.data.map((bar, i) => {
@@ -8917,7 +8917,7 @@ function IcfesVisualContextLegacy({ context }) {
         return (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
             <div style={{ border: '4px solid #1C1917', padding: '20px 30px', textAlign: 'center', background: '#fff', borderRadius: 8, boxShadow: '4px 4px 0 rgba(0,0,0,0.1)', maxWidth: '90%' }}>
-              <div style={{ fontSize: 22, fontWeight: 900, textTransform: 'uppercase', fontFamily: "'Plus Jakarta Sans', sans-serif", wordWrap: 'break-word' }}>
+              <div style={{ fontSize: 22, fontWeight: 900, textTransform: 'uppercase', fontFamily: "'Inter', sans-serif", wordWrap: 'break-word' }}>
                 {noticeText}
               </div>
               {context.subtext && <div style={{ fontSize: 12, marginTop: 10, fontWeight: 600 }}>{context.subtext}</div>}
@@ -9049,7 +9049,7 @@ function IcfesTest({ C, isLight, question, questionIdx, total, selected, animati
         if (isMath) {
           return (
             <span key={mIdx} style={{ 
-              fontFamily: "'Noto Serif JP', monospace", // Fuente elegante para fórmulas
+              fontFamily: "'Space Grotesk', monospace", // Fuente elegante para fórmulas
               background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)', 
               padding: '2px 8px', 
               borderRadius: 6,
@@ -9490,7 +9490,7 @@ function SenseiModal({ C, isLight, question, userAnsText, correctAnsText, onClos
     <div className="fi" style={{ position: 'fixed', inset: 0, zIndex: 99999, background: C.bg, display: 'flex', flexDirection: 'column', paddingTop: 'env(safe-area-inset-top, 20px)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent}, ${C.accent}AA)`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontFamily: "'Noto Serif JP', serif", boxShadow: `0 4px 16px ${C.accent}60` }}>知</div>
+          <div style={{ width: 42, height: 42, borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent}, ${C.accent}AA)`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontFamily: "'Space Grotesk', serif", boxShadow: `0 4px 16px ${C.accent}60` }}>知</div>
           <div>
             <div className="serif" style={{ fontSize: 22, fontWeight: 700, color: C.text }}>El Sabio</div>
             <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, letterSpacing: 1.5 }}>SABIDURÍA DE LA TIERRA</div>
@@ -10105,7 +10105,7 @@ function SabioLoading({ C }) {
       </div>
 
       {/* Frase colombiana que se desvanece y cambia */}
-      <div key={idx} style={{ fontFamily: "'Sora', sans-serif", fontSize: 21, fontWeight: 300, color: '#F6F1F2',
+      <div key={idx} style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 21, fontWeight: 300, color: '#F6F1F2',
         textAlign: 'center', maxWidth: 300, lineHeight: 1.45, letterSpacing: '-0.01em',
         animation: 'icqFrase 0.7s cubic-bezier(0.22,1,0.36,1) both' }}>
         {palabras.join(' ')} {ultima && <span style={{ color: '#FF6B54' }}>{ultima}</span>}…
@@ -10113,7 +10113,7 @@ function SabioLoading({ C }) {
 
       {/* Subtítulo + barra de carga */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-        <div style={{ fontFamily: "'Instrument Sans', sans-serif", fontSize: 9.5, fontWeight: 700, letterSpacing: 2.6,
+        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 9.5, fontWeight: 700, letterSpacing: 2.6,
           textTransform: 'uppercase', color: '#7C6E74' }}>
           Simulacro oficial · preparando preguntas
         </div>
@@ -15418,7 +15418,7 @@ function BazarPreview({ item, size = 60, C, user, appState }) {
   return (
     <div className={item.rarity === 'mítico' ? 'title-mythic' : item.rarity === 'legendario' ? 'title-legendary' : ''}
       style={{ width: size, textAlign: 'center', fontSize: 9.5, fontWeight: 900, fontStyle: 'italic',
-        fontFamily: "'Fraunces', serif", color: rc, lineHeight: 1.25 }}>
+        fontFamily: "'Space Grotesk', serif", color: rc, lineHeight: 1.25 }}>
       «{item.name}»
     </div>
   );
@@ -15773,7 +15773,7 @@ function ShopItemModal({ C, isLight, item, appState, user, onBuy, onEquip, onClo
         <div style={{ padding: '24px', background: `linear-gradient(135deg, ${rarity.color}18, transparent)`, borderBottom: `1px solid ${C.border}`, position: 'relative', borderRadius: '24px 24px 0 0' }}>
           <button onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><PkIc n="x" s={14} c={C.textMuted} /></button>
           <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: 2, color: rarity.color, background: rarity.bg, border: `1px solid ${rarity.color}30`, borderRadius: 6, padding: '4px 10px', display: 'inline-block', marginBottom: 12 }}>{rarity.label}</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.text, fontFamily: "'Fraunces', serif", lineHeight: 1.1, marginBottom: 8 }}>{item.name}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.text, fontFamily: "'Space Grotesk', serif", lineHeight: 1.1, marginBottom: 8 }}>{item.name}</div>
           <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>{item.desc}</div>
         </div>
 
@@ -16794,7 +16794,7 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, activ
                         NV. {u.lvl}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: "'Fraunces', serif", textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>{u.correctas}</span>
+                        <span style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: "'Space Grotesk', serif", textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>{u.correctas}</span>
                         <PkIc n="check" s={14} c={C.accent} />
                       </div>
                     </div>
@@ -17429,7 +17429,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
               <MiniFuego color={appState.fireColor} anim={appState.fireAnim} size={30} />
             </span>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.text, fontFamily: "'Fraunces',serif" }}>{user?.name || 'Usuario'}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.text, fontFamily: "'Space Grotesk',serif" }}>{user?.name || 'Usuario'}</div>
           <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>{myTitle}</div>
           <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>@{user?.code}</div>
           {/* BOTÓN: MI INVENTARIO (todo lo que has comprado) */}
@@ -17889,7 +17889,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
                         </div>
                       ) : s.item.type === 'title' ? (
                         <div className={s.item.rarity === 'mítico' ? 'title-mythic' : s.item.rarity === 'legendario' ? 'title-legendary' : ''}
-                          style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Fraunces', serif", fontStyle: 'italic',
+                          style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Space Grotesk', serif", fontStyle: 'italic',
                             color: rc, textAlign: 'center', padding: '0 26px', lineHeight: 1.2 }}>
                           «{s.item.name}»
                         </div>
@@ -17908,7 +17908,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
 
                     {/* Nombre + rareza + precio */}
                     <div style={{ position: 'absolute', left: 16, right: 16, bottom: 12 }}>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: '#F5F2EB', fontFamily: "'Fraunces', serif" }}>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: '#F5F2EB', fontFamily: "'Space Grotesk', serif" }}>
                         {obj.name}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 3 }}>
@@ -18346,7 +18346,7 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
         </div>
         <input type="file" accept="image/*" style={{ display: 'none' }} ref={fileInputRef} onChange={handleFileChange} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Fraunces', serif" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Space Grotesk', serif" }}>
             {user?.name || 'Usuario'}
           </div>
           <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, letterSpacing: 1 }}>{myTitle}</div>
