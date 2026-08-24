@@ -8,9 +8,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <link rel="manifest" href="/manifest.json?v=27" />
-    <link rel="icon" type="image/png" href="/logo192.png?v=27" />
-    <link rel="apple-touch-icon" href="/logo192.png?v=27" />
+    <link rel="manifest" href="/manifest.json?v=28" />
+    <link rel="icon" type="image/png" href="/logo192.png?v=28" />
+    <link rel="apple-touch-icon" href="/logo192.png?v=28" />
 
     <title>Pankey</title>
 
@@ -46,7 +46,10 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div id="app-frame">
+      <div id="root"></div>
+      <div id="app-portal"></div>
+    </div>
 
     <script>
       document.addEventListener('gesturestart', function (e) {

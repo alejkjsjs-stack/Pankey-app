@@ -26,15 +26,52 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── App-frame ──
+   En celular: la app llena TODA la pantalla (sin marco).
+   En computador/tablet: aparece como un dispositivo enmarcado, centrado
+   sobre un fondo. El transform del marco atrapa los position:fixed adentro. */
+#app-frame {
+  width: 100%;
+  height: 100dvh;
+  position: relative;
+  overflow: hidden;
+}
 #root {
   width: 100%;
-  max-width: 430px;
-  height: 100dvh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
-  margin: 0 auto;
   overflow: hidden;
+}
+#app-portal { position: absolute; top: 0; left: 0; width: 0; height: 0; }
+
+/* El contenido usa todo el ancho de su contenedor (marco en PC, pantalla en móvil). */
+:root { --appw: 100%; }
+
+@media (min-width: 760px) and (min-height: 600px) {
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+      radial-gradient(1100px 760px at 50% -8%, #1c120b 0%, transparent 58%),
+      radial-gradient(900px 700px at 50% 118%, #150f0d 0%, transparent 58%),
+      #080607;
+  }
+  #app-frame {
+    width: 428px;
+    height: min(922px, calc(100dvh - 48px));
+    max-height: calc(100dvh - 48px);
+    border-radius: 42px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow:
+      0 0 0 10px #0c0a09,
+      0 0 0 11px rgba(255, 255, 255, 0.05),
+      0 44px 130px rgba(0, 0, 0, 0.62);
+    transform: translateZ(0);   /* contiene los position:fixed dentro del marco */
+  }
 }
 
 input, textarea {
@@ -1248,7 +1285,10 @@ const fireBoost = () => { try { window.dispatchEvent(new CustomEvent('pkFireBoos
 // Portal: saca los overlays de modos de juego al body para que tapen header y nav
 function Portal({ children }) {
   if (typeof document === 'undefined') return null;
-  return createPortal(children, document.body);
+  // Montamos dentro del marco (#app-portal) para que los modales queden
+  // ENCUADRADOS en computador; fallback a body por si acaso.
+  const host = document.getElementById('app-portal') || document.body;
+  return createPortal(children, host);
 }
 const FB    = () => window.__FB;
 const fbOK  = () => !!window.__FB_READY && !!window.__FB;
@@ -1465,13 +1505,16 @@ const PRO_BENEFITS = [
   ['mochila', 'Cofre diario doble', '2 cofres gratis al día, en vez de 1'],
   ['sabio', 'Fuego morado', 'Racha con color exclusivo en el ranking'],
 ];
-const PRO_PRICE = '$14.900 COP / mes';
+const PRO_PRICE = '$9.900 COP / mes';
+const PRO_PRICE_YEAR = '$79.900 COP / año';   // ~33% de ahorro vs. mensual
+const PRO_YEAR_SAVE = 33;                     // % de ahorro para mostrar en la insignia
 
 // Paquetes de recarga de empanadas (dinero real — Módulo 4)
+// emp = total de empanadas entregadas · bonus/chest/proDays = premio especial que se entrega al confirmar el pago
 const EMPANADA_PACKS = [
-  { id: 'antojo',   name: 'El Antojo',   emp: 500,  price: '$4.900',  cop: 4900,  emoji: '🫓' },
-  { id: 'fritanga', name: 'La Fritanga', emp: 1500, price: '$12.900', cop: 12900, emoji: '🍽️', best: true },
-  { id: 'patron',   name: 'El Patrón',   emp: 5000, price: '$35.000', cop: 35000, emoji: '👑' },
+  { id: 'antojo',   name: 'El Antojo',   emp: 800,  price: '$4.900',  cop: 4900,  emoji: '🫓' },
+  { id: 'fritanga', name: 'La Fritanga', emp: 2800, price: '$12.900', cop: 12900, emoji: '🍽️', best: true, bonus: 'Cofre Raro de regalo', chest: 'raro' },
+  { id: 'patron',   name: 'El Patrón',   emp: 9000, price: '$35.000', cop: 35000, emoji: '👑', bonus: 'Cofre Legendario + 3 días de Pro', chest: 'legendario', proDays: 3 },
 ];
 
 // Tienda Real: Pankey Pro + recargas de empanadas con dinero real (Módulo 4)
@@ -1529,8 +1572,9 @@ function TiendaReal({ C, appState, onClose, onBuyPro, onBuyPack }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   Suscribirme · Plan Gratuito (Beta)
                 </button>
-                <div style={{ textAlign: 'center', fontSize: 10.5, color: C.textMuted, marginTop: 8 }}>
+                <div style={{ textAlign: 'center', fontSize: 10.5, color: C.textMuted, marginTop: 8, lineHeight: 1.55 }}>
                   Gratis durante la beta · después {PRO_PRICE}
+                  <br />o {PRO_PRICE_YEAR} · ahorra {PRO_YEAR_SAVE}%
                 </div>
               </>
             )}
@@ -1549,6 +1593,7 @@ function TiendaReal({ C, appState, onClose, onBuyPro, onBuyPack }) {
                   <div style={{ fontSize: 12, color: C.amberMid, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                     <PkIc n="empanada" s={12} c={C.amberMid} /> {p.emp.toLocaleString()} empanadas
                   </div>
+                  {p.bonus && <div style={{ fontSize: 10.5, color: '#C9A24B', fontWeight: 800, marginTop: 3, letterSpacing: 0.2 }}>+ {p.bonus}</div>}
                 </div>
                 <button onClick={() => onBuyPack(p)} style={{ flexShrink: 0, padding: '11px 15px', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                   fontSize: 13, fontWeight: 900, color: '#1A1206', background: `linear-gradient(135deg, #F5C542, ${C.amberMid})`, boxShadow: `0 6px 16px ${C.amberMid}40` }}>
@@ -3872,7 +3917,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
   return (
     <>
     <style>{globalStyles}</style>
-    <div style={{ width: '100%', maxWidth: 430, height: '100dvh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.text, position: 'relative', margin: '0 auto', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: C.bg, color: C.text, position: 'relative', overflow: 'hidden' }}>
       <TexturaFondo C={C} isLight={isLight} />
       {isSakura && <SakuraFalling />}
       {coinBurst && <CoinBurst key={coinBurst.key} amount={coinBurst.amount} C={C} />}
@@ -3911,6 +3956,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       <div style={{
         padding: '10px 18px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         flexShrink: 0, zIndex: 900, background: `linear-gradient(180deg, ${C.bg} 60%, transparent)`,
+        width: '100%', maxWidth: 'var(--appw)', marginInline: 'auto',
       }}>
         {/* Avatar → menú de identidad */}
         <button onClick={() => setIdentityMenu(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: '50%' }}>
@@ -3979,7 +4025,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
       )}
 
       {/* ── CONTENIDO ── */}
-      <div style={{ flex: 1, position: 'relative', zIndex: 100, overflow: 'hidden' }}>
+      <div style={{ flex: 1, position: 'relative', zIndex: 100, overflow: 'hidden', width: '100%', maxWidth: 'var(--appw)', marginInline: 'auto' }}>
         <div style={{ display: tab === 'tienda' ? 'block' : 'none', height: '100%', overflowY: 'auto', padding: '20px 20px 100px', WebkitOverflowScrolling: 'touch' }}>
           <SettingsTab startView="shop" asTab startViewNonce={tab === 'tienda' ? 1 : 0} C={C} isLight={isLight} themeKey={themeKey} setThemeKey={setThemeKey} ambientOn={ambientOn} setAmbientOn={setAmbientOn} appState={appState} setAppState={setAppState} user={user} partnerPhotoURL={partnerPhotoURL} onSavePhoto={() => {}} onLogout={() => {}} pushNotif={pushNotif} onCoinBurst={triggerCoinBurst} onAchievement={queueAchievement} onGoSettings={(dest) => setTab(dest || 'inicio')} onOpenTienda={() => setTiendaRealOpen(true)} />
         </div>
@@ -4014,6 +4060,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
         borderTop: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.10)'}`,
         zIndex: 900, paddingBottom: 'env(safe-area-inset-bottom)',
+        width: '100%', maxWidth: 'var(--appw)', marginInline: 'auto',
       }}>
         {NAV_TABS.map(({ id, icon, label }) => {
           const active = tab === id;
@@ -4179,31 +4226,60 @@ function Splash({ onDone, C, isLight }) {
 //  ⚠ CONTENIDO PLACEHOLDER: reemplazar por el texto legal real (revisado
 //     con un abogado y ajustado a la Ley 1581 de 2012 de Colombia).
 // ─────────────────────────────────────────────
+// ⚙ COMPLETA estos datos con la información real de tu empresa/persona antes de publicar.
+//   Se usan en todo el texto legal para no repetir. La fecha es la de la última revisión.
+const LEGAL_INFO = {
+  empresa: 'Jenny Marcela Estrella Valero',
+  nit: '1.030.527.610',
+  ciudad: 'Fusagasugá, Cundinamarca, Colombia',
+  direccion: 'Carrera 7 Este # 4-02, Apto 308',
+  correo: 'pankeyoff@gmail.com',
+  fecha: '23 de agosto de 2026',
+};
+
 const LEGAL_DOCS = {
   terms: {
     title: 'Términos y Condiciones',
-    updated: 'Última actualización: [FECHA]',
+    updated: 'Última actualización: ' + LEGAL_INFO.fecha,
     body: [
-      ['1. Aceptación', 'Al crear una cuenta y usar Pankey (la "App") aceptas estos Términos y Condiciones. Si no estás de acuerdo, no uses la App. Pankey es una herramienta de preparación para el examen ICFES Saber 11 con fines educativos y de entretenimiento.'],
-      ['2. Cuenta y edad', 'Debes registrar datos veraces. Si eres menor de edad, declaras contar con la autorización de tus padres o acudientes para usar la App y para el tratamiento de tus datos.'],
-      ['3. Suscripción Pankey Pro y compras', 'Pankey ofrece una suscripción mensual (Pankey Pro) y paquetes de "Empanadas" (moneda virtual sin valor monetario fuera de la App). Los precios se muestran en pesos colombianos (COP). Las Empanadas no son reembolsables ni canjeables por dinero. La suscripción se renueva según lo indicado al momento de la compra y puede cancelarse en cualquier momento.'],
-      ['4. Uso permitido', 'No puedes alterar, automatizar ni explotar la App para obtener monedas, energía o beneficios de forma indebida. Nos reservamos el derecho de suspender cuentas que incurran en fraude o abuso.'],
-      ['5. Contenido educativo', 'El contenido de simulacros y preguntas es material de práctica y no garantiza un resultado específico en el examen oficial. Pankey no está afiliado al ICFES.'],
-      ['6. Cambios y terminación', 'Podemos actualizar la App y estos Términos. El uso continuado implica la aceptación de los cambios. Podemos suspender el servicio por mantenimiento o por incumplimiento.'],
-      ['7. Contacto', 'Para dudas escríbenos a [CORREO DE CONTACTO].'],
+      ['1. Quiénes somos y objeto', 'Pankey (la "App") es un servicio operado por ' + LEGAL_INFO.empresa + ' (NIT/CC ' + LEGAL_INFO.nit + '), con domicilio en ' + LEGAL_INFO.ciudad + '. La App es una herramienta gamificada de preparación para el examen ICFES Saber 11, con fines educativos y de entretenimiento. Estos Términos regulan tu acceso y uso de la App.'],
+      ['2. Aceptación', 'Al crear una cuenta o usar la App aceptas de forma libre, expresa e informada estos Términos y la Política de Privacidad. Si no estás de acuerdo, no uses la App. El uso continuado tras cualquier cambio implica tu aceptación de la versión vigente.'],
+      ['3. Definiciones', '"Usuario" eres tú. "Pankey Pro" es la suscripción de pago que habilita funciones adicionales. "Empanadas" son la moneda virtual interna, sin valor monetario fuera de la App. "Parcero" es otro usuario con quien te vinculas para funciones sociales y de estudio en pareja.'],
+      ['4. Cuenta y veracidad', 'Para usar la App debes autenticarte con tu cuenta de Google y suministrar datos veraces y actualizados. Eres responsable de la actividad realizada desde tu cuenta y de mantener la confidencialidad de tu acceso. Notifícanos cualquier uso no autorizado.'],
+      ['5. Menores de edad', 'La App está dirigida a estudiantes de educación media, por lo que puede ser usada por menores de edad. Si eres menor, declaras contar con la autorización previa de tu padre, madre o representante legal para usar la App y para el tratamiento de tus datos personales, y que dicho representante ha leído y acepta estos Términos y la Política de Privacidad. Los pagos solo deben realizarse con autorización del representante legal.'],
+      ['6. Licencia de uso', 'Te otorgamos una licencia limitada, personal, revocable y no transferible para usar la App con fines lícitos. No adquieres ningún derecho de propiedad sobre la App ni sobre su contenido.'],
+      ['7. Suscripción Pankey Pro', 'Pankey Pro es una suscripción de pago cuyo precio, periodicidad y beneficios se te informan en la App al momento de la compra, en pesos colombianos (COP). Salvo que se indique lo contrario, la suscripción se renueva automáticamente al final de cada periodo, por el mismo valor, hasta que la canceles. Puedes cancelar en cualquier momento desde la App o escribiéndonos; la cancelación detiene renovaciones futuras y conservas el acceso hasta el final del periodo ya pagado.'],
+      ['8. Empanadas (moneda virtual)', 'Las Empanadas son una licencia de uso dentro de la App, no constituyen dinero, saldo, ni un bien negociable, y no son reembolsables, transferibles ni canjeables por dinero u otros bienes fuera de la App. Podemos ajustar precios, cantidades y disponibilidad de artículos virtuales. Las Empanadas no otorgan ningún derecho una vez cerrada tu cuenta o descontinuada la App.'],
+      ['9. Pagos', 'Los pagos se procesan a través de una pasarela de pagos autorizada (Wompi). No almacenamos los datos completos de tu tarjeta; estos son tratados por la pasarela conforme a sus propias políticas y estándares de seguridad (PCI-DSS). Los precios incluyen los impuestos aplicables cuando corresponda. Cualquier comprobante o factura se emite según la normativa vigente.'],
+      ['10. Derecho de retracto y reembolsos', 'Conforme a la Ley 1480 de 2011 (Estatuto del Consumidor), en las ventas a distancia tienes derecho de retracto dentro de los cinco (5) días hábiles siguientes a la compra, cuando aplique. Este derecho NO aplica a bienes o contenidos digitales que ya hayan comenzado a ejecutarse o consumirse con tu consentimiento (por ejemplo, Empanadas ya acreditadas o un periodo de suscripción ya iniciado). Para solicitudes escríbenos a ' + LEGAL_INFO.correo + '.'],
+      ['11. Uso permitido y prohibido', 'Te comprometes a no alterar, automatizar (bots/scripts), realizar ingeniería inversa, ni explotar fallos para obtener Empanadas, energía, posiciones en el ranking o beneficios de forma indebida. Tampoco puedes suplantar a otras personas, acosar, ni publicar contenido ilícito, ofensivo o que vulnere derechos de terceros. Podemos suspender o cerrar cuentas que incurran en fraude o abuso.'],
+      ['12. Contenido educativo', 'Los simulacros, preguntas y materiales son de práctica y no garantizan un resultado específico en el examen oficial. Pankey NO está afiliado, avalado ni patrocinado por el ICFES ni por ninguna entidad estatal. "ICFES" y "Saber 11" son marcas de sus respectivos titulares y se usan únicamente con fin descriptivo.'],
+      ['13. Propiedad intelectual y derechos de autor', 'La App, su marca, nombre, logotipos, diseño, código, textos, arte, personajes y sonidos son propiedad de ' + LEGAL_INFO.empresa + ' o de sus licenciantes y están protegidos por las normas de propiedad intelectual y derechos de autor. No puedes copiarlos, modificarlos, distribuirlos ni crear obras derivadas sin autorización escrita. Si consideras que algún contenido dentro de la App infringe tus derechos de autor, escríbenos a ' + LEGAL_INFO.correo + ' identificando la obra y acreditando la titularidad; revisaremos y retiraremos el contenido cuando corresponda.'],
+      ['14. Funciones sociales, perfil y fotos', 'Al usar funciones de parcero, ranking o co-lectura, cierta información de tu perfil (alias, avatar y progreso) puede ser visible para otros usuarios. Puedes subir una foto de perfil y, en el modo pareja, una foto de tu parcero: declaras que tienes derecho a usar esas imágenes y el consentimiento de las personas que aparecen en ellas, y nos otorgas una licencia limitada y revocable para almacenarlas y mostrarlas dentro de la App con el único fin de prestarte el servicio. Está prohibido subir imágenes o contenido ilegal, ofensivo, sexual, que involucre a menores de forma inapropiada o que vulnere derechos de terceros. Podemos moderar, ocultar o eliminar contenido y suspender cuentas que incumplan. Reporta contenido o conductas indebidas escribiéndonos a ' + LEGAL_INFO.correo + '.'],
+      ['15. Disponibilidad y cambios', 'Procuramos que la App funcione de forma continua, pero puede haber interrupciones por mantenimiento, fuerza mayor o causas técnicas. Podemos modificar, suspender o descontinuar funciones. Te avisaremos de cambios relevantes dentro de la App.'],
+      ['16. Limitación de responsabilidad', 'La App se ofrece "tal cual". En la medida permitida por la ley, no respondemos por daños indirectos, pérdida de datos o de progreso derivados del uso o imposibilidad de uso de la App. Nada en estos Términos limita derechos irrenunciables que la ley te reconozca como consumidor.'],
+      ['17. Terminación', 'Puedes dejar de usar la App y eliminar tu cuenta en cualquier momento. Podemos suspender o terminar tu acceso por incumplimiento de estos Términos. Al terminar, cesa tu licencia de uso y se aplican las reglas de conservación descritas en la Política de Privacidad.'],
+      ['18. Ley aplicable y controversias', 'Estos Términos se rigen por las leyes de la República de Colombia. Antes de acudir a otras instancias, buscaremos resolver cualquier diferencia de buena fe a través de nuestro canal de atención (PQR). Las controversias se someterán a los jueces competentes de ' + LEGAL_INFO.ciudad + '.'],
+      ['19. Contacto (PQR)', 'Para peticiones, quejas o reclamos escríbenos a ' + LEGAL_INFO.correo + '. Responderemos en los plazos que exija la normativa aplicable.'],
     ],
   },
   privacy: {
     title: 'Política de Privacidad',
-    updated: 'Última actualización: [FECHA]',
+    updated: 'Última actualización: ' + LEGAL_INFO.fecha,
     body: [
-      ['1. Responsable', 'El responsable del tratamiento de tus datos es [RAZÓN SOCIAL / NIT / DIRECCIÓN]. Correo: [CORREO].'],
-      ['2. Datos que recolectamos', 'Recolectamos tu nombre, alias, edad, correo asociado a tu cuenta de Google, y tu progreso dentro de la App (rachas, simulacros, logros, hábitos y actividad social).'],
-      ['3. Finalidad', 'Usamos tus datos para crear tu perfil, guardar tu progreso, habilitar funciones sociales (parceros, ranking) y mejorar la experiencia. No vendemos tus datos personales.'],
-      ['4. Autorización (Ley 1581 de 2012)', 'Al aceptar autorizas el tratamiento de tus datos personales conforme a la ley colombiana de Habeas Data. Si eres menor, esta autorización la otorga tu padre, madre o acudiente.'],
-      ['5. Tus derechos', 'Puedes conocer, actualizar, rectificar y solicitar la supresión de tus datos, así como revocar la autorización, escribiendo a [CORREO].'],
-      ['6. Seguridad y terceros', 'Usamos Firebase (Google) para autenticación y almacenamiento. Tus datos se procesan según las políticas de dichos proveedores.'],
-      ['7. Cambios', 'Podemos actualizar esta política; te informaremos de cambios relevantes dentro de la App.'],
+      ['1. Responsable del tratamiento', 'El responsable del tratamiento de tus datos personales es ' + LEGAL_INFO.empresa + ' (NIT/CC ' + LEGAL_INFO.nit + '), con domicilio en ' + LEGAL_INFO.direccion + ', ' + LEGAL_INFO.ciudad + '. Correo de contacto para asuntos de datos: ' + LEGAL_INFO.correo + '. Esta política se rige por la Ley 1581 de 2012, el Decreto 1377 de 2013 y demás normas colombianas de protección de datos.'],
+      ['2. Definiciones', '"Dato personal" es cualquier información vinculada a una persona identificada o identificable. "Titular" eres tú. "Tratamiento" es cualquier operación sobre tus datos (recolección, uso, almacenamiento, supresión). "Dato sensible" es aquel que afecta la intimidad o cuyo uso indebido puede generar discriminación; la App no solicita datos sensibles.'],
+      ['3. Datos que recolectamos', 'Datos de identificación y cuenta: nombre, alias, avatar y correo asociados a tu cuenta de Google. Datos de perfil: edad o curso, y la foto o alias de tu parcero cuando decides vincularte. Datos de uso y progreso: rachas, simulacros, respuestas de práctica, logros, hábitos, Empanadas y actividad social. Datos técnicos: identificadores de dispositivo, preferencias (tema, sonido) y datos básicos de funcionamiento. Datos de pago: NO almacenamos los datos de tu tarjeta; los procesa directamente la pasarela de pagos (Wompi).'],
+      ['4. Finalidades', 'Tratamos tus datos para: crear y gestionar tu cuenta y perfil; guardar y sincronizar tu progreso; habilitar funciones sociales (parceros, ranking, co-lectura); procesar compras y suscripciones a través de la pasarela; brindar soporte; velar por la seguridad y prevenir fraude; y mejorar la App. No vendemos tus datos personales ni los usamos para decisiones automatizadas con efectos jurídicos.'],
+      ['5. Autorización y base legal', 'El tratamiento se basa en tu autorización previa, expresa e informada, otorgada al aceptar esta política, y en las demás causas que permita la ley. La entrega de datos es facultativa; sin los datos mínimos, algunas funciones no estarán disponibles.'],
+      ['6. Datos de menores de edad', 'La App puede ser usada por menores de edad. Su tratamiento atiende el interés superior del menor y respeta sus derechos fundamentales (Decreto 1377 de 2013, art. 12). El uso de la App por un menor y la autorización para tratar sus datos deben contar con el consentimiento del padre, madre o representante legal, quien puede ejercer los derechos del menor y solicitar información en cualquier momento a través de ' + LEGAL_INFO.correo + '.'],
+      ['7. Encargados y terceros', 'Nos apoyamos en proveedores que actúan como encargados del tratamiento: Google Firebase (autenticación, base de datos y almacenamiento), la infraestructura de despliegue (hosting) y Wompi (procesamiento de pagos). Estos proveedores pueden almacenar información en servidores ubicados fuera de Colombia, por lo que puede existir una transferencia o transmisión internacional de datos, realizada bajo estándares adecuados de seguridad y confidencialidad. Solo compartimos lo necesario para prestar el servicio.'],
+      ['8. Tus derechos como titular', 'Tienes derecho a conocer, actualizar y rectificar tus datos; a solicitar prueba de la autorización; a ser informado del uso dado a tus datos; a presentar quejas ante la Superintendencia de Industria y Comercio (SIC) por infracciones; a revocar la autorización y solicitar la supresión de tus datos cuando no exista un deber legal o contractual de conservarlos; y a acceder gratuitamente a ellos.'],
+      ['9. Cómo ejercer tus derechos', 'Puedes ejercer tus derechos escribiendo a ' + LEGAL_INFO.correo + ', o desde las opciones de la App. Atenderemos las consultas en un término máximo de diez (10) días hábiles y los reclamos en un término máximo de quince (15) días hábiles, prorrogables conforme a la ley. Puedes eliminar tu cuenta y tus datos desde la App o solicitándolo por este canal.'],
+      ['10. Seguridad de la información', 'Aplicamos medidas técnicas y administrativas razonables para proteger tus datos frente a acceso no autorizado, pérdida o alteración, incluyendo el control de acceso a la base de datos y el cifrado en tránsito. Ningún sistema es 100% infalible; ante un incidente relevante actuaremos conforme a la ley.'],
+      ['11. Cookies y almacenamiento local', 'La App usa almacenamiento local del dispositivo (por ejemplo localStorage) para recordar tu sesión y preferencias, y tecnologías de sus proveedores para el funcionamiento del servicio. No usamos publicidad de terceros basada en seguimiento.'],
+      ['12. Conservación y eliminación', 'Conservamos tus datos mientras tu cuenta esté activa y durante el tiempo necesario para cumplir obligaciones legales, contables o de seguridad. Al eliminar tu cuenta, suprimimos o anonimizamos tus datos personales, salvo aquellos que debamos conservar por mandato legal.'],
+      ['13. Vigencia y cambios', 'Esta política rige desde la fecha de su última actualización. Podemos modificarla; te informaremos de cambios sustanciales dentro de la App. El uso posterior a la actualización implica tu conocimiento de la versión vigente.'],
     ],
   },
 };
@@ -4228,9 +4304,6 @@ function LegalView({ C, onClose, initial = 'terms' }) {
           ))}
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '18px', WebkitOverflowScrolling: 'touch' }}>
-          <div style={{ fontSize: 11, color: '#E8A34A', background: 'rgba(232,163,74,0.1)', border: '1px solid rgba(232,163,74,0.3)', borderRadius: 10, padding: '10px 12px', marginBottom: 16, lineHeight: 1.5 }}>
-            ⚠ Borrador de ejemplo. Reemplaza los campos entre [corchetes] y valida este texto con un abogado antes de publicar.
-          </div>
           <div className="serif" style={{ fontSize: 24, fontWeight: 800, color: C.text, marginBottom: 4 }}>{doc.title}</div>
           <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 20 }}>{doc.updated}</div>
           {doc.body.map(([h, p], i) => (
@@ -4298,7 +4371,7 @@ function Onboarding({ C, isLight, onDone }) {
   };
 
   return (
-    <div style={{ height: '100dvh', padding: '48px 32px', display: 'flex', flexDirection: 'column',
+    <div style={{ height: '100%', padding: '48px 32px', display: 'flex', flexDirection: 'column',
       justifyContent: 'center', background: C.bg || '#0F0D0C', color: C.text, position: 'relative', overflow: 'hidden' }}>
       
       <style>{`
@@ -4466,7 +4539,7 @@ function Connect({ C, isLight, user, onDone, onSkip }) {
   ];
 
   return (
-    <div style={{ height: '100dvh', padding: '48px 32px', display: 'flex', flexDirection: 'column',
+    <div style={{ height: '100%', padding: '48px 32px', display: 'flex', flexDirection: 'column',
       justifyContent: 'center', background: C.bg || '#0F0D0C', color: C.text, position: 'relative', overflow: 'hidden' }}>
       
       {/* Fondo Inmersivo */}
