@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   PANKEY · TEMA "ASCUA"  —  reskin del Inicio
-   Fuente de verdad visual: pankey-ASCUA-v2.html
+   SIMU · TEMA "ASCUA"  —  reskin del Inicio
+   Fuente de verdad visual: simu-ASCUA-v2.html
    NOTA: se omiten a propósito las reglas globales del DEMO
    ( * {…}, html,body{…}, body{display:grid;place-items:center;padding:14px;font:…},
      .frame/.notch/.screen ) porque romperían el layout del resto de la app
@@ -280,7 +280,7 @@
 .abg-vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 32%,transparent 46%,rgba(0,0,0,.5) 100%)}
 @media (prefers-reduced-motion:reduce){.abg-orb,.abg-grid,.abg-stars i{animation:none}}
 
-/* ═══════════════ PANKEY PRO ═══════════════ */
+/* ═══════════════ SIMU PRO ═══════════════ */
 /* CTA dorado compartido */
 .pro-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 26px;border-radius:15px;border:none;cursor:pointer;font-family:inherit;
   background:linear-gradient(180deg,#FFE7A2,#E0A93E 58%,#B4831E);color:#3a2405;font:900 15px/1 'Inter',sans-serif;letter-spacing:.2px;
@@ -1377,7 +1377,7 @@
 .rul-rev__spark{position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;background:var(--rc);box-shadow:0 0 8px var(--rc);animation:rulSpark .85s ease-out var(--d,0s) both}
 @keyframes rulSpark{0%{opacity:0;transform:rotate(var(--a)) translateY(0) scale(1)}18%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-130px) scale(0)}}
 
-/* Promo grande de Pankey Pro */
+/* Promo grande de Simu Pro */
 .bz-pro{position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;width:100%;border:none;cursor:pointer;border-radius:18px;padding:16px 15px;text-align:left;font-family:inherit;
   background:linear-gradient(120deg,rgba(255,207,107,.09),rgba(255,46,76,.06));
   box-shadow:inset 0 0 0 1px rgba(255,150,80,.24);transition:transform .12s var(--ez)}

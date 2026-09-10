@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { THEMES as T } from './config/theme';
 import { Ic } from './components/Icon';
 import { BookCover } from './components/BookCover';
-import './pankey-ascua.css'; // Tema "Ascua" (reskin del Inicio)
+import './simu-ascua.css'; // Tema "Ascua" (reskin del Inicio)
 
 // ─────────────────────────────────────────────
 //  GLOBAL STYLES — Premium Japanese aesthetic
@@ -559,9 +559,9 @@ const PETROGLIFOS_MARCA = [
   "M12 5a2 2 0 1 1 0-4 2 2 0 0 1 0 4z M12 5v12 M12 8H8V5 M12 8h4V5 M12 15H8v3 M12 15h4v3 M12 17q0 4 4 5",
 ];
 // ─────────────────────────────────────────────
-//  LOGO / ISOTIPO DE PANKEY — la rana-vueltiao en medallón Tumbaga
+//  LOGO / ISOTIPO DE SIMU — la rana-vueltiao en medallón Tumbaga
 // ─────────────────────────────────────────────
-function PankeyLogo({ size = 64, C, glow = true }) {
+function SimuLogo({ size = 64, C, glow = true }) {
   const oro = (C && C.accent) || '#D4AF37';
   const piedra = (C && C.bgAlt) || '#1A1715';
   // Greca zigzag circular (patrón del sombrero vueltiao): 22 dientes entre r36 y r40
@@ -1517,7 +1517,7 @@ const EMPANADA_PACKS = [
   { id: 'patron',   name: 'El Patrón',   emp: 9000, price: '$35.000', cop: 35000, emoji: '👑', bonus: 'Cofre Legendario + 3 días de Pro', chest: 'legendario', proDays: 3 },
 ];
 
-// Tienda Real: Pankey Pro + recargas de empanadas con dinero real (Módulo 4)
+// Tienda Real: Simu Pro + recargas de empanadas con dinero real (Módulo 4)
 function TiendaReal({ C, appState, onClose, onBuyPro, onBuyPack }) {
   const isPro = !!appState.isPro;
   return (
@@ -1538,12 +1538,12 @@ function TiendaReal({ C, appState, onClose, onBuyPro, onBuyPack }) {
             </div>
           </div>
 
-          {/* ── Sección 1: Pankey Pro ── */}
+          {/* ── Sección 1: Simu Pro ── */}
           <div style={{ borderRadius: 20, padding: '18px', marginBottom: 22, position: 'relative', overflow: 'hidden',
             background: 'linear-gradient(150deg, rgba(167,139,250,0.2), rgba(124,92,214,0.06))', border: '1px solid rgba(167,139,250,0.4)' }}>
             <div style={{ position: 'absolute', top: -30, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'radial-gradient(circle, rgba(167,139,250,0.25), transparent 70%)', pointerEvents: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: 1.5, color: '#A78BFA' }}>PANKEY PRO</div>
+              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: 1.5, color: '#A78BFA' }}>SIMU PRO</div>
               {isPro && <span style={{ fontSize: 9, fontWeight: 900, color: '#1A1206', background: '#A78BFA', borderRadius: 5, padding: '2px 7px' }}>ACTIVO</span>}
             </div>
             <div style={{ fontSize: 12.5, color: C.textMid, marginBottom: 14, lineHeight: 1.5 }}>Desbloquea todo el poder del Templo.</div>
@@ -1614,7 +1614,7 @@ function TiendaReal({ C, appState, onClose, onBuyPro, onBuyPack }) {
   );
 }
 
-// Modal de Energía + invitación a Pankey Pro (Módulo 2)
+// Modal de Energía + invitación a Simu Pro (Módulo 2)
 function EnergiaModal({ C, appState, onClose, onOpenPro }) {
   const info = getEnergyNow(appState);
   const empty = !info.unlimited && info.energy <= 0;
@@ -1630,7 +1630,7 @@ function EnergiaModal({ C, appState, onClose, onOpenPro }) {
             <div style={{ textAlign: 'center', padding: '6px 0 18px' }}>
               <div style={{ fontSize: 40, fontWeight: 900, color: '#A78BFA' }}>∞</div>
               <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginTop: 4 }}>Energía ilimitada</div>
-              <div style={{ fontSize: 12.5, color: C.textMuted, marginTop: 4 }}>Eres Pankey Pro. Haz todos los simulacros que quieras.</div>
+              <div style={{ fontSize: 12.5, color: C.textMuted, marginTop: 4 }}>Eres Simu Pro. Haz todos los simulacros que quieras.</div>
             </div>
           ) : (
             <>
@@ -1654,11 +1654,11 @@ function EnergiaModal({ C, appState, onClose, onOpenPro }) {
             </>
           )}
 
-          {/* Invitación a Pankey Pro */}
+          {/* Invitación a Simu Pro */}
           {!info.unlimited && (
             <div style={{ borderRadius: 18, padding: '16px', background: 'linear-gradient(150deg, rgba(167,139,250,0.16), rgba(167,139,250,0.04))', border: '1px solid rgba(167,139,250,0.35)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 2, color: '#A78BFA' }}>PANKEY PRO</div>
+                <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 2, color: '#A78BFA' }}>SIMU PRO</div>
                 <div style={{ flex: 1, height: 1, background: 'rgba(167,139,250,0.25)' }} />
                 <div style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{PRO_PRICE}</div>
               </div>
@@ -1677,7 +1677,7 @@ function EnergiaModal({ C, appState, onClose, onOpenPro }) {
               </div>
               <button onClick={onOpenPro} style={{ width: '100%', height: 48, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: 14, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #A78BFA, #7C5CD6)', boxShadow: '0 8px 22px rgba(167,139,250,0.4)' }}>
-                Conseguir Pankey Pro
+                Conseguir Simu Pro
               </button>
             </div>
           )}
@@ -1691,7 +1691,7 @@ function EnergiaModal({ C, appState, onClose, onOpenPro }) {
 }
 
 const freshState = () => ({
-  isPro: false,                 // suscripción Pankey Pro (Módulo 3)
+  isPro: false,                 // suscripción Simu Pro (Módulo 3)
   energy: ENERGY_MAX,           // energía de simulacros (usuarios gratuitos)
   energyLastRefill: null,       // timestamp de la última recarga completa
   cofreOpensDate: null,         // fecha del contador de cofres abiertos hoy
@@ -1792,8 +1792,8 @@ const freshState = () => ({
     {id:29, name:"El Historiador",        desc:"Supera 80% en Ciencias Sociales.",         icon:"icfes",  unlocked:false, date:null, ryo:500,  xp:1000},
     {id:32, name:"Racha del Templo",      desc:"Completa ICFES 7 días seguidos.",          icon:"flame",  unlocked:false, date:null, ryo:600,  xp:1200},
     // ── SOCIAL ────────────────────────────────────────────────
-    {id:30, name:"Primer Amigo",          desc:"Añade a tu primer amigo en Pankey.",       icon:"people", unlocked:false, date:null, ryo:200,  xp:400 },
-    {id:31, name:"El Conector",           desc:"Tienes 5 amigos en Pankey.",               icon:"people", unlocked:false, date:null, ryo:500,  xp:1000},
+    {id:30, name:"Primer Amigo",          desc:"Añade a tu primer amigo en Simu.",       icon:"people", unlocked:false, date:null, ryo:200,  xp:400 },
+    {id:31, name:"El Conector",           desc:"Tienes 5 amigos en Simu.",               icon:"people", unlocked:false, date:null, ryo:500,  xp:1000},
     // ── ESPECIALES ────────────────────────────────────────────
     {id:40, name:"El Primer Capítulo",    desc:"Avanza al capítulo 2 de cualquier libro.", icon:"book",   unlocked:false, date:null, ryo:100,  xp:200 },
     {id:41, name:"Madrugador",            desc:"Completa una sesión antes de las 7 AM.",   icon:"timer",  unlocked:false, date:null, ryo:300,  xp:600 },
@@ -3260,7 +3260,7 @@ export default function App() {
   const [energyModalOpen, setEnergyModalOpen] = useState(false); // modal de energía / invitación a Pro
   const [energyTick, setEnergyTick] = useState(0); // fuerza recomputar el contador de recarga
   const [tiendaRealOpen, setTiendaRealOpen] = useState(false); // Tienda Real (Pro + recargas)
-  const [proScreenOpen, setProScreenOpen] = useState(false); // pantalla de venta Pankey Pro
+  const [proScreenOpen, setProScreenOpen] = useState(false); // pantalla de venta Simu Pro
   const [partnerPhotoURL, setPartnerPhotoURL] = useState(null);
   const [fbLoaded, setFbLoaded]   = useState(false);
   const [ambientOn, setAmbientOn] = useState(saved?.ambientOn ?? true); // música de fondo ON por defecto (se respeta si la apagaron)
@@ -3396,7 +3396,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
         if (req.status === 'pending' && !seenNotifsRef.current.has(`req_${req.fromCode}`)) {
           seenNotifsRef.current.add(`req_${req.fromCode}`);
           if (Date.now() - req.ts < 120000) {
-            sendPushNotif('Nueva alianza en el páramo', `@${req.fromName} quiere ser tu parcero en Pankey.`, `req-${req.fromCode}`);
+            sendPushNotif('Nueva alianza en el páramo', `@${req.fromName} quiere ser tu parcero en Simu.`, `req-${req.fromCode}`);
             pushNotif(`@${req.fromName} quiere ser tu aliado`);
           }
         }
@@ -3833,17 +3833,17 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
     return true;
   };
 
-  // Abrir Pankey Pro → pantalla de venta (cinematográfica)
+  // Abrir Simu Pro → pantalla de venta (cinematográfica)
   const openPro = () => { setEnergyModalOpen(false); setProScreenOpen(true); };
 
   // ── Compras (Módulo 4). El cobro REAL va con pasarela + verificación en servidor (Módulo 5).
   //    Por ahora no acreditamos nada en el cliente: sería falso e inseguro. ──
   const handleBuyPro = () => {
-    // BETA: Pankey Pro gratis por ahora. Cuando conectemos Wompi (Módulo 5) esto pasará por el pago.
+    // BETA: Simu Pro gratis por ahora. Cuando conectemos Wompi (Módulo 5) esto pasará por el pago.
     setAppState(s => ({ ...s, isPro: true }));
     setTiendaRealOpen(false);
     triggerCoinBurst(0);
-    pushNotif('🎉 ¡Pankey Pro activado! Gratis durante la beta.');
+    pushNotif('🎉 ¡Simu Pro activado! Gratis durante la beta.');
   };
   const handleBuyPack = (pack) => {
     pushNotif(`«${pack?.name}» (${pack?.price}) — las recargas se habilitan al conectar Wompi. Próximamente.`);
@@ -4051,7 +4051,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
 
       {energyModalOpen && <EnergiaModal C={C} appState={appState} onClose={() => setEnergyModalOpen(false)} onOpenPro={openPro} />}
       {tiendaRealOpen && <TiendaReal C={C} appState={appState} onClose={() => setTiendaRealOpen(false)} onBuyPro={handleBuyPro} onBuyPack={handleBuyPack} />}
-      {proScreenOpen && <PankeyProScreen C={C} appState={appState} user={user} onClose={() => setProScreenOpen(false)} onActivate={() => { handleBuyPro(); setProScreenOpen(false); }} />}
+      {proScreenOpen && <SimuProScreen C={C} appState={appState} user={user} onClose={() => setProScreenOpen(false)} onActivate={() => { handleBuyPro(); setProScreenOpen(false); }} />}
 
       {/* Nav bar (Ascua) — íconos + labels, activo en rojo con glow, punto "live" en Combo */}
       <div style={{
@@ -4125,7 +4125,7 @@ const seenNotifsRef = useRef(new Set()); // Para no spamear al usuario con la mi
 //  SPLASH (Caverna Animada + Cóndor + Frases)
 // ─────────────────────────────────────────────
 // ── SPLASH "Oro líquido": oro fundido que sube con calma y llena el negro; al
-//    TOCAR, clímax que inunda la pantalla. PANKEY fino tipo Apple en liquid glass.
+//    TOCAR, clímax que inunda la pantalla. SIMU fino tipo Apple en liquid glass.
 //    Paleta estricta: oro / carmesí / negro (sin cafés). ──
 function Splash({ onDone, C, isLight }) {
   const [phase, setPhase] = useState('enter'); // enter | ready | burst
@@ -4175,13 +4175,13 @@ function Splash({ onDone, C, isLight }) {
         background: 'radial-gradient(ellipse at 50% 100%, rgba(232,184,78,.34), transparent 68%)', filter: 'blur(22px)', mixBlendMode: 'screen',
         transition: phase === 'burst' ? 'bottom .95s cubic-bezier(.5,0,.15,1)' : 'bottom 2.3s cubic-bezier(.3,.7,.3,1)', opacity: phase === 'burst' ? 0 : 1 }} />
 
-      {/* PANKEY — serif fino con brillo de oro líquido (sin cuadro) */}
+      {/* SIMU — serif fino con brillo de oro líquido (sin cuadro) */}
       <div style={{ position: 'absolute', top: '31%', left: '50%', transform: 'translate(-50%,0)', zIndex: 4, whiteSpace: 'nowrap',
         opacity: phase === 'enter' ? 0 : 1, animation: phase === 'enter' ? 'none' : 'lgTitle 1.3s cubic-bezier(.22,1,.36,1) both' }}>
         <span style={{ fontFamily: "'Space Grotesk','Space Grotesk',serif", fontWeight: 500, fontSize: 56, letterSpacing: 1,
           background: 'linear-gradient(100deg, #B9821A 0%, #E8B84E 34%, #FFF7E0 50%, #E8B84E 66%, #B9821A 100%)', backgroundSize: '250% 100%',
           WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-          filter: 'drop-shadow(0 5px 22px rgba(232,184,78,.32))', animation: 'goldShine 4.2s linear infinite' }}>Pankey</span>
+          filter: 'drop-shadow(0 5px 22px rgba(232,184,78,.32))', animation: 'goldShine 4.2s linear infinite' }}>Simu</span>
       </div>
 
       {/* Toca para entrar (sobre el negro, encima de la superficie del oro) */}
@@ -4242,18 +4242,18 @@ const LEGAL_DOCS = {
     title: 'Términos y Condiciones',
     updated: 'Última actualización: ' + LEGAL_INFO.fecha,
     body: [
-      ['1. Quiénes somos y objeto', 'Pankey (la "App") es un servicio operado por ' + LEGAL_INFO.empresa + ' (NIT/CC ' + LEGAL_INFO.nit + '), con domicilio en ' + LEGAL_INFO.ciudad + '. La App es una herramienta gamificada de preparación para el examen ICFES Saber 11, con fines educativos y de entretenimiento. Estos Términos regulan tu acceso y uso de la App.'],
+      ['1. Quiénes somos y objeto', 'Simu (la "App") es un servicio operado por ' + LEGAL_INFO.empresa + ' (NIT/CC ' + LEGAL_INFO.nit + '), con domicilio en ' + LEGAL_INFO.ciudad + '. La App es una herramienta gamificada de preparación para el examen ICFES Saber 11, con fines educativos y de entretenimiento. Estos Términos regulan tu acceso y uso de la App.'],
       ['2. Aceptación', 'Al crear una cuenta o usar la App aceptas de forma libre, expresa e informada estos Términos y la Política de Privacidad. Si no estás de acuerdo, no uses la App. El uso continuado tras cualquier cambio implica tu aceptación de la versión vigente.'],
-      ['3. Definiciones', '"Usuario" eres tú. "Pankey Pro" es la suscripción de pago que habilita funciones adicionales. "Empanadas" son la moneda virtual interna, sin valor monetario fuera de la App. "Parcero" es otro usuario con quien te vinculas para funciones sociales y de estudio en pareja.'],
+      ['3. Definiciones', '"Usuario" eres tú. "Simu Pro" es la suscripción de pago que habilita funciones adicionales. "Empanadas" son la moneda virtual interna, sin valor monetario fuera de la App. "Parcero" es otro usuario con quien te vinculas para funciones sociales y de estudio en pareja.'],
       ['4. Cuenta y veracidad', 'Para usar la App debes autenticarte con tu cuenta de Google y suministrar datos veraces y actualizados. Eres responsable de la actividad realizada desde tu cuenta y de mantener la confidencialidad de tu acceso. Notifícanos cualquier uso no autorizado.'],
       ['5. Menores de edad', 'La App está dirigida a estudiantes de educación media, por lo que puede ser usada por menores de edad. Si eres menor, declaras contar con la autorización previa de tu padre, madre o representante legal para usar la App y para el tratamiento de tus datos personales, y que dicho representante ha leído y acepta estos Términos y la Política de Privacidad. Los pagos solo deben realizarse con autorización del representante legal.'],
       ['6. Licencia de uso', 'Te otorgamos una licencia limitada, personal, revocable y no transferible para usar la App con fines lícitos. No adquieres ningún derecho de propiedad sobre la App ni sobre su contenido.'],
-      ['7. Suscripción Pankey Pro', 'Pankey Pro es una suscripción de pago cuyo precio, periodicidad y beneficios se te informan en la App al momento de la compra, en pesos colombianos (COP). Salvo que se indique lo contrario, la suscripción se renueva automáticamente al final de cada periodo, por el mismo valor, hasta que la canceles. Puedes cancelar en cualquier momento desde la App o escribiéndonos; la cancelación detiene renovaciones futuras y conservas el acceso hasta el final del periodo ya pagado.'],
+      ['7. Suscripción Simu Pro', 'Simu Pro es una suscripción de pago cuyo precio, periodicidad y beneficios se te informan en la App al momento de la compra, en pesos colombianos (COP). Salvo que se indique lo contrario, la suscripción se renueva automáticamente al final de cada periodo, por el mismo valor, hasta que la canceles. Puedes cancelar en cualquier momento desde la App o escribiéndonos; la cancelación detiene renovaciones futuras y conservas el acceso hasta el final del periodo ya pagado.'],
       ['8. Empanadas (moneda virtual)', 'Las Empanadas son una licencia de uso dentro de la App, no constituyen dinero, saldo, ni un bien negociable, y no son reembolsables, transferibles ni canjeables por dinero u otros bienes fuera de la App. Podemos ajustar precios, cantidades y disponibilidad de artículos virtuales. Las Empanadas no otorgan ningún derecho una vez cerrada tu cuenta o descontinuada la App.'],
       ['9. Pagos', 'Los pagos se procesan a través de una pasarela de pagos autorizada (Wompi). No almacenamos los datos completos de tu tarjeta; estos son tratados por la pasarela conforme a sus propias políticas y estándares de seguridad (PCI-DSS). Los precios incluyen los impuestos aplicables cuando corresponda. Cualquier comprobante o factura se emite según la normativa vigente.'],
       ['10. Derecho de retracto y reembolsos', 'Conforme a la Ley 1480 de 2011 (Estatuto del Consumidor), en las ventas a distancia tienes derecho de retracto dentro de los cinco (5) días hábiles siguientes a la compra, cuando aplique. Este derecho NO aplica a bienes o contenidos digitales que ya hayan comenzado a ejecutarse o consumirse con tu consentimiento (por ejemplo, Empanadas ya acreditadas o un periodo de suscripción ya iniciado). Para solicitudes escríbenos a ' + LEGAL_INFO.correo + '.'],
       ['11. Uso permitido y prohibido', 'Te comprometes a no alterar, automatizar (bots/scripts), realizar ingeniería inversa, ni explotar fallos para obtener Empanadas, energía, posiciones en el ranking o beneficios de forma indebida. Tampoco puedes suplantar a otras personas, acosar, ni publicar contenido ilícito, ofensivo o que vulnere derechos de terceros. Podemos suspender o cerrar cuentas que incurran en fraude o abuso.'],
-      ['12. Contenido educativo', 'Los simulacros, preguntas y materiales son de práctica y no garantizan un resultado específico en el examen oficial. Pankey NO está afiliado, avalado ni patrocinado por el ICFES ni por ninguna entidad estatal. "ICFES" y "Saber 11" son marcas de sus respectivos titulares y se usan únicamente con fin descriptivo.'],
+      ['12. Contenido educativo', 'Los simulacros, preguntas y materiales son de práctica y no garantizan un resultado específico en el examen oficial. Simu NO está afiliado, avalado ni patrocinado por el ICFES ni por ninguna entidad estatal. "ICFES" y "Saber 11" son marcas de sus respectivos titulares y se usan únicamente con fin descriptivo.'],
       ['13. Propiedad intelectual y derechos de autor', 'La App, su marca, nombre, logotipos, diseño, código, textos, arte, personajes y sonidos son propiedad de ' + LEGAL_INFO.empresa + ' o de sus licenciantes y están protegidos por las normas de propiedad intelectual y derechos de autor. No puedes copiarlos, modificarlos, distribuirlos ni crear obras derivadas sin autorización escrita. Si consideras que algún contenido dentro de la App infringe tus derechos de autor, escríbenos a ' + LEGAL_INFO.correo + ' identificando la obra y acreditando la titularidad; revisaremos y retiraremos el contenido cuando corresponda.'],
       ['14. Funciones sociales, perfil y fotos', 'Al usar funciones de parcero, ranking o co-lectura, cierta información de tu perfil (alias, avatar y progreso) puede ser visible para otros usuarios. Puedes subir una foto de perfil y, en el modo pareja, una foto de tu parcero: declaras que tienes derecho a usar esas imágenes y el consentimiento de las personas que aparecen en ellas, y nos otorgas una licencia limitada y revocable para almacenarlas y mostrarlas dentro de la App con el único fin de prestarte el servicio. Está prohibido subir imágenes o contenido ilegal, ofensivo, sexual, que involucre a menores de forma inapropiada o que vulnere derechos de terceros. Podemos moderar, ocultar o eliminar contenido y suspender cuentas que incumplan. Reporta contenido o conductas indebidas escribiéndonos a ' + LEGAL_INFO.correo + '.'],
       ['15. Disponibilidad y cambios', 'Procuramos que la App funcione de forma continua, pero puede haber interrupciones por mantenimiento, fuerza mayor o causas técnicas. Podemos modificar, suspender o descontinuar funciones. Te avisaremos de cambios relevantes dentro de la App.'],
@@ -4413,7 +4413,7 @@ function Onboarding({ C, isLight, onDone }) {
             <PkIc n="rana" s={72} c={accent} sw={1} />
           </div>
           <div className="fu fu1" style={{ marginBottom: 44 }}>
-            <div className="serif" style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.15, marginBottom: 10, color: C.text, letterSpacing: 2 }}>PANKEY</div>
+            <div className="serif" style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.15, marginBottom: 10, color: C.text, letterSpacing: 2 }}>SIMU</div>
             <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.7, fontWeight: 500 }}>Identifícate para iniciar tu expedición hacia el conocimiento.</div>
           </div>
           <div className="fu fu2">
@@ -4917,12 +4917,12 @@ const requestNotifPermission = async () => {
   return await Notification.requestPermission();
 };
 
-const sendPushNotif = (title, body, tag = 'pankey-general') => {
+const sendPushNotif = (title, body, tag = 'simu-general') => {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try { 
     // Si el pelao tiene la app abierta en la cara, no le vibramos el celular (solo sale la in-app).
     // A menos que sea el temporizador del café, ese sí suena siempre.
-    if (document.visibilityState === 'visible' && tag !== 'pankey-timer') return;
+    if (document.visibilityState === 'visible' && tag !== 'simu-timer') return;
     
     new Notification(title, { 
       body, 
@@ -5589,7 +5589,7 @@ function CafetalRitual({ C, appState, setAppState, pushNotif, currentBook, setBo
     if (running && !paused) {
       intervalRef.current = setInterval(() => {
         setSeconds(s => {
-          if (s + 1 === goalMins * 60) { try { playAlarm(); } catch (e) {} sendPushNotif('¡Sesión cumplida!', `Leíste ${goalMins} minutos.`, 'pankey-timer'); pushNotif('¡Meta cumplida! 🎉'); }
+          if (s + 1 === goalMins * 60) { try { playAlarm(); } catch (e) {} sendPushNotif('¡Sesión cumplida!', `Leíste ${goalMins} minutos.`, 'simu-timer'); pushNotif('¡Meta cumplida! 🎉'); }
           return s + 1;
         });
       }, 1000);
@@ -6567,7 +6567,7 @@ function detectarDebilidad(appState) {
   return { subject, nivel, pct: peor.pct };
 }
 
-// Materias más débiles del usuario (para el Repaso Inteligente de Pankey Pro)
+// Materias más débiles del usuario (para el Repaso Inteligente de Simu Pro)
 function materiasDebiles(appState) {
   const dom = dominioPorMateria(appState);
   const conDatos = Object.entries(dom).filter(([, v]) => (v.t || 0) >= 4);
@@ -7265,7 +7265,7 @@ function FinContrarreloj({ C, fin, hits, total, secsLeft, usedTenths, respondida
           </button>
         </div>
         <button onClick={() => { FX.play('tap'); shareWhatsApp(
-          `PANKEY ⚡ Contrarreloj\n${fin.score}/500 puntos · ${hits}/${total} aciertos en 90 segundos${fin.rec ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${streakDays} día${streakDays !== 1 ? 's' : ''}\n¿Podrás superarme? → pankey.vercel.app`
+          `SIMU ⚡ Contrarreloj\n${fin.score}/500 puntos · ${hits}/${total} aciertos en 90 segundos${fin.rec ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${streakDays} día${streakDays !== 1 ? 's' : ''}\n¿Podrás superarme? → simu-icfes.vercel.app`
         ); }} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', maxWidth: 320, margin: '10px auto 0', padding: '12px', borderRadius: 15,
@@ -7510,7 +7510,7 @@ function ModoSupervivencia({ C, appState, onTerminar, onOtra, onClose, onRevive 
             <FinDeModo color={ROJO} titulo="SUPERVIVENCIA" valor={olaRef.current} unidad={`ola${olaRef.current !== 1 ? 's' : ''} alcanzada${olaRef.current !== 1 ? 's' : ''} · ${correctRef.current} correctas`}
               esRecord={fin.rec} emp={fin.emp} xp={fin.xp} onOtra={onOtra} onSalir={onClose}
               extra={`Tu mejor: Ola ${Math.max(olaRef.current, appState.supervivenciaRecord || 0)}`}
-              shareText={`PANKEY 💀 Supervivencia\nLlegué a la Ola ${olaRef.current} con ${correctRef.current} correctas${fin.rec ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n→ pankey.vercel.app`}/>
+              shareText={`SIMU 💀 Supervivencia\nLlegué a la Ola ${olaRef.current} con ${correctRef.current} correctas${fin.rec ? '\n¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n→ simu-icfes.vercel.app`}/>
             {/* Leaderboard de la comunidad */}
             {lb && lb.length > 0 && (
               <div className="fi" style={{ width: '100%', maxWidth: 320, marginTop: 18, textAlign: 'left' }}>
@@ -8020,8 +8020,8 @@ function ModoRuleta({ C, appState, onTerminar, onOtra, onClose }) {
             </div>
             <button onClick={() => { FX.play('tap'); shareWhatsApp(
               fin.perdio
-                ? `PANKEY 🎰 La Ruleta del Saber\nEl páramo me quitó todo apostando x${fin.mult} 😤\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Tú sí aguantas? → pankey.vercel.app`
-                : `PANKEY 🎰 La Ruleta del Saber\nMe retiré en x${fin.mult} con ${fin.emp} empanadas${esRecord ? ' — ¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Llegas al x32? → pankey.vercel.app`
+                ? `SIMU 🎰 La Ruleta del Saber\nEl páramo me quitó todo apostando x${fin.mult} 😤\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Tú sí aguantas? → simu-icfes.vercel.app`
+                : `SIMU 🎰 La Ruleta del Saber\nMe retiré en x${fin.mult} con ${fin.emp} empanadas${esRecord ? ' — ¡NUEVO RÉCORD!' : ''}\n🔥 Racha: ${appState.streakDays || 0} día${(appState.streakDays || 0) !== 1 ? 's' : ''}\n¿Llegas al x32? → simu-icfes.vercel.app`
             ); }} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               width: '100%', maxWidth: 320, marginTop: 10, padding: '12px', borderRadius: 15,
@@ -8359,7 +8359,7 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
         </div>
       ) : null}
 
-      {/* ══ REPASO INTELIGENTE (beneficio Pankey Pro) ══ */}
+      {/* ══ REPASO INTELIGENTE (beneficio Simu Pro) ══ */}
       {appState.isPro ? (
         <button onClick={() => { FX.play('duel'); FX.vibrate('medium'); onPracticeWeak?.(materiasDebiles(appState)); }} style={{
           width: '100%', textAlign: 'left', borderRadius: 18, padding: '15px 17px', cursor: 'pointer', fontFamily: 'inherit',
@@ -8381,7 +8381,7 @@ function IcfesDashboard({ C, isLight, appState, setAppState, onStartSetup, onGoO
           <span style={{ fontSize: 18 }}>🔒</span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: '#A78BFA' }}>Repaso Inteligente</div>
-            <div style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 1.4 }}>Simulacros hechos con tus puntos débiles · exclusivo de Pankey Pro</div>
+            <div style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 1.4 }}>Simulacros hechos con tus puntos débiles · exclusivo de Simu Pro</div>
           </div>
         </button>
       )}
@@ -10346,7 +10346,7 @@ function AltarDelTemplo({ lvl, off }) {
 // ─────────────────────────────────────────────
 //  CAPA 5 — FUEGO DE RACHA (CSS puro, evoluciona)
 // ─────────────────────────────────────────────
-// Skins exclusivos del fuego de racha (beneficio Pankey Pro) — filtros CSS
+// Skins exclusivos del fuego de racha (beneficio Simu Pro) — filtros CSS
 const FIRE_SKINS = {
   default:   { name: 'Fuego',     filter: 'none',                            swatch: '#F0902B', pro: false },
   morado:    { name: 'Morado',    filter: 'hue-rotate(255deg) saturate(1.4)', swatch: '#A78BFA', pro: true },
@@ -11240,7 +11240,7 @@ function CofreRacha({ C, isLight, appState, setAppState, onMissionReward, onGoSh
   const lv = chestLevelFor(streak);
   const sealed = appState.yourConfirmed ||
     (appState.icfesHistory || []).some(r => r.date === today || (r.ts && new Date(r.ts).toDateString() === today));
-  const maxOpens = appState.isPro ? 2 : 1;   // Pankey Pro: cofre diario doble
+  const maxOpens = appState.isPro ? 2 : 1;   // Simu Pro: cofre diario doble
   const opensToday = appState.cofreOpensDate === dk ? (appState.cofreOpensCount || 0) : 0;
   const openedToday = opensToday >= maxOpens;
   const canOpen = sealed && !openedToday;
@@ -11500,11 +11500,11 @@ function RetoDelDia({ C, appState, setAppState, onClose, onMissionReward, unlock
     const marks = [0, 1, 2].map(i => i < wins ? '✅' : (i === wins && failed ? '❌' : '⬜')).join('');
     const pct = stats && stats.played > 0 ? Math.round(100 * (stats.perfect || 0) / stats.played) : null;
     const lines = [
-      'PANKEY — Reto del Día', marks,
+      'SIMU — Reto del Día', marks,
       perfectFinal
         ? `¡SELLO PERFECTO!${pct !== null ? ` Solo el ${pct}% lo logró hoy.` : ''}`
         : `Caí en la ronda ${wins + 1}.`,
-      '¿Vos podés? → https://pankey.vercel.app',
+      '¿Vos podés? → https://simu-icfes.vercel.app',
     ];
     window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\n')), '_blank');
   };
@@ -12111,7 +12111,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
   const fondo = { position: 'fixed', inset: 0, zIndex: 99994, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
     background: 'radial-gradient(ellipse 92% 62% at 50% 30%, #1c0709 0%, #0c0405 52%, #050203 100%)' };
 
-  // ══ BUSCANDO (estilo Clash adaptado a Pankey: lupa + emblema + liga + dato) ══
+  // ══ BUSCANDO (estilo Clash adaptado a Simu: lupa + emblema + liga + dato) ══
   if (phase === 'search') {
     const LIGAS = [
       { min: 0, n: 'Aprendiz del Páramo' }, { min: 5, n: 'Bachiller en Ascuas' },
@@ -12413,7 +12413,7 @@ function DueloFlash({ C, user, appState, setAppState, onClose, onRematch, onMiss
           <button onClick={onRematch} className="bkt-btn bkt-btn--pri"><PkIc n="swords" s={16} c="#fff" /> Otro duelo</button>
           <button onClick={onClose} className="bkt-btn bkt-btn--sec">Listo</button>
           <button className="bkt-share" aria-label="Compartir resultado" onClick={() => { FX.play('tap'); shareWhatsApp(
-            `PANKEY · Duelo Flash\n${r.win ? `Le gané ${myScore}–${r.rs} a ${rival?.name || 'mi rival'}` : r.tie ? `Empaté ${myScore}–${r.rs}` : `Caí ${myScore}–${r.rs} ante ${rival?.name || 'mi rival'}, pero vuelvo`}\n→ pankey.vercel.app`); }}>
+            `SIMU · Duelo Flash\n${r.win ? `Le gané ${myScore}–${r.rs} a ${rival?.name || 'mi rival'}` : r.tie ? `Empaté ${myScore}–${r.rs}` : `Caí ${myScore}–${r.rs} ante ${rival?.name || 'mi rival'}, pero vuelvo`}\n→ simu-icfes.vercel.app`); }}>
             <PkIc n="msg" s={17} c="#9AA0A6" />
           </button>
         </div>
@@ -12603,7 +12603,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   };
   // Cambio de color del fuego (movido al avatar, según el diseño Ascua): cicla las skins Pro
   const ciclarFuego = () => {
-    if (!appState.isPro) { FX.play('tap'); pushNotif('🔥 Cambia el color del fuego con Pankey Pro'); return; }
+    if (!appState.isPro) { FX.play('tap'); pushNotif('🔥 Cambia el color del fuego con Simu Pro'); return; }
     const ids = Object.keys(FIRE_SKINS);
     const nextId = ids[(ids.indexOf(appState.fireColor || 'default') + 1) % ids.length];
     FX.play('sparks'); FX.vibrate('light');
@@ -13081,11 +13081,11 @@ function ResultadosShow({ result, appState, onDetalle, onRetry, onBack }) {
       .map(([s, v]) => `${SUBJECT_META[s]?.short || s}: ${v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0}%`)
       .join(' | ');
     const lines = [
-      'PANKEY · Simulacro ICFES',
+      'SIMU · Simulacro ICFES',
       `${result.score}/500${esRecord ? ' · ¡NUEVO RÉCORD!' : ''}`,
       sub,
       (appState.streakDays || 0) > 0 ? `Racha: ${appState.streakDays} días` : '',
-      '¿Vos podés? → https://pankey.vercel.app',
+      '¿Vos podés? → https://simu-icfes.vercel.app',
     ].filter(Boolean);
     window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\n')), '_blank');
   };
@@ -13304,7 +13304,7 @@ function AnimBg({ variant = 'violet' }) {
 }
 
 // ═════════════════════════════════════════════
-//  PANKEY PRO — "El Sabio que te conoce"
+//  SIMU PRO — "El Sabio que te conoce"
 // ═════════════════════════════════════════════
 // Iconos PROPIOS de cada función Pro (glifos únicos, no reciclados de otras partes del app).
 function ProIcon({ id, s = 24, c = 'currentColor', sw = 1.7 }) {
@@ -13519,14 +13519,14 @@ function AdnIcfes({ C, appState, user, onClose, onPractice }) {
     </div>,
     // 9 — compartir
     <div className="adn-c" key="s">
-      <div className="adn-badge">MI ADN · PANKEY PRO</div>
+      <div className="adn-badge">MI ADN · SIMU PRO</div>
       <div className="adn-perfil" style={{ fontSize: 24, margin: '10px 0 4px' }}>{d.perfil.name}</div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', margin: '12px 0 18px' }}>
         <div className="adn-pill"><b style={{ color: '#FFCF6B' }}>{d.best}</b><span>mejor</span></div>
         <div className="adn-pill"><b style={{ color: d.fuerte?.color }}>{d.fuerte?.short}</b><span>tu fuerte</span></div>
         <div className="adn-pill"><b style={{ color: '#FF8A6B' }}>{d.debil?.short}</b><span>tu reto</span></div>
       </div>
-      <button className="pro-cta" onClick={(e) => { e.stopPropagation(); FX.play('tap'); shareWhatsApp(`Mi ADN del ICFES (Pankey Pro) 🧬\nPerfil: ${d.perfil.name}\nMejor puntaje: ${d.best}/500\nMi fuerte: ${d.fuerte?.subject}\nMi reto: ${d.debil?.subject}\n\nEstudia con el Sabio que te conoce → pankey.vercel.app`); }}>
+      <button className="pro-cta" onClick={(e) => { e.stopPropagation(); FX.play('tap'); shareWhatsApp(`Mi ADN del ICFES (Simu Pro) 🧬\nPerfil: ${d.perfil.name}\nMejor puntaje: ${d.best}/500\nMi fuerte: ${d.fuerte?.subject}\nMi reto: ${d.debil?.subject}\n\nEstudia con el Sabio que te conoce → simu-icfes.vercel.app`); }}>
         <PkIc n="msg" s={16} c="#3a2405" /> Compartir mi ADN
       </button>
     </div>,
@@ -13547,8 +13547,8 @@ function AdnIcfes({ C, appState, user, onClose, onPractice }) {
   );
 }
 
-// Pantalla de venta de Pankey Pro (cinematográfica, full-screen).
-function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
+// Pantalla de venta de Simu Pro (cinematográfica, full-screen).
+function SimuProScreen({ C, appState, user, onClose, onActivate }) {
   const [plan, setPlan] = useState('anual');
   return (
     <Portal>
@@ -13559,7 +13559,7 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
           {/* Encabezado */}
           <div className="prosell-hero">
             <div className="prosell-halo" />
-            <div className="prosell-badge"><PkIc n="sabio" s={16} c="#3a2405" /> PANKEY PRO</div>
+            <div className="prosell-badge"><PkIc n="sabio" s={16} c="#3a2405" /> SIMU PRO</div>
             <div className="prosell-title serif">El Sabio que te conoce de verdad</div>
             <div className="prosell-tag">No más práctica. Tu preparador personal, 24/7.</div>
           </div>
@@ -13585,7 +13585,7 @@ function PankeyProScreen({ C, appState, user, onClose, onActivate }) {
               <div className="prosell-vs__s">una sola vez</div>
             </div>
             <div className="prosell-vs__c prosell-vs__c--good">
-              <div className="prosell-vs__t">Pankey Pro · 1 año</div>
+              <div className="prosell-vs__t">Simu Pro · 1 año</div>
               <div className="prosell-vs__p" style={{ color: '#FFE7A2' }}>$89.900</div>
               <div className="prosell-vs__s">el Sabio, 365 días</div>
             </div>
@@ -13730,7 +13730,7 @@ function CentroSabioBody({ appState, user, onOpenFunc, onPractice, preview }) {
   return (
     <>
       <div className="csab-head">
-        <div className="csab-badge"><ProIcon id="adn" s={12} c="#FFD98A" /> PANKEY PRO</div>
+        <div className="csab-badge"><ProIcon id="adn" s={12} c="#FFD98A" /> SIMU PRO</div>
         <div className="csab-hi serif">El Centro del Sabio</div>
         <div className="csab-sub">Hola {nombre}, tu preparador personal ya tiene todo listo.</div>
       </div>
@@ -13881,7 +13881,7 @@ function CentroSabioLock({ C, appState, user, onOpenPro }) {
       <div className="csablock-over">
         <div className="csablock-card">
           <div className="csablock-lock"><ProIcon id="adn" s={40} c="#FFE7A2" /></div>
-          <div className="csablock-badge">PANKEY PRO</div>
+          <div className="csablock-badge">SIMU PRO</div>
           <div className="csablock-h serif">{gancho}</div>
           <div className="csablock-sub">Aquí abajo está tu ADN, tu Plan de Batalla y 6 herramientas más — pero por ahora están borrosas.</div>
           <button className="pro-cta" onClick={() => { FX.play('open'); FX.vibrate('medium'); onOpenPro?.(); }}>Ver mi análisis completo →</button>
@@ -14646,7 +14646,7 @@ function ReporteSemanal({ C, appState, user, onClose, onPractice }) {
           </Sec>
 
           <button className="pro-cta" style={{ width: '100%', marginTop: 8 }}
-            onClick={() => { FX.play('tap'); shareWhatsApp(`Mi reporte de la semana (Pankey Pro) 📊\nSemana ${r.semana} · ${r.sims} simulacros\nPromedio: ${r.avgThis}/500${r.avgLast ? ` (${r.delta >= 0 ? '+' : ''}${r.delta} vs la semana pasada)` : ''}\nPerfil: ${r.perfil.name}\n\n→ pankey.vercel.app`); }}>
+            onClick={() => { FX.play('tap'); shareWhatsApp(`Mi reporte de la semana (Simu Pro) 📊\nSemana ${r.semana} · ${r.sims} simulacros\nPromedio: ${r.avgThis}/500${r.avgLast ? ` (${r.delta >= 0 ? '+' : ''}${r.delta} vs la semana pasada)` : ''}\nPerfil: ${r.perfil.name}\n\n→ simu-icfes.vercel.app`); }}>
             <PkIc n="msg" s={16} c="#3a2405" /> Compartir mi progreso
           </button>
           <div style={{ height: 22 }} />
@@ -14811,7 +14811,7 @@ const SABIO_HYPE = [
     setAppState(s => ({ ...s, comodinActive: false }));
     FX.play('chestOpen'); FX.vibrate('success');
     handleAnswer(activeQuestions[currentQ].correct);
-    pushNotif?.('La rana Pankey susurró la respuesta. Comodín gastado.');
+    pushNotif?.('La rana Simu susurró la respuesta. Comodín gastado.');
   };
 
   const finishTest = (finalAnswers) => {
@@ -15627,7 +15627,7 @@ const ACCENT_COLORS = [
 //  PANEL DEL CREADOR — usuario admin de pruebas
 //  Entra con uno de estos códigos y aparece el panel en Ajustes.
 // ─────────────────────────────────────────────
-const ADMIN_CODES = ['PANKEYDEV', 'ADMINSITO', 'ALEJK15'];
+const ADMIN_CODES = ['SIMUDEV', 'ADMINSITO', 'ALEJK15'];
 
 function AdminPanel({ C, appState, setAppState, pushNotif }) {
   const [vals, setVals] = useState({});
@@ -15708,8 +15708,8 @@ function AdminPanel({ C, appState, setAppState, pushNotif }) {
         {[
           { txt: '+1.000 emp', fn: s => ({ ryo: (s.ryo || 0) + 1000 }) },
           { txt: '+1.000 XP', fn: s => ({ xp: (s.xp || 0) + 1000 }) },
-          { txt: 'Activar Pankey Pro ⚡', fn: () => ({ isPro: true }) },
-          { txt: 'Quitar Pankey Pro', fn: () => ({ isPro: false, fireColor: null }) },
+          { txt: 'Activar Simu Pro ⚡', fn: () => ({ isPro: true }) },
+          { txt: 'Quitar Simu Pro', fn: () => ({ isPro: false, fireColor: null }) },
           { txt: 'Recargar energía', fn: () => ({ energy: ENERGY_MAX, energyLastRefill: Date.now() }) },
           { txt: 'Recargar cofre del día', fn: s => ({ cofreLastOpened: null, cofreOpensDate: null, cofreOpensCount: 0, yourConfirmed: true, lastConfirmedDate: todayStr() }) },
           { txt: 'Reset misiones de hoy', fn: () => ({ missionsRewarded: [] }) },
@@ -15803,7 +15803,7 @@ function ProfileMiniCard({ C, name, code, titleItem, photoURL, frameItem, banner
               { icon: 'icfes',   label: 'Mejor ICFES',  val: icfesBest > 0 ? `${icfesBest}/500` : '—' },
               { icon: 'target',  label: 'Simulacros',    val: icfesTotal  || 0 },
               { icon: 'people',  label: 'Aliados',       val: friendsCount || 0 },
-              { icon: 'timer',   label: 'Días en Pankey',val: appDays || 1 },
+              { icon: 'timer',   label: 'Días en Simu',val: appDays || 1 },
             ].map(({ icon, label, val }) => (
               <div key={label} style={{ background: C.bgAlt, padding: '10px 12px',
                 borderRadius: 12, border: `1px solid ${C.border}` }}>
@@ -16666,7 +16666,7 @@ function FriendsView({ C, isLight, appState, setAppState, user, pushNotif, activ
     setSearchLoading(true); setSearchResult(null);
     try {
       const snap = await FB().get(FB().ref(FB().db, `users/${code}`));
-      if (!snap.exists()) pushNotif('Ese aparecido no existe en Pankey.');
+      if (!snap.exists()) pushNotif('Ese aparecido no existe en Simu.');
       else setViewingProfile(snap.val()); 
     } catch(e) { pushNotif('Error buscando. Intenta de nuevo.'); }
     finally { setSearchLoading(false); setSearchInput(''); }
@@ -18178,14 +18178,14 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
           })()}
         </div>
 
-        {/* ══ PANKEY PRO — promo grande y llamativa ══ */}
+        {/* ══ SIMU PRO — promo grande y llamativa ══ */}
         {!appState.isPro && (
           <div style={{ padding: '14px 20px 4px' }}>
             <button className="bz-pro" onClick={() => { FX.play('open'); FX.vibrate('light'); onOpenTienda?.(); }}>
               <span className="bz-pro__aura" />
               <span className="bz-pro__badge"><PkIc n="flame" s={26} c="#2A0E00" /></span>
               <span className="bz-pro__tx">
-                <span className="bz-pro__k">Pankey Pro</span>
+                <span className="bz-pro__k">Simu Pro</span>
                 <b>Energía infinita · cofre doble diario · fuego a color</b>
                 <small>Estudia sin frenos y que tu llama se note.</small>
               </span>
@@ -18543,4 +18543,4 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   );
 }
 
-// End of Pankey App.js — Complete v2.0 with all fixes and new featuress
+// End of Simu App.js — Complete v2.0 with all fixes and new featuress

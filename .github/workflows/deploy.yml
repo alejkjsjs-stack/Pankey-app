@@ -1,4 +1,4 @@
-name: Deploy to pankey.vercel.app
+name: Deploy to simu-icfes.vercel.app
 
 on:
   push:
