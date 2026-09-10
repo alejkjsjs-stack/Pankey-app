@@ -12536,7 +12536,7 @@ function InicioTab({ C, isLight, appState, setAppState, user, books, onGoTab, on
   const today = todayStr();
   const dk    = dateKeyISO();
 
-  useEffect(() => { const iv = setInterval(() => setAhora(Date.now()), 1000); return () => clearInterval(iv); }, []);
+  useEffect(() => { const iv = setInterval(() => setAhora(Date.now()), 30000); return () => clearInterval(iv); }, []);
   useEffect(() => { const iv = setInterval(() => setFraseIdx(i => (i + 1) % FRASES_FOGON.length), 15000); return () => clearInterval(iv); }, []);
   useEffect(() => () => clearTimeout(lpTimer.current), []);
 

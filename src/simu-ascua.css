@@ -1696,3 +1696,9 @@
   .float{animation:none!important}
   .stars.far,.stars.near{transition:none!important}
 }
+
+/* ── Fluidez: en dispositivos con "reducir movimiento" (o gama baja), pausar SOLO
+   las animaciones AMBIENTALES de fondo (orbes/auras). Los efectos del juego se mantienen. */
+@media (prefers-reduced-motion: reduce){
+  .asc-aura,.abg-orb--1,.abg-orb--2,.abg-orb--3,.resbg-aura{animation:none!important}
+}
