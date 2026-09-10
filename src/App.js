@@ -1264,16 +1264,109 @@ const FX = {
 
   toggleAmbient: function(on, themeKey, tracksMap) {
     this.ambient.enabled = on;
-    if (on) this.setAmbient(themeKey, tracksMap);
-    else if (this.ambient.audio) { try { this.ambient.audio.pause(); } catch (e) {} }
+    try { if (on) this._genStart(); else this._genStop(); } catch (e) {}
   },
 
-  // Pausar/retomar sin perder la pista (para cuando sales de la app o cambias de pestaña)
-  pauseAmbient: function() { if (this.ambient.audio) { try { this.ambient.audio.pause(); } catch (e) {} } },
-  resumeAmbient: function() {
-    if (this.ambient.enabled && this.ambient.audio && this.ambient.audio.paused) {
-      try { this.ambient.audio.play().catch(() => {}); } catch (e) {}
-    }
+  // Pausar/retomar (al salir de la app o cambiar de pestaña)
+  pauseAmbient: function() { try { this._genPause(); } catch (e) {} },
+  resumeAmbient: function() { try { if (this.ambient.enabled) this._genResume(); } catch (e) {} },
+
+  // ─────────────────────────────────────────────
+  //  AMBIENTE GENERATIVO (Web Audio) — fondo INFINITO que nunca se repite.
+  //  Pad cálido que "respira" + notas "brasa" dispersas, tono nocturno "Ascua".
+  //  Reemplaza el loop de un solo mp3 (que cansaba) por variedad sin fin.
+  // ─────────────────────────────────────────────
+  _gen: { built: false, playing: false, paused: false, target: 0.22, timers: [], voices: [], bus: null, filt: null, root: 110 },
+
+  _genBuild: function() {
+    this.init();
+    if (!this.ctx || this._gen.built) return;
+    const ctx = this.ctx, g = this._gen;
+    g.bus = ctx.createGain(); g.bus.gain.value = 0;
+    g.bus.connect(this._master);                                 // seco
+    const send = ctx.createGain(); send.gain.value = 0.9;
+    g.bus.connect(send); send.connect(this._rev);                // espacio (reverb)
+    g.filt = ctx.createBiquadFilter(); g.filt.type = 'lowpass';
+    g.filt.frequency.value = 620; g.filt.Q.value = 0.6;
+    g.filt.connect(g.bus);
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05;   // respiración ~20s
+    const lfoGain = ctx.createGain(); lfoGain.gain.value = 260;
+    lfo.connect(lfoGain); lfoGain.connect(g.filt.frequency); lfo.start();
+    const mk = (detune, gainV) => {
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.detune.value = detune;
+      const gg = ctx.createGain(); gg.gain.value = gainV;
+      o.connect(gg); gg.connect(g.filt); o.start();
+      return { o };
+    };
+    g.voices = [ mk(-6, 0.16), mk(5, 0.11), mk(0, 0.08) ];        // fundamental, quinta, octava
+    g.built = true;
+    this._genChord(true);
+  },
+
+  _genChord: function(first) {
+    if (!this._gen.built || !this.ctx) return;
+    const ctx = this.ctx, g = this._gen, t = ctx.currentTime;
+    const roots = [110.00, 130.81, 146.83, 164.81, 98.00, 87.31]; // A2,C3,D3,E3,G2,F2
+    g.root = roots[(Math.random() * roots.length) | 0];
+    const freqs = [ g.root, g.root * 1.4983, g.root * 2 ];
+    g.voices.forEach((v, i) => {
+      const glide = first ? 0.02 : 6 + Math.random() * 4;
+      try { v.o.frequency.cancelScheduledValues(t); v.o.frequency.setTargetAtTime(freqs[i], t, glide / 3); } catch (e) {}
+    });
+    if (!g.paused) { g.bus.gain.cancelScheduledValues(t); g.bus.gain.setTargetAtTime(g.target, t, 3); }
+  },
+
+  _genEmber: function() {
+    const g = this._gen;
+    if (!g.built || !g.playing || g.paused || !this.ctx || this.ctx.state !== 'running') return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const steps = [0, 3, 5, 7, 10];                               // pentatónica menor
+    const semi = steps[(Math.random() * steps.length) | 0] + 12 * (1 + ((Math.random() * 2) | 0));
+    const o = ctx.createOscillator(); o.type = Math.random() < 0.5 ? 'sine' : 'triangle';
+    o.frequency.value = g.root * Math.pow(2, semi / 12);
+    const gg = ctx.createGain(); gg.gain.value = 0;
+    o.connect(gg); gg.connect(g.bus);
+    const s = ctx.createGain(); s.gain.value = 1.3; gg.connect(s); s.connect(this._rev);  // muy reverberado (lejano)
+    const peak = 0.05 + Math.random() * 0.05;
+    gg.gain.setValueAtTime(0, t);
+    gg.gain.linearRampToValueAtTime(peak, t + 0.08);
+    gg.gain.exponentialRampToValueAtTime(0.0008, t + 3.6);
+    o.start(t); o.stop(t + 3.8);
+  },
+
+  _genStart: function() {
+    this._genBuild();
+    const g = this._gen;
+    if (!g.built) return;
+    g.playing = true; g.paused = false;
+    if (this.ctx && this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch (e) {} }
+    this._genChord(false);
+    g.timers.forEach(clearTimeout); g.timers = [];
+    const self = this;
+    const loopChord = () => { self._genChord(false); g.timers.push(setTimeout(loopChord, 22000 + Math.random() * 14000)); };
+    const loopEmber = () => { self._genEmber(); g.timers.push(setTimeout(loopEmber, 5000 + Math.random() * 7000)); };
+    g.timers.push(setTimeout(loopChord, 22000 + Math.random() * 14000));
+    g.timers.push(setTimeout(loopEmber, 2500 + Math.random() * 4000));
+  },
+
+  _genStop: function() {
+    const g = this._gen;
+    g.playing = false;
+    g.timers.forEach(clearTimeout); g.timers = [];
+    if (g.bus && this.ctx) { const t = this.ctx.currentTime; g.bus.gain.cancelScheduledValues(t); g.bus.gain.setTargetAtTime(0, t, 0.8); }
+  },
+
+  _genPause: function() {
+    const g = this._gen; g.paused = true;
+    if (g.bus && this.ctx) { const t = this.ctx.currentTime; g.bus.gain.cancelScheduledValues(t); g.bus.gain.setTargetAtTime(0, t, 0.3); }
+  },
+
+  _genResume: function() {
+    const g = this._gen;
+    if (!g.built || !g.playing) { this._genStart(); return; }
+    g.paused = false;
+    if (this.ctx && this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch (e) {} }
+    const t = this.ctx.currentTime; g.bus.gain.cancelScheduledValues(t); g.bus.gain.setTargetAtTime(g.target, t, 1.2);
   },
 };
 
