@@ -4322,10 +4322,11 @@ function Splash({ onDone, C, isLight }) {
 // ⚙ COMPLETA estos datos con la información real de tu empresa/persona antes de publicar.
 //   Se usan en todo el texto legal para no repetir. La fecha es la de la última revisión.
 const LEGAL_INFO = {
+  // Por privacidad NO se publican la cédula ni la dirección de casa; la ley solo exige
+  // identificar al responsable (nombre) y un canal de contacto. El resto se entrega a
+  // la autoridad competente o al titular que lo solicite por el correo de contacto.
   empresa: 'Jenny Marcela Estrella Valero',
-  nit: '1.030.527.610',
   ciudad: 'Fusagasugá, Cundinamarca, Colombia',
-  direccion: 'Carrera 7 Este # 4-02, Apto 308',
   correo: 'pankeyoff@gmail.com',
   fecha: '23 de agosto de 2026',
 };
@@ -4335,7 +4336,7 @@ const LEGAL_DOCS = {
     title: 'Términos y Condiciones',
     updated: 'Última actualización: ' + LEGAL_INFO.fecha,
     body: [
-      ['1. Quiénes somos y objeto', 'Simu (la "App") es un servicio operado por ' + LEGAL_INFO.empresa + ' (NIT/CC ' + LEGAL_INFO.nit + '), con domicilio en ' + LEGAL_INFO.ciudad + '. La App es una herramienta gamificada de preparación para el examen ICFES Saber 11, con fines educativos y de entretenimiento. Estos Términos regulan tu acceso y uso de la App.'],
+      ['1. Quiénes somos y objeto', 'Simu (la "App") es un servicio operado por ' + LEGAL_INFO.empresa + ', en ' + LEGAL_INFO.ciudad + '. La App es una herramienta gamificada de preparación para el examen ICFES Saber 11, con fines educativos y de entretenimiento. Estos Términos regulan tu acceso y uso de la App.'],
       ['2. Aceptación', 'Al crear una cuenta o usar la App aceptas de forma libre, expresa e informada estos Términos y la Política de Privacidad. Si no estás de acuerdo, no uses la App. El uso continuado tras cualquier cambio implica tu aceptación de la versión vigente.'],
       ['3. Definiciones', '"Usuario" eres tú. "Simu Pro" es la suscripción de pago que habilita funciones adicionales. "Empanadas" son la moneda virtual interna, sin valor monetario fuera de la App. "Parcero" es otro usuario con quien te vinculas para funciones sociales y de estudio en pareja.'],
       ['4. Cuenta y veracidad', 'Para usar la App debes autenticarte con tu cuenta de Google y suministrar datos veraces y actualizados. Eres responsable de la actividad realizada desde tu cuenta y de mantener la confidencialidad de tu acceso. Notifícanos cualquier uso no autorizado.'],
@@ -4360,7 +4361,7 @@ const LEGAL_DOCS = {
     title: 'Política de Privacidad',
     updated: 'Última actualización: ' + LEGAL_INFO.fecha,
     body: [
-      ['1. Responsable del tratamiento', 'El responsable del tratamiento de tus datos personales es ' + LEGAL_INFO.empresa + ' (NIT/CC ' + LEGAL_INFO.nit + '), con domicilio en ' + LEGAL_INFO.direccion + ', ' + LEGAL_INFO.ciudad + '. Correo de contacto para asuntos de datos: ' + LEGAL_INFO.correo + '. Esta política se rige por la Ley 1581 de 2012, el Decreto 1377 de 2013 y demás normas colombianas de protección de datos.'],
+      ['1. Responsable del tratamiento', 'El responsable del tratamiento de tus datos personales es ' + LEGAL_INFO.empresa + ', en ' + LEGAL_INFO.ciudad + '. Correo de contacto para asuntos de datos: ' + LEGAL_INFO.correo + '. Esta política se rige por la Ley 1581 de 2012, el Decreto 1377 de 2013 y demás normas colombianas de protección de datos.'],
       ['2. Definiciones', '"Dato personal" es cualquier información vinculada a una persona identificada o identificable. "Titular" eres tú. "Tratamiento" es cualquier operación sobre tus datos (recolección, uso, almacenamiento, supresión). "Dato sensible" es aquel que afecta la intimidad o cuyo uso indebido puede generar discriminación; la App no solicita datos sensibles.'],
       ['3. Datos que recolectamos', 'Datos de identificación y cuenta: nombre, alias, avatar y correo asociados a tu cuenta de Google. Datos de perfil: edad o curso, y la foto o alias de tu parcero cuando decides vincularte. Datos de uso y progreso: rachas, simulacros, respuestas de práctica, logros, hábitos, Empanadas y actividad social. Datos técnicos: identificadores de dispositivo, preferencias (tema, sonido) y datos básicos de funcionamiento. Datos de pago: NO almacenamos los datos de tu tarjeta; los procesa directamente la pasarela de pagos (Wompi).'],
       ['4. Finalidades', 'Tratamos tus datos para: crear y gestionar tu cuenta y perfil; guardar y sincronizar tu progreso; habilitar funciones sociales (parceros, ranking, co-lectura); procesar compras y suscripciones a través de la pasarela; brindar soporte; velar por la seguridad y prevenir fraude; y mejorar la App. No vendemos tus datos personales ni los usamos para decisiones automatizadas con efectos jurídicos.'],
