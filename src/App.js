@@ -796,9 +796,16 @@ const injectFirebase = () => {
       const app = initializeApp(cfg);
       const auth = getAuth(app);
       const provider = new GoogleAuthProvider();
-      window.__FB = { db: getDatabase(app), ref, set, get, onValue, update, push, onDisconnect, remove, auth, provider, signInWithPopup, signOut };
+      // Escucha "blindado": si un listener falla (p.ej. permiso denegado al
+      // expirar la sesion) NO se cae la app; se registra y sigue.
+      const safeOnValue = (q, cb, err, opts) => onValue(
+        q, cb,
+        (typeof err === 'function') ? err : (e) => { try { console.warn('[Simu RTDB]', (e && e.message) || e); } catch(_) {} },
+        (typeof err === 'object' ? err : opts)
+      );
+      window.__FB = { db: getDatabase(app), ref, set, get, onValue: safeOnValue, update, push, onDisconnect, remove, auth, provider, signInWithPopup, signOut };
       window.__FB_READY = true;
-    } catch(e) { 
+    } catch(e) {
       window.__FB_READY = false; 
       alert("Error interno de Firebase: " + e.message);
     }
