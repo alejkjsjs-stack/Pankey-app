@@ -779,9 +779,9 @@ const injectFirebase = () => {
   s.type = 'module';
   s.innerHTML = `
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set, get, onValue, update, push, onDisconnect }
+    import { getDatabase, ref, set, get, onValue, update, push, onDisconnect, remove }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider }
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     const cfg = {
       apiKey: "AIzaSyDf308JcBu-8eXBW2OpmST-MK0gCD9lVPs",
@@ -796,7 +796,7 @@ const injectFirebase = () => {
       const app = initializeApp(cfg);
       const auth = getAuth(app);
       const provider = new GoogleAuthProvider();
-      window.__FB = { db: getDatabase(app), ref, set, get, onValue, update, push, onDisconnect, auth, provider, signInWithPopup };
+      window.__FB = { db: getDatabase(app), ref, set, get, onValue, update, push, onDisconnect, remove, auth, provider, signInWithPopup, signOut };
       window.__FB_READY = true;
     } catch(e) { 
       window.__FB_READY = false; 
@@ -17314,6 +17314,25 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
   const [, setBazarTick] = useState(0);              // tick del countdown de la oferta
   const fileInputRef = useRef(null);
   const escRef = useRef(null); // carrusel del escaparate (auto-avance)
+  const [delConfirm, setDelConfirm] = useState(false); // modal "Eliminar mi cuenta"
+  const [delLoading, setDelLoading] = useState(false);
+
+  // Eliminar la cuenta del usuario de forma permanente (exigido por Google Play y la ley de datos).
+  // Borra su perfil y el mapa uid→code, cierra sesión de Google y limpia el dispositivo.
+  const handleDeleteAccount = async () => {
+    setDelLoading(true);
+    const FB = window.__FB;
+    const code = user?.code;
+    const uid = user?.uid || appState?.uid;
+    try {
+      if (FB && code) { try { await FB.remove(FB.ref(FB.db, `users/${code}`)); } catch (_) {} }
+      if (FB && uid)  { try { await FB.remove(FB.ref(FB.db, `uids/${uid}`)); } catch (_) {} }
+      try { if (FB?.signOut && FB?.auth) await FB.signOut(FB.auth); } catch (_) {}
+      try { localStorage.removeItem('leemos_v9'); } catch (_) {}
+    } catch (_) {}
+    try { onLogout && onLogout(); } catch (_) {}
+    try { window.location.reload(); } catch (_) {}
+  };
 
   // Countdown de la Oferta del Día (solo late cuando el Bazar está abierto)
   useEffect(() => {
@@ -18633,6 +18652,50 @@ function SettingsTab({ C, isLight, themeKey, setThemeKey, ambientOn, setAmbientO
       <button onClick={onLogout} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 14, padding: '13px', color: C.textMuted, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
         Cerrar sesión
       </button>
+
+      {/* Eliminar mi cuenta — requisito legal (ley de datos) y de Google Play */}
+      <button onClick={() => setDelConfirm(true)} style={{ background: 'none', border: 'none', padding: '4px 13px 8px', color: C.textMuted, fontSize: 11.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', opacity: 0.75, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+        Eliminar mi cuenta
+      </button>
+
+      {delConfirm && (
+        <div onClick={() => !delLoading && setDelConfirm(false)} style={{
+          position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', padding: 24, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '100%', maxWidth: 360, background: C.bgAlt || '#160D0F', borderRadius: 20,
+            border: `1px solid ${C.border}`, padding: '26px 22px', textAlign: 'center',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, margin: '0 auto 16px', background: '#EF444418',
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PkIc n="x" s={26} c="#EF4444" sw={2.4} />
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 8, fontFamily: 'inherit' }}>
+              ¿Eliminar tu cuenta?
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: C.textMuted, marginBottom: 22 }}>
+              Esto borra <b>para siempre</b> tu perfil, tu racha, tus empanadas y todo tu progreso.
+              No se puede deshacer.
+            </div>
+            <button disabled={delLoading} onClick={handleDeleteAccount} style={{
+              width: '100%', padding: '13px', borderRadius: 13, border: 'none', marginBottom: 10,
+              background: delLoading ? '#EF444455' : '#EF4444', color: '#fff', fontSize: 14, fontWeight: 700,
+              cursor: delLoading ? 'default' : 'pointer', fontFamily: 'inherit',
+            }}>
+              {delLoading ? 'Eliminando…' : 'Sí, eliminar mi cuenta'}
+            </button>
+            <button disabled={delLoading} onClick={() => setDelConfirm(false)} style={{
+              width: '100%', padding: '12px', borderRadius: 13, border: `1px solid ${C.border}`,
+              background: 'none', color: C.text, fontSize: 14, fontWeight: 600,
+              cursor: delLoading ? 'default' : 'pointer', fontFamily: 'inherit',
+            }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

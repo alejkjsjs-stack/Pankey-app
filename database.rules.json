@@ -67,6 +67,23 @@
       ".read": "auth != null",
       "$code": { ".write": "auth != null" }
     },
+    "duelRooms": {
+      ".read": "auth != null",
+      "$roomId": { ".write": "auth != null" }
+    },
+
+    "retoStats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "chats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "sharedStreaks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
 
     "flashQueue": {
       ".read": "auth != null",
