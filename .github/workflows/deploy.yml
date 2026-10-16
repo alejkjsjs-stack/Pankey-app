@@ -14,3 +14,6 @@ jobs:
           node-version: '18'
       - run: npm ci
       - run: npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN_PANKEY }}
+        env:
+          VERCEL_ORG_ID: team_OJ2ObBbAyOg3otZJXhkGyxpr
+          VERCEL_PROJECT_ID: prj_qRQFQj0CTKFaa8DuaoJVXtmQ6hWh
