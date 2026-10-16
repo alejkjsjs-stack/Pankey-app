@@ -9,11 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN_PANKEY }}
+      # Vercel construye la app en sus servidores; no instalamos nada aquí.
+      - run: npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN_PANKEY }}
         env:
           VERCEL_ORG_ID: team_OJ2ObBbAyOg3otZJXhkGyxpr
           VERCEL_PROJECT_ID: prj_qRQFQj0CTKFaa8DuaoJVXtmQ6hWh
